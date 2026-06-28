@@ -1,0 +1,18 @@
+package com.caliarena.domain.match
+
+import java.time.Instant
+
+data class Match(
+    val id: Int,
+    val bracketId: Int,
+    val routineId: Int,
+    val athleteRedId: Int?,
+    val athleteBlueId: Int?,
+    val redFromMatchId: Int?,
+    val blueFromMatchId: Int?,
+    val winnerAthleteId: Int?,
+    val status: MatchStatus,
+    val startedAt: Instant?,
+    val finishedAt: Instant?,
+    val createdAt: Instant,
+)

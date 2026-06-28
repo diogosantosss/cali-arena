@@ -11,7 +11,6 @@ repositories {
 }
 
 dependencies {
-
 }
 
 kotlin {
