@@ -1,7 +1,10 @@
 plugins {
-    kotlin("jvm") version "2.1.20"
+    alias(libs.plugins.kotlin.jvm)
 
-    id("io.spring.dependency-management") version "1.1.7"
+    // Spring
+    alias(libs.plugins.spring.boot)
+    alias(libs.plugins.spring.dependency.management)
+    alias(libs.plugins.ktlint)
 }
 
 group = "cali.arena"
@@ -24,8 +27,11 @@ dependencies {
     // Driver
     runtimeOnly("org.postgresql:postgresql")
 
-    testImplementation("org.junit.jupiter:junit-jupiter")
-    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+    // Testcontainers
+    testImplementation("org.testcontainers:testcontainers:1.21.3")
+    testImplementation("org.testcontainers:postgresql:1.21.3")
+    testImplementation("org.testcontainers:junit-jupiter:1.21.3")
+
     testImplementation("org.springframework.boot:spring-boot-starter-test")
 }
 
