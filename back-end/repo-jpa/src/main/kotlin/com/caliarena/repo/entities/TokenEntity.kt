@@ -30,8 +30,8 @@ class TokenEntity(
             Token(
                 tokenValidationInfo = TokenValidationInfo(tokenValidation),
                 userId = user.id,
-                createdAt = Instant.ofEpochMilli(createdAt),
-                lastUsedAt = Instant.ofEpochMilli(lastUsedAt),
+                createdAt = Instant.ofEpochSecond(createdAt),
+                lastUsedAt = Instant.ofEpochSecond(lastUsedAt),
             )
     }
 }

@@ -35,16 +35,17 @@ class UserEntity(
             username = username,
             password = PasswordValidationInfo(password),
             role = role,
-            createdAt = Instant.ofEpochMilli(createdAt),
+            createdAt = Instant.ofEpochSecond(createdAt),
         )
 
     companion object {
         fun User.fromDomain() =
             UserEntity(
+                id = this.id,
                 username = this.username,
                 password = this.password.validationInfo,
                 role = this.role,
-                createdAt = this.createdAt.toEpochMilli(),
+                createdAt = this.createdAt.epochSecond,
             )
     }
 }

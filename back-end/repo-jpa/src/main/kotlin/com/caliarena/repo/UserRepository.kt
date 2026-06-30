@@ -7,6 +7,7 @@ import com.caliarena.domain.user.User
 import com.caliarena.domain.user.UserRole
 import com.caliarena.repo.entities.TokenEntity
 import com.caliarena.repo.entities.TokenEntity.Companion.toDomain
+import com.caliarena.repo.entities.UserEntity
 import com.caliarena.repo.entities.UserEntity.Companion.fromDomain
 import com.caliarena.repo.jpa.TokenRepositoryJpa
 import com.caliarena.repo.jpa.UserRepositoryJpa
@@ -26,15 +27,14 @@ class UserRepository(
         role: UserRole,
     ): User {
         val user =
-            User(
-                id = 0,
+            UserEntity(
                 username = username,
-                password = passwordValidationInfo,
+                password = passwordValidationInfo.validationInfo,
                 role = role,
-                createdAt = Instant.now(),
+                createdAt = Instant.now().epochSecond,
             )
 
-        return userRepositoryJpa.save(user.fromDomain()).toDomain()
+        return userRepositoryJpa.save(user).toDomain()
     }
 
     override fun findByUsername(username: String): User? = userRepositoryJpa.findByUsername(username)?.toDomain()
@@ -44,7 +44,7 @@ class UserRepository(
             tokenRepositoryJpa.findByIdOrNull(tokenValidationInfo.validationInfo)
                 ?: return null
 
-        return Pair(tokenEntity.user.toDomain(), tokenEntity.toDomain())
+        return tokenEntity.user.toDomain() to tokenEntity.toDomain()
     }
 
     override fun createToken(
@@ -92,5 +92,8 @@ class UserRepository(
 
     override fun deleteById(id: Int) = userRepositoryJpa.deleteById(id)
 
-    override fun clear() = userRepositoryJpa.deleteAll()
+    override fun clear() {
+        tokenRepositoryJpa.deleteAll()
+        userRepositoryJpa.deleteAll()
+    }
 }
