@@ -1,6 +1,10 @@
 plugins {
     alias(libs.plugins.kotlin.jvm)
-    id("org.jlleitschuh.gradle.ktlint") version "13.1.0"
+
+    kotlin("plugin.spring") version "1.9.25"
+    alias(libs.plugins.spring.boot)
+    alias(libs.plugins.spring.dependency.management)
+    alias(libs.plugins.ktlint)
 }
 
 group = "com.caliarena"
@@ -11,7 +15,19 @@ repositories {
 }
 
 dependencies {
+    implementation(project(":repo-jpa"))
 
+    implementation("org.springframework.boot:spring-boot-starter-web")
+
+    // for Postgres
+    implementation("org.postgresql:postgresql:42.7.2")
+
+    // To get password encode
+    api("org.springframework.security:spring-security-core:7.0.5")
+
+    testImplementation("org.springframework.boot:spring-boot-starter-test")
+    testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
 kotlin {
