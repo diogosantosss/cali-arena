@@ -17,21 +17,21 @@ class TokenEntity(
     @Id
     @Column(name = "token_validation", length = 256)
     var tokenValidation: String = "",
-
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
     var user: UserEntity = UserEntity(),
-
     @Column(name = "created_at", nullable = false)
     var createdAt: Long = 0L,
-
     @Column(name = "last_used_at", nullable = false)
     var lastUsedAt: Long = 0L,
 ) {
-    fun toDomain() = Token(
-        tokenValidationInfo = TokenValidationInfo(tokenValidation),
-        userId = user.id,
-        createdAt = Instant.ofEpochMilli(createdAt),
-        lastUsedAt = Instant.ofEpochMilli(lastUsedAt),
-    )
+    companion object {
+        fun TokenEntity.toDomain() =
+            Token(
+                tokenValidationInfo = TokenValidationInfo(tokenValidation),
+                userId = user.id,
+                createdAt = Instant.ofEpochMilli(createdAt),
+                lastUsedAt = Instant.ofEpochMilli(lastUsedAt),
+            )
+    }
 }

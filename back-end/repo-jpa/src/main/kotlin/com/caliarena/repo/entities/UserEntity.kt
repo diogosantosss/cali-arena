@@ -19,34 +19,32 @@ class UserEntity(
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     var id: Int = 0,
-
     @Column(nullable = false, unique = true, length = 64)
     var username: String = "",
-
     @Column(nullable = false, length = 256)
     var password: String = "",
-
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "user_role")
     var role: UserRole = UserRole.ADMIN,
-
     @Column(name = "created_at", nullable = false)
     var createdAt: Long = 0L,
 ) {
-    fun toDomain() = User(
-        id = id,
-        username = username,
-        password = PasswordValidationInfo(password),
-        role = role,
-        createdAt = Instant.ofEpochMilli(createdAt),
-    )
+    fun toDomain() =
+        User(
+            id = id,
+            username = username,
+            password = PasswordValidationInfo(password),
+            role = role,
+            createdAt = Instant.ofEpochMilli(createdAt),
+        )
 
     companion object {
-        fun User.fromDomain() = UserEntity(
-            username = this.username,
-            password = this.password.validationInfo,
-            role = this.role,
-            createdAt = this.createdAt.toEpochMilli()
-        )
+        fun User.fromDomain() =
+            UserEntity(
+                username = this.username,
+                password = this.password.validationInfo,
+                role = this.role,
+                createdAt = this.createdAt.toEpochMilli(),
+            )
     }
 }

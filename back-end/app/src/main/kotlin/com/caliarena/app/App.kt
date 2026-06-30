@@ -4,9 +4,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.runApplication
 
 @SpringBootApplication(scanBasePackages = ["com.caliarena"])
-class App {
-
-}
+class App
 
 fun main() {
     runApplication<App>()
