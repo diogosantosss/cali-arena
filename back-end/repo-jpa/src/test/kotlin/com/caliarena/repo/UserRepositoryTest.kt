@@ -1,5 +1,6 @@
 package com.caliarena.repo
 
+import com.caliarena.RepositoryUser
 import com.caliarena.domain.token.Token
 import com.caliarena.domain.token.TokenValidationInfo
 import com.caliarena.domain.user.PasswordValidationInfo
@@ -16,7 +17,6 @@ import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
-import pt.isel.repo.RepositoryUser
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 

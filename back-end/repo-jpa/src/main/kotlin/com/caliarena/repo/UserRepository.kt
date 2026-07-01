@@ -1,5 +1,6 @@
 package com.caliarena.repo
 
+import com.caliarena.RepositoryUser
 import com.caliarena.domain.token.Token
 import com.caliarena.domain.token.TokenValidationInfo
 import com.caliarena.domain.user.PasswordValidationInfo
@@ -13,7 +14,6 @@ import com.caliarena.repo.jpa.user.TokenRepositoryJpa
 import com.caliarena.repo.jpa.user.UserRepositoryJpa
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Repository
-import pt.isel.repo.RepositoryUser
 import java.time.Instant
 
 @Repository
@@ -86,7 +86,7 @@ class UserRepository(
 
     override fun findById(id: Int): User? = userRepositoryJpa.findByIdOrNull(id) ?.toDomain()
 
-    override fun findAll(): List<User> = userRepositoryJpa.findAll().map { it.toDomain() }
+    override fun findAll(): List<User> = userRepositoryJpa.findAll().map(UserEntity::toDomain)
 
     override fun save(entity: User): User? = userRepositoryJpa.save(entity.fromDomain()).toDomain()
 

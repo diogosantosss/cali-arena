@@ -1,5 +1,8 @@
-package pt.isel.repo
+package com.caliarena
 
+import com.caliarena.domain.athlete.GenderType
+import com.caliarena.domain.bracket.Bracket
+import com.caliarena.domain.bracket.BracketStage
 import com.caliarena.domain.tournament.ScreenState
 import com.caliarena.domain.tournament.Tournament
 import com.caliarena.domain.tournament.TournamentState
@@ -25,4 +28,11 @@ interface RepositoryTournament : Repository<Tournament> {
     fun findStateByTournamentId(tournamentId: Int): TournamentState?
 
     fun updateScreen(tournamentId: Int, screen: ScreenState, currentMatchId: Int?): TournamentState?
+
+    // Bracket
+    fun createBracket(tournamentId: Int, gender: GenderType, stage: BracketStage): Bracket
+
+    fun findBracketsByTournamentId(tournamentId: Int): List<Bracket>
+
+    fun findBracketsByTournamentIdAndGender(tournamentId: Int, gender: GenderType): List<Bracket>
 }

@@ -1,4 +1,4 @@
-package pt.isel.repo
+package com.caliarena
 
 import com.caliarena.domain.match.Match
 import com.caliarena.domain.match.MatchEvent
