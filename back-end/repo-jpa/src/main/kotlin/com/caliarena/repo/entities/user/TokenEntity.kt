@@ -1,4 +1,4 @@
-package com.caliarena.repo.entities
+package com.caliarena.repo.entities.user
 
 import com.caliarena.domain.token.Token
 import com.caliarena.domain.token.TokenValidationInfo

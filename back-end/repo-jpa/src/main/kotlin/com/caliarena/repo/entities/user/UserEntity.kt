@@ -1,4 +1,4 @@
-package com.caliarena.repo.entities
+package com.caliarena.repo.entities.user
 
 import com.caliarena.domain.user.PasswordValidationInfo
 import com.caliarena.domain.user.User
@@ -24,7 +24,7 @@ class UserEntity(
     @Column(nullable = false, length = 256)
     var password: String = "",
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, columnDefinition = "user_role")
+    @Column(nullable = false, length = 20)
     var role: UserRole = UserRole.ADMIN,
     @Column(name = "created_at", nullable = false)
     var createdAt: Long = 0L,

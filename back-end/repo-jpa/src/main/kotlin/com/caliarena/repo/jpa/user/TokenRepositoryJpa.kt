@@ -1,6 +1,6 @@
-package com.caliarena.repo.jpa
+package com.caliarena.repo.jpa.user
 
-import com.caliarena.repo.entities.TokenEntity
+import com.caliarena.repo.entities.user.TokenEntity
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Modifying
 import org.springframework.data.jpa.repository.Query

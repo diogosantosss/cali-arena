@@ -6,6 +6,11 @@ package pt.isel.repo
  */
 interface Transaction {
     val repoUser: RepositoryUser
+//    val repoAthlete: RepositoryAthlete
+//    val repoClub: RepositoryClub
+//    val repoTournament: RepositoryTournament
+//    val repoBracket: RepositoryBracket
+//    val repoMatch: RepositoryMatch
 
     fun rollback()
 }
