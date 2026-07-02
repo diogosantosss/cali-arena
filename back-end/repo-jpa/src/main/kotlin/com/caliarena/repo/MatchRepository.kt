@@ -156,6 +156,7 @@ class MatchRepository(
     override fun clear() {
         matchEventJpa.deleteAll()
         matchProgJpa.deleteAll()
+        matchJpa.clearFromMatchReferences()
         matchJpa.deleteAll()
     }
 }
