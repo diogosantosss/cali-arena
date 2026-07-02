@@ -12,11 +12,10 @@ interface RepositoryMatch : Repository<Match> {
     fun createMatch(
         bracketId: Int,
         routineId: Int,
-        athleteRedId: Int?,
-        athleteBlueId: Int?,
         redFromMatchId: Int?,
         blueFromMatchId: Int?,
-    ): Match
+        createdAt: Instant,
+    ): Match?
 
     fun findByBracketId(bracketId: Int): List<Match>
 
@@ -27,13 +26,15 @@ interface RepositoryMatch : Repository<Match> {
     fun updateWinner(id: Int, winnerAthleteId: Int): Match?
 
     // MatchProgress
-    fun createMatchProgress(matchId: Int): MatchProgress
+    fun createMatchProgress(matchId: Int, updatedAt: Instant): MatchProgress?
 
     fun findProgressByMatchId(matchId: Int): MatchProgress?
 
-    fun updateReps(matchId: Int, redReps: Int, blueReps: Int): MatchProgress?
+    fun updateReps(matchId: Int, redReps: Int, blueReps: Int,
+                   updatedAt: Instant): MatchProgress?
 
-    fun updateTimer(matchId: Int, timerStartedAt: Instant?, timerRemainingSeconds: Int?): MatchProgress?
+    fun updateTimer(matchId: Int, timerStartedAt: Instant?, timerRemainingSeconds: Int?,
+                    updatedAt: Instant): MatchProgress?
 
     // MatchEvent
     fun createEvent(
@@ -41,7 +42,8 @@ interface RepositoryMatch : Repository<Match> {
         judgeId: Int,
         eventType: MatchEventType,
         payload: String?,
-    ): MatchEvent
+        createdAt: Instant
+    ): MatchEvent?
 
     fun findEventsByMatchId(matchId: Int): List<MatchEvent>
 }
