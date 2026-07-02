@@ -1,4 +1,4 @@
-package pt.isel.repo
+package com.caliarena
 
 /**
  * Generic repository interface for basic CRUD operations
