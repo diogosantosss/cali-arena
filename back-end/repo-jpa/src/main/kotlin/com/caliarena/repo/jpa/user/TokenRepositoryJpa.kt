@@ -8,16 +8,15 @@ import org.springframework.data.repository.query.Param
 
 interface TokenRepositoryJpa : JpaRepository<TokenEntity, String> {
     /**
-     * Deletes the oldest tokens for a user that exceed a specified [offset].
+     * Removes the least-recently-used tokens for a user, keeping only the newest [offset] entries.
      *
-     * Fetches all tokens for the given user ordered by last_used_at (descending) and created_at (descending),
-     * skips the first [offset] tokens (most recent), and deletes the remaining older ones.
+     * Tokens are ranked by:
+     * 1. `last_used_at` descending
+     * 2. `created_at` descending
      *
-     * @return The number of tokens deleted
+     * Any tokens beyond that window are deleted in a single bulk operation.
      *
-     * @note The @Modifying annotation with:
-     * - [clearAutomatically] = true: clears the persistence context after deletion to prevent stale data
-     * - [flushAutomatically] = true: ensures changes are immediately flushed to the database
+     * @return number of deleted tokens
      */
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query(
@@ -25,8 +24,11 @@ interface TokenRepositoryJpa : JpaRepository<TokenEntity, String> {
             delete from tokens 
             where user_id = :userId 
                 and token_validation in (
-                    select token_validation from tokens where user_id = :userId 
-                        order by last_used_at desc, created_at desc offset :offset
+                    select token_validation 
+                    from tokens 
+                    where user_id = :userId 
+                    order by last_used_at desc, created_at desc 
+                    offset :offset
                 )
         """,
         nativeQuery = true,

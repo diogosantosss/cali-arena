@@ -52,6 +52,8 @@ class TransactionManagerJpa(
                 matchEventRepositoryJpa,
                 matchProgRepositoryJpa,
                 matchRepositoryJpa,
+                bracketRepositoryJpa,
+                userRepositoryJpa,
             )
         val repoEnduranceRoutine =
             EnduranceRoutineRepository(
