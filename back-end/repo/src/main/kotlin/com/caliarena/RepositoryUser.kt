@@ -18,6 +18,7 @@ interface RepositoryUser : Repository<User> {
         username: String,
         passwordValidationInfo: PasswordValidationInfo,
         role: UserRole,
+        createdAt: Instant,
     ): User
 
     fun findByUsername(username: String): User?
@@ -35,4 +36,9 @@ interface RepositoryUser : Repository<User> {
     )
 
     fun removeTokenByTokenValidation(tokenValidationInfo: TokenValidationInfo): Int
+
+    fun updateUserRole(
+        userId: Int,
+        role: UserRole,
+    ): User?
 }

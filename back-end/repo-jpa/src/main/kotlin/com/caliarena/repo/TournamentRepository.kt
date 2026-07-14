@@ -115,6 +115,8 @@ class TournamentRepository(
 
     override fun findById(id: Int): Tournament? = tournamentJpa.findByIdOrNull(id)?.toDomain()
 
+    override fun findByBracketId(bracketId: Int): Bracket? = bracketJpa.findByIdOrNull(bracketId)?.toDomain()
+
     override fun findAll(): List<Tournament> = tournamentJpa.findAll().map(TournamentEntity::toDomain)
 
     override fun save(entity: Tournament): Tournament? = tournamentJpa.save(entity.fromDomain()).toDomain()

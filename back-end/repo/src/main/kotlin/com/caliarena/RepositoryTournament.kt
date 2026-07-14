@@ -33,6 +33,8 @@ interface RepositoryTournament : Repository<Tournament> {
     // Bracket
     fun createBracket(tournamentId: Int, gender: GenderType, stage: BracketStage, createdAt: Instant): Bracket?
 
+    fun findByBracketId(bracketId: Int): Bracket?
+
     fun findBracketsByTournamentId(tournamentId: Int): List<Bracket>
 
     fun findBracketsByTournamentIdAndGender(tournamentId: Int, gender: GenderType): List<Bracket>
