@@ -527,5 +527,6 @@ class MatchRepositoryTest {
                 username = "judge-${System.nanoTime()}",
                 passwordValidationInfo = PasswordValidationInfo("hashed"),
                 role = UserRole.JUDGE,
+                createdAt = Instant.now().truncatedTo(ChronoUnit.SECONDS),
             ).id
 }

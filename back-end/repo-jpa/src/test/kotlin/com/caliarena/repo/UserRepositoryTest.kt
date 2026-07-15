@@ -293,6 +293,7 @@ class UserRepositoryTest {
         username = username,
         passwordValidationInfo = PasswordValidationInfo("hashed_pw"),
         role = UserRole.JUDGE,
+        createdAt = Instant.now().truncatedTo(ChronoUnit.SECONDS),
     )
 
     private fun newToken(
