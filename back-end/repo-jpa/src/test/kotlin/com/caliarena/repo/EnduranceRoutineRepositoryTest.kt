@@ -19,11 +19,11 @@ import java.time.temporal.ChronoUnit
 @SpringBootTest(classes = [TestConfiguration::class])
 class EnduranceRoutineRepositoryTest {
     @Autowired
-    lateinit var transactionManager: TransactionManagerJpa
+    lateinit var trx: TransactionManagerJpa
 
     @BeforeEach
     fun cleanup() {
-        transactionManager.run {
+        trx.run {
             repoEnduranceRoutine.clear()
         }
     }
@@ -32,7 +32,7 @@ class EnduranceRoutineRepositoryTest {
     inner class CreateRoutine {
         @Test
         fun `should create a routine with the given fields`() =
-            transactionManager.run {
+            trx.run {
                 val routine =
                     repoEnduranceRoutine.createRoutine(
                         name = "routine-a",
@@ -50,7 +50,7 @@ class EnduranceRoutineRepositoryTest {
     inner class FindByName {
         @Test
         fun `should find an existing routine by name`() =
-            transactionManager.run {
+            trx.run {
                 repoEnduranceRoutine.createRoutine("routine-b", null, Instant.now().truncatedTo(ChronoUnit.SECONDS))
 
                 val found = repoEnduranceRoutine.findByName("routine-b")
@@ -61,7 +61,7 @@ class EnduranceRoutineRepositoryTest {
 
         @Test
         fun `should return null when name does not exist`() =
-            transactionManager.run {
+            trx.run {
                 assertNull(repoEnduranceRoutine.findByName("missing"))
             }
     }
@@ -70,7 +70,7 @@ class EnduranceRoutineRepositoryTest {
     inner class CreateExercise {
         @Test
         fun `should create an exercise for an existing routine`() =
-            transactionManager.run {
+            trx.run {
                 val routine = repoEnduranceRoutine.createRoutine("routine-c", null, Instant.now().truncatedTo(ChronoUnit.SECONDS))
 
                 val exercise =
@@ -92,7 +92,7 @@ class EnduranceRoutineRepositoryTest {
 
         @Test
         fun `should return null when routine does not exist`() =
-            transactionManager.run {
+            trx.run {
                 val exercise =
                     repoEnduranceRoutine.createExercise(
                         routineId = -1,
@@ -112,7 +112,7 @@ class EnduranceRoutineRepositoryTest {
     inner class FindExercisesByRoutineId {
         @Test
         fun `should return exercises for a routine`() =
-            transactionManager.run {
+            trx.run {
                 val routine = repoEnduranceRoutine.createRoutine("routine-d", null, Instant.now().truncatedTo(ChronoUnit.SECONDS))
                 repoEnduranceRoutine.createExercise(routine.id, "e1", 10, null, 1, null, ExerciseType.NORMAL)
                 repoEnduranceRoutine.createExercise(routine.id, "e2", 12, null, 2, 1, ExerciseType.SUPERSET)
@@ -127,7 +127,7 @@ class EnduranceRoutineRepositoryTest {
     inner class FindById {
         @Test
         fun `should find an existing routine by id`() =
-            transactionManager.run {
+            trx.run {
                 val created = repoEnduranceRoutine.createRoutine("routine-e", 900, Instant.now().truncatedTo(ChronoUnit.SECONDS))
 
                 val found = repoEnduranceRoutine.findById(created.id)
@@ -138,7 +138,7 @@ class EnduranceRoutineRepositoryTest {
 
         @Test
         fun `should return null when id does not exist`() =
-            transactionManager.run {
+            trx.run {
                 assertNull(repoEnduranceRoutine.findById(-1))
             }
     }
@@ -147,7 +147,7 @@ class EnduranceRoutineRepositoryTest {
     inner class FindAll {
         @Test
         fun `should return all created routines`() =
-            transactionManager.run {
+            trx.run {
                 repoEnduranceRoutine.createRoutine("routine-f1", null, Instant.now().truncatedTo(ChronoUnit.SECONDS))
                 repoEnduranceRoutine.createRoutine("routine-f2", null, Instant.now().truncatedTo(ChronoUnit.SECONDS))
 
@@ -158,7 +158,7 @@ class EnduranceRoutineRepositoryTest {
 
         @Test
         fun `should return empty list when there are no routines`() =
-            transactionManager.run {
+            trx.run {
                 assertTrue(repoEnduranceRoutine.findAll().isEmpty())
             }
     }
@@ -167,7 +167,7 @@ class EnduranceRoutineRepositoryTest {
     inner class Save {
         @Test
         fun `should update an existing routine`() =
-            transactionManager.run {
+            trx.run {
                 val created = repoEnduranceRoutine.createRoutine("routine-g", 600, Instant.now().truncatedTo(ChronoUnit.SECONDS))
                 val updated = created.copy(name = "routine-g-updated")
 
@@ -183,7 +183,7 @@ class EnduranceRoutineRepositoryTest {
     inner class DeleteById {
         @Test
         fun `should remove the routine`() =
-            transactionManager.run {
+            trx.run {
                 val created = repoEnduranceRoutine.createRoutine("routine-h", null, Instant.now().truncatedTo(ChronoUnit.SECONDS))
 
                 repoEnduranceRoutine.deleteById(created.id)
@@ -196,7 +196,7 @@ class EnduranceRoutineRepositoryTest {
     inner class Clear {
         @Test
         fun `should remove all routines and exercises`() =
-            transactionManager.run {
+            trx.run {
                 val routine = repoEnduranceRoutine.createRoutine("routine-i", null, Instant.now().truncatedTo(ChronoUnit.SECONDS))
                 repoEnduranceRoutine.createExercise(routine.id, "e1", 10, null, 1, null, ExerciseType.NORMAL)
 

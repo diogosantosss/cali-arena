@@ -23,6 +23,8 @@ interface RepositoryTournament : Repository<Tournament> {
 
     fun updateStatus(id: Int, status: TournamentStatus): Tournament?
 
+    fun findByName(name: String): Tournament?
+
     // TournamentState
     fun createTournamentState(tournamentId: Int, updatedAt: Instant): TournamentState?
 

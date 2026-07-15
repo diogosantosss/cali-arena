@@ -47,6 +47,8 @@ class TournamentRepository(
     override fun findByStatus(status: TournamentStatus): List<Tournament> =
         tournamentJpa.findByStatus(status).map(TournamentEntity::toDomain)
 
+    override fun findByName(name: String): Tournament? = tournamentJpa.findByName(name)?.toDomain()
+
     override fun updateStatus(
         id: Int,
         status: TournamentStatus,

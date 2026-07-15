@@ -27,11 +27,11 @@ import java.time.temporal.ChronoUnit
 @SpringBootTest(classes = [TestConfiguration::class])
 class MatchRepositoryTest {
     @Autowired
-    lateinit var transactionManager: TransactionManagerJpa
+    lateinit var trx: TransactionManagerJpa
 
     @BeforeEach
     fun cleanup() {
-        transactionManager.run {
+        trx.run {
             repoMatch.clear()
             repoTournament.clear()
             repoEnduranceRoutine.clear()
@@ -43,7 +43,7 @@ class MatchRepositoryTest {
     inner class CreateMatch {
         @Test
         fun `should create a match for an existing bracket`() =
-            transactionManager.run {
+            trx.run {
                 val bracketId = newTournamentWithBracket(repoTournament)
                 val routineId = newRoutine(repoEnduranceRoutine)
 
@@ -57,7 +57,7 @@ class MatchRepositoryTest {
 
         @Test
         fun `should return null when bracket does not exist`() =
-            transactionManager.run {
+            trx.run {
                 val routineId = newRoutine(repoEnduranceRoutine)
 
                 val match =
@@ -74,7 +74,7 @@ class MatchRepositoryTest {
 
         @Test
         fun `should store redFromMatchId and blueFromMatchId`() =
-            transactionManager.run {
+            trx.run {
                 val bracketId = newTournamentWithBracket(repoTournament)
                 val routineId = newRoutine(repoEnduranceRoutine)
                 val prev = newMatch(repoMatch, bracketId, routineId)
@@ -97,7 +97,7 @@ class MatchRepositoryTest {
     inner class FindByBracketId {
         @Test
         fun `should return all matches for a bracket`() =
-            transactionManager.run {
+            trx.run {
                 val bracketId = newTournamentWithBracket(repoTournament)
                 val routineId = newRoutine(repoEnduranceRoutine)
                 newMatch(repoMatch, bracketId, routineId)
@@ -110,7 +110,7 @@ class MatchRepositoryTest {
 
         @Test
         fun `should return empty list when bracket has no matches`() =
-            transactionManager.run {
+            trx.run {
                 val bracketId = newTournamentWithBracket(repoTournament)
 
                 val matches = repoMatch.findByBracketId(bracketId)
@@ -123,7 +123,7 @@ class MatchRepositoryTest {
     inner class FindByStatus {
         @Test
         fun `should return matches with the given status`() =
-            transactionManager.run {
+            trx.run {
                 val bracketId = newTournamentWithBracket(repoTournament)
                 val routineId = newRoutine(repoEnduranceRoutine)
                 val m1 = newMatch(repoMatch, bracketId, routineId)
@@ -143,7 +143,7 @@ class MatchRepositoryTest {
     inner class UpdateStatus {
         @Test
         fun `should update the match status`() =
-            transactionManager.run {
+            trx.run {
                 val bracketId = newTournamentWithBracket(repoTournament)
                 val routineId = newRoutine(repoEnduranceRoutine)
                 val match = newMatch(repoMatch, bracketId, routineId)
@@ -156,7 +156,7 @@ class MatchRepositoryTest {
 
         @Test
         fun `should return null when match does not exist`() =
-            transactionManager.run {
+            trx.run {
                 assertNull(repoMatch.updateStatus(-1, MatchStatus.RUNNING))
             }
     }
@@ -165,7 +165,7 @@ class MatchRepositoryTest {
     inner class FindById {
         @Test
         fun `should find an existing match by id`() =
-            transactionManager.run {
+            trx.run {
                 val bracketId = newTournamentWithBracket(repoTournament)
                 val routineId = newRoutine(repoEnduranceRoutine)
                 val created = newMatch(repoMatch, bracketId, routineId)
@@ -178,7 +178,7 @@ class MatchRepositoryTest {
 
         @Test
         fun `should return null when id does not exist`() =
-            transactionManager.run {
+            trx.run {
                 assertNull(repoMatch.findById(-1))
             }
     }
@@ -187,7 +187,7 @@ class MatchRepositoryTest {
     inner class FindAll {
         @Test
         fun `should return all created matches`() =
-            transactionManager.run {
+            trx.run {
                 val bracketId = newTournamentWithBracket(repoTournament)
                 val routineId = newRoutine(repoEnduranceRoutine)
                 newMatch(repoMatch, bracketId, routineId)
@@ -200,7 +200,7 @@ class MatchRepositoryTest {
 
         @Test
         fun `should return empty list when there are no matches`() =
-            transactionManager.run {
+            trx.run {
                 assertTrue(repoMatch.findAll().isEmpty())
             }
     }
@@ -209,7 +209,7 @@ class MatchRepositoryTest {
     inner class DeleteById {
         @Test
         fun `should remove the match`() =
-            transactionManager.run {
+            trx.run {
                 val bracketId = newTournamentWithBracket(repoTournament)
                 val routineId = newRoutine(repoEnduranceRoutine)
                 val created = newMatch(repoMatch, bracketId, routineId)
@@ -224,7 +224,7 @@ class MatchRepositoryTest {
     inner class Clear {
         @Test
         fun `should remove all matches, progress and events`() =
-            transactionManager.run {
+            trx.run {
                 val bracketId = newTournamentWithBracket(repoTournament)
                 val routineId = newRoutine(repoEnduranceRoutine)
                 val match = newMatch(repoMatch, bracketId, routineId)
@@ -241,7 +241,7 @@ class MatchRepositoryTest {
     inner class CreateMatchProgress {
         @Test
         fun `should create progress for an existing match`() =
-            transactionManager.run {
+            trx.run {
                 val bracketId = newTournamentWithBracket(repoTournament)
                 val routineId = newRoutine(repoEnduranceRoutine)
                 val match = newMatch(repoMatch, bracketId, routineId)
@@ -260,7 +260,7 @@ class MatchRepositoryTest {
 
         @Test
         fun `should return null when match does not exist`() =
-            transactionManager.run {
+            trx.run {
                 assertNull(
                     repoMatch.createMatchProgress(
                         matchId = -1,
@@ -274,7 +274,7 @@ class MatchRepositoryTest {
     inner class FindProgressByMatchId {
         @Test
         fun `should find progress for an existing match`() =
-            transactionManager.run {
+            trx.run {
                 val bracketId = newTournamentWithBracket(repoTournament)
                 val routineId = newRoutine(repoEnduranceRoutine)
                 val match = newMatch(repoMatch, bracketId, routineId)
@@ -288,7 +288,7 @@ class MatchRepositoryTest {
 
         @Test
         fun `should return null when match has no progress`() =
-            transactionManager.run {
+            trx.run {
                 assertNull(repoMatch.findProgressByMatchId(-1))
             }
     }
@@ -297,7 +297,7 @@ class MatchRepositoryTest {
     inner class UpdateReps {
         @Test
         fun `should update red and blue reps`() =
-            transactionManager.run {
+            trx.run {
                 val bracketId = newTournamentWithBracket(repoTournament)
                 val routineId = newRoutine(repoEnduranceRoutine)
                 val match = newMatch(repoMatch, bracketId, routineId)
@@ -318,7 +318,7 @@ class MatchRepositoryTest {
 
         @Test
         fun `should return null when progress does not exist`() =
-            transactionManager.run {
+            trx.run {
                 assertNull(
                     repoMatch.updateReps(
                         matchId = -1,
@@ -334,7 +334,7 @@ class MatchRepositoryTest {
     inner class UpdateTimer {
         @Test
         fun `should update the timer fields`() =
-            transactionManager.run {
+            trx.run {
                 val bracketId = newTournamentWithBracket(repoTournament)
                 val routineId = newRoutine(repoEnduranceRoutine)
                 val match = newMatch(repoMatch, bracketId, routineId)
@@ -356,7 +356,7 @@ class MatchRepositoryTest {
 
         @Test
         fun `should return null when progress does not exist`() =
-            transactionManager.run {
+            trx.run {
                 assertNull(
                     repoMatch.updateTimer(
                         matchId = -1,
@@ -372,7 +372,7 @@ class MatchRepositoryTest {
     inner class CreateEvent {
         @Test
         fun `should create an event for an existing match and judge`() =
-            transactionManager.run {
+            trx.run {
                 val bracketId = newTournamentWithBracket(repoTournament)
                 val routineId = newRoutine(repoEnduranceRoutine)
                 val match = newMatch(repoMatch, bracketId, routineId)
@@ -395,7 +395,7 @@ class MatchRepositoryTest {
 
         @Test
         fun `should store payload when provided`() =
-            transactionManager.run {
+            trx.run {
                 val bracketId = newTournamentWithBracket(repoTournament)
                 val routineId = newRoutine(repoEnduranceRoutine)
                 val match = newMatch(repoMatch, bracketId, routineId)
@@ -415,7 +415,7 @@ class MatchRepositoryTest {
 
         @Test
         fun `should return null when match does not exist`() =
-            transactionManager.run {
+            trx.run {
                 val judgeId = newJudge(repoUser)
 
                 assertNull(
@@ -431,7 +431,7 @@ class MatchRepositoryTest {
 
         @Test
         fun `should return null when judge does not exist`() =
-            transactionManager.run {
+            trx.run {
                 val bracketId = newTournamentWithBracket(repoTournament)
                 val routineId = newRoutine(repoEnduranceRoutine)
                 val match = newMatch(repoMatch, bracketId, routineId)
@@ -452,7 +452,7 @@ class MatchRepositoryTest {
     inner class FindEventsByMatchId {
         @Test
         fun `should return all events for a match`() =
-            transactionManager.run {
+            trx.run {
                 val bracketId = newTournamentWithBracket(repoTournament)
                 val routineId = newRoutine(repoEnduranceRoutine)
                 val match = newMatch(repoMatch, bracketId, routineId)
@@ -468,7 +468,7 @@ class MatchRepositoryTest {
 
         @Test
         fun `should return empty list when match has no events`() =
-            transactionManager.run {
+            trx.run {
                 val bracketId = newTournamentWithBracket(repoTournament)
                 val routineId = newRoutine(repoEnduranceRoutine)
                 val match = newMatch(repoMatch, bracketId, routineId)

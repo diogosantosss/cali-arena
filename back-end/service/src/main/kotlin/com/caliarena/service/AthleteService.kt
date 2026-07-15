@@ -32,13 +32,14 @@ class AthleteService(
             repoClub.findById(clubId)
                 ?: return@run failure(AthleteError.ClubNotFound)
 
-            GenderType.entries.find { it.name == gender }
-                ?: return@run failure(AthleteError.InvalidGender)
+            val genderType =
+                GenderType.entries.find { it.name == gender }
+                    ?: return@run failure(AthleteError.InvalidGender)
 
             val athlete =
                 repoAthlete.createAthlete(
                     name = name,
-                    gender = GenderType.valueOf(gender),
+                    gender = genderType,
                     clubId = clubId,
                     createdAt = clock.instant(),
                 ) ?: return@run failure(AthleteError.CreatingAthlete)
