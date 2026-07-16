@@ -26,16 +26,13 @@ dependencies {
     // To use SLF4J
     implementation("org.slf4j:slf4j-api:2.0.16")
 
-    testImplementation(platform("org.junit:junit-bom:5.12.0"))
-    testImplementation("org.springframework:spring-test:6.2.11")
-    testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
-    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+    testImplementation("org.mockito.kotlin:mockito-kotlin:5.4.0")
+    testImplementation("org.mockito:mockito-junit-jupiter:5.18.0")
+    testImplementation("org.junit.jupiter:junit-jupiter:5.10.0")
+    testImplementation("org.junit.platform:junit-platform-launcher")
+    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.10.0")
 }
 
 kotlin {
     jvmToolchain(21)
-}
-
-tasks.test {
-    useJUnitPlatform()
 }

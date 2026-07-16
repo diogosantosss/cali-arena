@@ -16,9 +16,8 @@ data class Token(
 ) {
     fun isTimeValid(clock: Clock, config: UsersDomainConfig): Boolean {
         val now = clock.instant()
-        return createdAt <= now &&
-                Duration.between(now, createdAt) <= config.tokenTtl &&
-                Duration.between(now, lastUsedAt) <= config.tokenRollingTtl
+
+        return now <= createdAt + config.tokenTtl && now <= lastUsedAt + config.tokenRollingTtl
     }
 
     fun expiration(config: UsersDomainConfig): Instant {

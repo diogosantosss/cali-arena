@@ -1,10 +1,10 @@
 package com.caliarena.http.model
 
+import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import java.net.URI
 
-private const val MEDIA_TYPE = "application/problem+json"
 private const val PROBLEM_URI_PATH = "/problem"
 
 sealed class Problem(
@@ -16,8 +16,8 @@ sealed class Problem(
     fun response(status: HttpStatus): ResponseEntity<Any> =
         ResponseEntity
             .status(status)
-            .header("Content-Type", MEDIA_TYPE)
-            .body(this)
+            .header(HttpHeaders.CONTENT_TYPE, MEDIA_TYPE)
+            .body(ProblemBody(type, title, status.value()))
 
     data object InvalidRequestContent : Problem(URI("$PROBLEM_URI_PATH/invalid-request-content"))
 
@@ -35,4 +35,14 @@ sealed class Problem(
     data object UserOrPasswordAreInvalid : Problem(URI("$PROBLEM_URI_PATH/user-or-password-are-invalid"))
 
     data object NotAuthorized : Problem(URI("$PROBLEM_URI_PATH/not-authorized"))
+
+    private data class ProblemBody(
+        val type: String,
+        val title: String,
+        val status: Int,
+    )
+
+    companion object {
+        private const val MEDIA_TYPE = "application/problem+json"
+    }
 }

@@ -157,7 +157,7 @@ class UserAuthService(
             }
 
             val role =
-                UserRole.entries.find { it.name == role }
+                UserRole.entries.find { it.name.equals(role, true) }
                     ?: return@run failure(UserError.InvalidRole)
 
             repoUser.findById(userToUpdateId)
