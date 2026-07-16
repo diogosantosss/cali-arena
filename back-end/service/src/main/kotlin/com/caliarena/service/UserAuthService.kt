@@ -26,6 +26,8 @@ sealed class UserError {
     data object ErrorUpdatingUserRole : UserError()
 
     data object UserOrPasswordAreInvalid : UserError()
+
+    data object NotAuthorized : UserError()
 }
 
 @Named
@@ -60,7 +62,7 @@ class UserAuthService(
         val passwordValidationInfo = createPasswordValidationInformation(password)
 
         return trxManager.run {
-            if (repoUser.findByUsername(username) == null) {
+            if (repoUser.findByUsername(username) != null) {
                 return@run failure(UserError.AlreadyUsedUsername)
             }
 
@@ -141,20 +143,29 @@ class UserAuthService(
 
     fun updateUserRole(
         token: String,
+        userToUpdateId: Int,
         role: String,
     ): Either<UserError, User> =
         trxManager.run {
-            val tokenValidationInfo = tokenEncoder.createValidationInformation(token)
-            val user =
-                repoUser.getTokenByTokenValidation(tokenValidationInfo)
-                    ?: return@run failure(UserError.UserNotFound)
+            val user: Pair<User, Token> =
+                repoUser.getTokenByTokenValidation(
+                    tokenEncoder.createValidationInformation(token),
+                ) ?: return@run failure(UserError.UserNotFound)
+
+            if (user.first.role != UserRole.ADMIN) {
+                return@run failure(UserError.NotAuthorized)
+            }
 
             val role =
                 UserRole.entries.find { it.name == role }
                     ?: return@run failure(UserError.InvalidRole)
 
+            repoUser.findById(userToUpdateId)
+                ?: return@run failure(UserError.UserNotFound)
+
             val updatedUser =
-                repoUser.updateUserRole(user.first.id, role) ?: return@run failure(UserError.ErrorUpdatingUserRole)
+                repoUser.updateUserRole(userToUpdateId, role)
+                    ?: return@run failure(UserError.ErrorUpdatingUserRole)
 
             success(updatedUser)
         }

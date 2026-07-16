@@ -17,6 +17,7 @@ dependencies {
 
     // To use Spring MVC
     implementation("org.springframework:spring-webmvc:7.0.7")
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.22.1")
 
     // To use Servlet API
     implementation("jakarta.servlet:jakarta.servlet-api:6.1.0")
