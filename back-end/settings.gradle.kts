@@ -4,7 +4,8 @@ plugins {
 
 rootProject.name = "cali-arena"
 include(":app")
-include("repo-jpa")
-include("repo-jpa")
+include("http")
+include("service")
 include("domain")
 include("repo")
+include("repo-jpa")

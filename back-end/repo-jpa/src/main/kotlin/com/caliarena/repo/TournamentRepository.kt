@@ -47,6 +47,8 @@ class TournamentRepository(
     override fun findByStatus(status: TournamentStatus): List<Tournament> =
         tournamentJpa.findByStatus(status).map(TournamentEntity::toDomain)
 
+    override fun findByName(name: String): Tournament? = tournamentJpa.findByName(name)?.toDomain()
+
     override fun updateStatus(
         id: Int,
         status: TournamentStatus,
@@ -114,6 +116,8 @@ class TournamentRepository(
     ): List<Bracket> = bracketJpa.findByTournamentIdAndGender(tournamentId, gender).map(BracketEntity::toDomain)
 
     override fun findById(id: Int): Tournament? = tournamentJpa.findByIdOrNull(id)?.toDomain()
+
+    override fun findByBracketId(bracketId: Int): Bracket? = bracketJpa.findByIdOrNull(bracketId)?.toDomain()
 
     override fun findAll(): List<Tournament> = tournamentJpa.findAll().map(TournamentEntity::toDomain)
 

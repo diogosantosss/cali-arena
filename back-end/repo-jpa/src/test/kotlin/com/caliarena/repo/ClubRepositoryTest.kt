@@ -17,11 +17,11 @@ import java.time.temporal.ChronoUnit
 @SpringBootTest(classes = [TestConfiguration::class])
 class ClubRepositoryTest {
     @Autowired
-    lateinit var transactionManager: TransactionManagerJpa
+    lateinit var trx: TransactionManagerJpa
 
     @BeforeEach
     fun cleanup() {
-        transactionManager.run {
+        trx.run {
             repoAthlete.clear()
             repoClub.clear()
         }
@@ -31,7 +31,7 @@ class ClubRepositoryTest {
     inner class CreateClub {
         @Test
         fun `should create a club with the given fields`() =
-            transactionManager.run {
+            trx.run {
                 val club =
                     repoClub.createClub(
                         name = "alpha",
@@ -49,7 +49,7 @@ class ClubRepositoryTest {
     inner class FindByName {
         @Test
         fun `should find an existing club by name`() =
-            transactionManager.run {
+            trx.run {
                 repoClub.createClub("bravo", "B", Instant.now().truncatedTo(ChronoUnit.SECONDS))
 
                 val found = repoClub.findByName("bravo")
@@ -60,7 +60,7 @@ class ClubRepositoryTest {
 
         @Test
         fun `should return null when name does not exist`() =
-            transactionManager.run {
+            trx.run {
                 assertNull(repoClub.findByName("missing"))
             }
     }
@@ -69,7 +69,7 @@ class ClubRepositoryTest {
     inner class FindById {
         @Test
         fun `should find an existing club by id`() =
-            transactionManager.run {
+            trx.run {
                 val created = repoClub.createClub("charlie", null, Instant.now().truncatedTo(ChronoUnit.SECONDS))
 
                 val found = repoClub.findById(created.id)
@@ -80,7 +80,7 @@ class ClubRepositoryTest {
 
         @Test
         fun `should return null when id does not exist`() =
-            transactionManager.run {
+            trx.run {
                 assertNull(repoClub.findById(-1))
             }
     }
@@ -89,7 +89,7 @@ class ClubRepositoryTest {
     inner class FindAll {
         @Test
         fun `should return all created clubs`() =
-            transactionManager.run {
+            trx.run {
                 repoClub.createClub("c1", null, Instant.now().truncatedTo(ChronoUnit.SECONDS))
                 repoClub.createClub("c2", null, Instant.now().truncatedTo(ChronoUnit.SECONDS))
 
@@ -100,7 +100,7 @@ class ClubRepositoryTest {
 
         @Test
         fun `should return empty list when there are no clubs`() =
-            transactionManager.run {
+            trx.run {
                 assertTrue(repoClub.findAll().isEmpty())
             }
     }
@@ -109,7 +109,7 @@ class ClubRepositoryTest {
     inner class Save {
         @Test
         fun `should update an existing club`() =
-            transactionManager.run {
+            trx.run {
                 val created = repoClub.createClub("delta", "D", Instant.now().truncatedTo(ChronoUnit.SECONDS))
                 val updated = created.copy(name = "delta-updated")
 
@@ -125,7 +125,7 @@ class ClubRepositoryTest {
     inner class DeleteById {
         @Test
         fun `should remove the club`() =
-            transactionManager.run {
+            trx.run {
                 val created = repoClub.createClub("echo", "E", Instant.now().truncatedTo(ChronoUnit.SECONDS))
 
                 repoClub.deleteById(created.id)
@@ -138,7 +138,7 @@ class ClubRepositoryTest {
     inner class Clear {
         @Test
         fun `should remove all clubs`() =
-            transactionManager.run {
+            trx.run {
                 repoClub.createClub("f1", null, Instant.now().truncatedTo(ChronoUnit.SECONDS))
                 repoClub.createClub("f2", null, Instant.now().truncatedTo(ChronoUnit.SECONDS))
 

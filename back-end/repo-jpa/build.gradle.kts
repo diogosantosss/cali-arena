@@ -2,7 +2,7 @@ plugins {
     alias(libs.plugins.kotlin.jvm)
 
     // Spring
-    kotlin("plugin.spring") version "1.9.25"
+    alias(libs.plugins.kotlin.spring)
     alias(libs.plugins.spring.boot)
     alias(libs.plugins.spring.dependency.management)
     alias(libs.plugins.ktlint)

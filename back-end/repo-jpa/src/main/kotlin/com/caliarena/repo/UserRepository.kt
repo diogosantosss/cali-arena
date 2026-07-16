@@ -25,13 +25,14 @@ class UserRepository(
         username: String,
         passwordValidationInfo: PasswordValidationInfo,
         role: UserRole,
+        createdAt: Instant,
     ): User {
         val user =
             UserEntity(
                 username = username,
                 password = passwordValidationInfo.validationInfo,
                 role = role,
-                createdAt = Instant.now().epochSecond,
+                createdAt = createdAt.epochSecond,
             )
 
         return userRepositoryJpa.save(user).toDomain()
@@ -83,6 +84,16 @@ class UserRepository(
 
     override fun removeTokenByTokenValidation(tokenValidationInfo: TokenValidationInfo): Int =
         tokenRepositoryJpa.deleteByTokenValidation(tokenValidationInfo.validationInfo)
+
+    override fun updateUserRole(
+        userId: Int,
+        role: UserRole,
+    ): User? {
+        val user = userRepositoryJpa.findByIdOrNull(userId) ?: return null
+        user.role = role
+        userRepositoryJpa.save(user)
+        return user.toDomain()
+    }
 
     override fun findById(id: Int): User? = userRepositoryJpa.findByIdOrNull(id) ?.toDomain()
 

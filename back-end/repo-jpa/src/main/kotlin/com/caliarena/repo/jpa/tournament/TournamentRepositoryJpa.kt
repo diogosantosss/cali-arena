@@ -6,4 +6,6 @@ import org.springframework.data.jpa.repository.JpaRepository
 
 interface TournamentRepositoryJpa : JpaRepository<TournamentEntity, Int> {
     fun findByStatus(status: TournamentStatus): List<TournamentEntity>
+
+    fun findByName(tournamentName: String): TournamentEntity?
 }

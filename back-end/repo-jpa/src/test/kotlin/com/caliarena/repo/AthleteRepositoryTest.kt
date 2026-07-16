@@ -20,11 +20,11 @@ import java.time.temporal.ChronoUnit
 @SpringBootTest(classes = [TestConfiguration::class])
 class AthleteRepositoryTest {
     @Autowired
-    lateinit var transactionManager: TransactionManagerJpa
+    lateinit var trx: TransactionManagerJpa
 
     @BeforeEach
     fun cleanup() {
-        transactionManager.run {
+        trx.run {
             repoAthlete.clear()
             repoClub.clear()
         }
@@ -34,7 +34,7 @@ class AthleteRepositoryTest {
     inner class CreateAthlete {
         @Test
         fun `should create an athlete for an existing club`() =
-            transactionManager.run {
+            trx.run {
                 val club = newClub(repoClub, "crossfit")
 
                 val athlete =
@@ -54,7 +54,7 @@ class AthleteRepositoryTest {
 
         @Test
         fun `should return null when club does not exist`() =
-            transactionManager.run {
+            trx.run {
                 val athlete =
                     repoAthlete.createAthlete(
                         name = "ghost",
@@ -71,7 +71,7 @@ class AthleteRepositoryTest {
     inner class FindByClubId {
         @Test
         fun `should return athletes for a club`() =
-            transactionManager.run {
+            trx.run {
                 val club = newClub(repoClub, "club-a")
                 newAthlete(repoAthlete, club.id, "a1", GenderType.MALE)
                 newAthlete(repoAthlete, club.id, "a2", GenderType.FEMALE)
@@ -83,7 +83,7 @@ class AthleteRepositoryTest {
 
         @Test
         fun `should return empty list when club has no athletes`() =
-            transactionManager.run {
+            trx.run {
                 val club = newClub(repoClub, "club-b")
 
                 val athletes = repoAthlete.findByClubId(club.id)
@@ -96,7 +96,7 @@ class AthleteRepositoryTest {
     inner class FindByGender {
         @Test
         fun `should return athletes with the given gender`() =
-            transactionManager.run {
+            trx.run {
                 val club = newClub(repoClub, "club-c")
                 newAthlete(repoAthlete, club.id, "m1", GenderType.MALE)
                 newAthlete(repoAthlete, club.id, "f1", GenderType.FEMALE)
@@ -112,7 +112,7 @@ class AthleteRepositoryTest {
     inner class FindById {
         @Test
         fun `should find an existing athlete by id`() =
-            transactionManager.run {
+            trx.run {
                 val club = newClub(repoClub)
                 val created = newAthlete(repoAthlete, club.id)
 
@@ -124,7 +124,7 @@ class AthleteRepositoryTest {
 
         @Test
         fun `should return null when id does not exist`() =
-            transactionManager.run {
+            trx.run {
                 assertNull(repoAthlete.findById(-1))
             }
     }
@@ -133,7 +133,7 @@ class AthleteRepositoryTest {
     inner class FindAll {
         @Test
         fun `should return all created athletes`() =
-            transactionManager.run {
+            trx.run {
                 val club = newClub(repoClub)
                 newAthlete(repoAthlete, club.id, "a1")
                 newAthlete(repoAthlete, club.id, "a2")
@@ -145,7 +145,7 @@ class AthleteRepositoryTest {
 
         @Test
         fun `should return empty list when there are no athletes`() =
-            transactionManager.run {
+            trx.run {
                 assertTrue(repoAthlete.findAll().isEmpty())
             }
     }
@@ -154,7 +154,7 @@ class AthleteRepositoryTest {
     inner class Save {
         @Test
         fun `should update an existing athlete`() =
-            transactionManager.run {
+            trx.run {
                 val club = newClub(repoClub, "club-save")
                 val created = newAthlete(repoAthlete, club.id, "john")
                 val updated = created.copy(name = "john-updated")
@@ -171,7 +171,7 @@ class AthleteRepositoryTest {
     inner class DeleteById {
         @Test
         fun `should remove the athlete`() =
-            transactionManager.run {
+            trx.run {
                 val club = newClub(repoClub)
                 val created = newAthlete(repoAthlete, club.id)
 
@@ -185,7 +185,7 @@ class AthleteRepositoryTest {
     inner class Clear {
         @Test
         fun `should remove all athletes`() =
-            transactionManager.run {
+            trx.run {
                 val club = newClub(repoClub)
                 newAthlete(repoAthlete, club.id, "a1")
                 newAthlete(repoAthlete, club.id, "a2")

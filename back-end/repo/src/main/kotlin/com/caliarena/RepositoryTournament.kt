@@ -23,6 +23,8 @@ interface RepositoryTournament : Repository<Tournament> {
 
     fun updateStatus(id: Int, status: TournamentStatus): Tournament?
 
+    fun findByName(name: String): Tournament?
+
     // TournamentState
     fun createTournamentState(tournamentId: Int, updatedAt: Instant): TournamentState?
 
@@ -32,6 +34,8 @@ interface RepositoryTournament : Repository<Tournament> {
 
     // Bracket
     fun createBracket(tournamentId: Int, gender: GenderType, stage: BracketStage, createdAt: Instant): Bracket?
+
+    fun findByBracketId(bracketId: Int): Bracket?
 
     fun findBracketsByTournamentId(tournamentId: Int): List<Bracket>
 

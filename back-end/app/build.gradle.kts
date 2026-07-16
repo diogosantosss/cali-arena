@@ -1,7 +1,6 @@
 plugins {
     alias(libs.plugins.kotlin.jvm)
-
-    kotlin("plugin.spring") version "1.9.25"
+    alias(libs.plugins.kotlin.spring)
     alias(libs.plugins.spring.boot)
     alias(libs.plugins.spring.dependency.management)
     alias(libs.plugins.ktlint)
@@ -15,9 +14,13 @@ repositories {
 }
 
 dependencies {
+    api(project(":http"))
     implementation(project(":repo-jpa"))
 
     implementation("org.springframework.boot:spring-boot-starter-web")
+    implementation("org.springframework.boot:spring-boot-starter-actuator")
+
+    implementation("org.jetbrains.kotlin:kotlin-reflect")
 
     // for Postgres
     implementation("org.postgresql:postgresql:42.7.2")
