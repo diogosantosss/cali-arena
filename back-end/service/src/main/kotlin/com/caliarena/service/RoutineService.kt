@@ -27,8 +27,9 @@ class RoutineService(
         timeCapSeconds: Int?,
     ): Either<RoutineError, EnduranceRoutine> =
         trx.run {
-            repoEnduranceRoutine.findByName(name)
-                ?: return@run failure(RoutineError.RoutineAlreadyExists)
+            repoEnduranceRoutine
+                .findByName(name)
+                ?.let { return@run failure(RoutineError.RoutineAlreadyExists) }
 
             val enduranceRoutine =
                 repoEnduranceRoutine.createRoutine(
