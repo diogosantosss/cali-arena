@@ -239,7 +239,7 @@ class ClubServiceTest : ServiceTest() {
 
             val result = service.updateClub(1, "Sporting Clube de Portugal", "SCP")
 
-            assertEquals(failure(ClubError.CreatingClub), result)
+            assertEquals(failure(ClubError.UpdatingClub), result)
         }
 
         @Test

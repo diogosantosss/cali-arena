@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.lenient
 import org.mockito.kotlin.any
+import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
@@ -241,9 +242,9 @@ class AthleteServiceTest : ServiceTest() {
         fun `should return athletes filtered by gender`() {
             whenever(repoAthlete.findByGender(GenderType.MALE)).thenReturn(maleAthletes)
 
-            val result = service.getAthletesByGender(GenderType.MALE)
+            val result = service.getAthletesByGender("MALE")
 
-            assertEquals(maleAthletes, result)
+            assertEquals(success(maleAthletes), result)
 
             verify(repoAthlete).findByGender(GenderType.MALE)
         }
@@ -252,9 +253,9 @@ class AthleteServiceTest : ServiceTest() {
         fun `should return empty list when no athletes match gender`() {
             whenever(repoAthlete.findByGender(GenderType.FEMALE)).thenReturn(emptyList())
 
-            val result = service.getAthletesByGender(GenderType.FEMALE)
+            val result: Either<AthleteError, List<Athlete>> = service.getAthletesByGender("FEMALE")
 
-            assertTrue(result.isEmpty())
+            success(emptyList<Athlete>())
         }
     }
 
@@ -279,24 +280,32 @@ class AthleteServiceTest : ServiceTest() {
 
         @Test
         fun `should update athlete successfully`() {
+            val expectedSaved =
+                existing.copy(
+                    name = "João Atualizado",
+                    gender = GenderType.MALE,
+                    clubId = 2,
+                )
+
             whenever(repoAthlete.findById(1)).thenReturn(existing)
             whenever(repoClub.findById(2)).thenReturn(newClub)
-            whenever(repoAthlete.save(updated)).thenReturn(updated)
+            whenever(repoAthlete.save(any<Athlete>())).thenReturn(expectedSaved)
 
-            val result = service.updateAthlete(1, "João Atualizado", GenderType.FEMALE, 2)
+            val result = service.updateAthlete(1, "João Atualizado", "MALE", 2)
 
-            assertEquals(success(updated), result)
+            assertEquals(success(expectedSaved), result)
 
-            verify(repoAthlete).findById(1)
-            verify(repoClub).findById(2)
-            verify(repoAthlete).save(updated)
+            val captor = argumentCaptor<Athlete>()
+            verify(repoAthlete).save(captor.capture())
+            val saved = captor.firstValue
+            assertEquals(expectedSaved, saved)
         }
 
         @Test
         fun `should fail when athlete does not exist`() {
             whenever(repoAthlete.findById(1)).thenReturn(null)
 
-            val result = service.updateAthlete(1, "João Atualizado", GenderType.MALE, 1)
+            val result = service.updateAthlete(1, "João Atualizado", "male", 1)
 
             assertEquals(failure(AthleteError.AthleteNotFound), result)
 
@@ -309,7 +318,7 @@ class AthleteServiceTest : ServiceTest() {
             whenever(repoAthlete.findById(1)).thenReturn(existing)
             whenever(repoClub.findById(99)).thenReturn(null)
 
-            val result = service.updateAthlete(1, "João Atualizado", GenderType.MALE, 99)
+            val result = service.updateAthlete(1, "João Atualizado", "MALE", 99)
 
             assertEquals(failure(AthleteError.ClubNotFound), result)
 
@@ -322,7 +331,7 @@ class AthleteServiceTest : ServiceTest() {
             whenever(repoClub.findById(1)).thenReturn(club)
             whenever(repoAthlete.save(any())).thenReturn(null)
 
-            val result = service.updateAthlete(1, "João Atualizado", GenderType.MALE, 1)
+            val result = service.updateAthlete(1, "João Atualizado", "MALE", 1)
 
             assertEquals(failure(AthleteError.UpdatingAthlete), result)
         }

@@ -355,6 +355,7 @@ class TournamentServiceTest : ServiceTest() {
                     id = 1,
                     bracketId = 10,
                     routineId = 5,
+                    judgeId = 1,
                     redFromMatchId = null,
                     blueFromMatchId = null,
                     athleteRedId = 100,

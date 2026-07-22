@@ -36,6 +36,39 @@ sealed class Problem(
 
     data object NotAuthorized : Problem(URI("$PROBLEM_URI_PATH/not-authorized"))
 
+    // Athlete related Errors
+    data object AthleteNotFound : Problem(URI("$PROBLEM_URI_PATH/athlete-not-found"))
+
+    data object ErrorCreatingAthlete : Problem(URI("$PROBLEM_URI_PATH/error-creating-athlete"))
+
+    data object InvalidGender : Problem(URI("$PROBLEM_URI_PATH/gender"))
+
+    data object UpdatingAthlete : Problem(URI("$PROBLEM_URI_PATH/updating-athlete"))
+
+    // Club related Errors
+    data object ClubNotFound : Problem(URI("$PROBLEM_URI_PATH/club-not-found"))
+
+    data object ClubAlreadyExists : Problem(URI("$PROBLEM_URI_PATH/club-already-exists"))
+
+    data object CreatingClub : Problem(URI("$PROBLEM_URI_PATH/creating-club"))
+
+    // Match related Errors
+    data object MatchNotFound : Problem(URI("$PROBLEM_URI_PATH/match-not-found"))
+
+    data object BracketNotFound : Problem(URI("$PROBLEM_URI_PATH/bracket-not-found"))
+
+    data object RoutineNotFound : Problem(URI("$PROBLEM_URI_PATH/routine-not-found"))
+
+    data object AthleteNotInMatch : Problem(URI("$PROBLEM_URI_PATH/athlete-not-in-match"))
+
+    data object InvalidStatusTransition : Problem(URI("$PROBLEM_URI_PATH/invalid-status-transition"))
+
+    data object MatchNotRunning : Problem(URI("$PROBLEM_URI_PATH/match-not-running"))
+
+    data object ProgressNotFound : Problem(URI("$PROBLEM_URI_PATH/progress-not-found"))
+
+    data object ProgressAlreadyExists : Problem(URI("$PROBLEM_URI_PATH/progress-already-exists"))
+
     private data class ProblemBody(
         val type: String,
         val title: String,

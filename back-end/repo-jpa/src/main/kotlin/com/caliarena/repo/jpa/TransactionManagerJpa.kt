@@ -10,7 +10,6 @@ import com.caliarena.repo.TournamentRepository
 import com.caliarena.repo.UserRepository
 import com.caliarena.repo.jpa.athlete.AthleteRepositoryJpa
 import com.caliarena.repo.jpa.club.ClubRepositoryJpa
-import com.caliarena.repo.jpa.match.MatchEventRepositoryJpa
 import com.caliarena.repo.jpa.match.MatchProgRepositoryJpa
 import com.caliarena.repo.jpa.match.MatchRepositoryJpa
 import com.caliarena.repo.jpa.routine.EndRoutineRepositoryJpa
@@ -31,7 +30,6 @@ class TransactionManagerJpa(
     // match related repos
     private val matchRepositoryJpa: MatchRepositoryJpa,
     private val matchProgRepositoryJpa: MatchProgRepositoryJpa,
-    private val matchEventRepositoryJpa: MatchEventRepositoryJpa,
     // routine related repos
     private val endRoutineRepositoryJpa: EndRoutineRepositoryJpa,
     private val exerciseRepositoryJpa: ExerciseRepositoryJpa,
@@ -49,11 +47,11 @@ class TransactionManagerJpa(
         val repoClub = ClubRepository(clubRepositoryJpa)
         val repoMatch =
             MatchRepository(
-                matchEventRepositoryJpa,
                 matchProgRepositoryJpa,
                 matchRepositoryJpa,
                 bracketRepositoryJpa,
                 userRepositoryJpa,
+                exerciseRepositoryJpa,
             )
         val repoEnduranceRoutine =
             EnduranceRoutineRepository(

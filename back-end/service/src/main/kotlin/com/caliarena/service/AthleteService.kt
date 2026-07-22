@@ -69,15 +69,19 @@ class AthleteService(
             success(repoAthlete.findByClubId(clubId))
         }
 
-    fun getAthletesByGender(gender: GenderType): List<Athlete> =
+    fun getAthletesByGender(gender: String): Either<AthleteError, List<Athlete>> =
         trx.run {
-            repoAthlete.findByGender(gender)
+            val genderType =
+                GenderType.entries.find { it.name == gender }
+                    ?: return@run failure(AthleteError.InvalidGender)
+
+            success(repoAthlete.findByGender(genderType))
         }
 
     fun updateAthlete(
         id: Int,
         name: String,
-        gender: GenderType,
+        gender: String,
         clubId: Int,
     ): Either<AthleteError, Athlete> =
         trx.run {
@@ -85,12 +89,16 @@ class AthleteService(
                 repoAthlete.findById(id)
                     ?: return@run failure(AthleteError.AthleteNotFound)
 
+            val genderType =
+                GenderType.entries.find { it.name == gender }
+                    ?: return@run failure(AthleteError.InvalidGender)
+
             repoClub.findById(clubId)
                 ?: return@run failure(AthleteError.ClubNotFound)
 
             val updated =
                 repoAthlete.save(
-                    existing.copy(name = name, gender = gender, clubId = clubId),
+                    existing.copy(name = name, gender = genderType, clubId = clubId),
                 ) ?: return@run failure(AthleteError.UpdatingAthlete)
 
             success(updated)
