@@ -1,6 +1,6 @@
 DROP TABLE IF EXISTS match_progress;
-DROP TABLE IF EXISTS matches;
 DROP TABLE IF EXISTS tournament_state;
+DROP TABLE IF EXISTS matches;
 DROP TABLE IF EXISTS brackets;
 DROP TABLE IF EXISTS exercises;
 DROP TABLE IF EXISTS endurance_routines;
