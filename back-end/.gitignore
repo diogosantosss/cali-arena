@@ -1,9 +1,9 @@
 .gradle
+.env
 build/
 !gradle/wrapper/gradle-wrapper.jar
 !**/src/main/**/build/
 !**/src/test/**/build/
-app/src/main/resources/
 
 ### IntelliJ IDEA ###
 .idea
