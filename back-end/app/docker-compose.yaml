@@ -23,3 +23,11 @@ services:
       DB_URL: ${DB_URL}
     ports:
       - "8080:8080"
+
+  nginx:
+    container_name: caliarena-nginx
+    image: caliarena-nginx
+    ports:
+      - "4000:4000"
+    depends_on:
+      - caliarena-jvm
