@@ -57,8 +57,6 @@ sealed class Problem(
 
     data object BracketNotFound : Problem(URI("$PROBLEM_URI_PATH/bracket-not-found"))
 
-    data object RoutineNotFound : Problem(URI("$PROBLEM_URI_PATH/routine-not-found"))
-
     data object AthleteNotInMatch : Problem(URI("$PROBLEM_URI_PATH/athlete-not-in-match"))
 
     data object InvalidStatusTransition : Problem(URI("$PROBLEM_URI_PATH/invalid-status-transition"))
@@ -68,6 +66,28 @@ sealed class Problem(
     data object ProgressNotFound : Problem(URI("$PROBLEM_URI_PATH/progress-not-found"))
 
     data object ProgressAlreadyExists : Problem(URI("$PROBLEM_URI_PATH/progress-already-exists"))
+
+    // Routines related Errors
+    data object RoutineNotFound : Problem(URI("$PROBLEM_URI_PATH/routine-not-found"))
+
+    data object RoutineAlreadyExists : Problem(URI("$PROBLEM_URI_PATH/routine-already-exists"))
+
+    data object ExerciseTypeNotFound : Problem(URI("$PROBLEM_URI_PATH/exercise-type-not-found"))
+
+    // Tournament related Errors
+    data object TournamentNotFound : Problem(URI("$PROBLEM_URI_PATH/tournament-not-found"))
+
+    data object TournamentAlreadyExists : Problem(URI("$PROBLEM_URI_PATH/tournament-already-exists"))
+
+    data object BracketAlreadyExists : Problem(URI("$PROBLEM_URI_PATH/bracket-already-exists"))
+
+    data object TournamentStateNotFound : Problem(URI("$PROBLEM_URI_PATH/tournament-state-not-found"))
+
+    data object TournamentStateAlreadyExists : Problem(URI("$PROBLEM_URI_PATH/tournament-state-already-exists"))
+
+    data object InvalidBracketStage : Problem(URI("$PROBLEM_URI_PATH/invalid-bracket-stage"))
+
+    data object InvalidScreenState : Problem(URI("$PROBLEM_URI_PATH/invalid-screen-state"))
 
     private data class ProblemBody(
         val type: String,
