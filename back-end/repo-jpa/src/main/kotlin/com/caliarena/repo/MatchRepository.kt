@@ -2,17 +2,15 @@ package com.caliarena.repo
 
 import com.caliarena.RepositoryMatch
 import com.caliarena.domain.match.Match
-import com.caliarena.domain.match.MatchEvent
-import com.caliarena.domain.match.MatchEventType
 import com.caliarena.domain.match.MatchProgress
 import com.caliarena.domain.match.MatchStatus
 import com.caliarena.repo.entities.match.MatchEntity
 import com.caliarena.repo.entities.match.MatchEntity.Companion.fromDomain
-import com.caliarena.repo.entities.match.MatchEventEntity
 import com.caliarena.repo.entities.match.MatchProgressEntity
-import com.caliarena.repo.jpa.match.MatchEventRepositoryJpa
+import com.caliarena.repo.entities.match.MatchProgressEntity.Companion.fromDomain
 import com.caliarena.repo.jpa.match.MatchProgRepositoryJpa
 import com.caliarena.repo.jpa.match.MatchRepositoryJpa
+import com.caliarena.repo.jpa.routine.ExerciseRepositoryJpa
 import com.caliarena.repo.jpa.tournament.BracketRepositoryJpa
 import com.caliarena.repo.jpa.user.UserRepositoryJpa
 import org.springframework.data.repository.findByIdOrNull
@@ -21,25 +19,28 @@ import java.time.Instant
 
 @Repository
 class MatchRepository(
-    private val matchEventJpa: MatchEventRepositoryJpa,
     private val matchProgJpa: MatchProgRepositoryJpa,
     private val matchJpa: MatchRepositoryJpa,
     private val bracketJpa: BracketRepositoryJpa,
     private val userJpa: UserRepositoryJpa,
+    private val exerciseJpa: ExerciseRepositoryJpa,
 ) : RepositoryMatch {
     override fun createMatch(
         bracketId: Int,
         routineId: Int,
+        judgeId: Int,
         redFromMatchId: Int?,
         blueFromMatchId: Int?,
         createdAt: Instant,
     ): Match? {
         val bracket = bracketJpa.findByIdOrNull(bracketId) ?: return null
+        val judge = userJpa.findByIdOrNull(judgeId) ?: return null
         return matchJpa
             .save(
                 MatchEntity(
                     bracket = bracket,
                     routineId = routineId,
+                    judge = judge,
                     redFromMatchId = redFromMatchId,
                     blueFromMatchId = blueFromMatchId,
                     status = MatchStatus.PENDING,
@@ -51,29 +52,6 @@ class MatchRepository(
     override fun findByBracketId(bracketId: Int): List<Match> = matchJpa.findByBracketId(bracketId).map(MatchEntity::toDomain)
 
     override fun findByStatus(status: MatchStatus): List<Match> = matchJpa.findByStatus(status).map(MatchEntity::toDomain)
-
-    override fun updateStatus(
-        id: Int,
-        status: MatchStatus,
-    ): Match? {
-        val entity = matchJpa.findByIdOrNull(id) ?: return null
-        entity.status = status
-        return matchJpa.save(entity).toDomain()
-    }
-
-    override fun updateWinner(
-        id: Int,
-        winnerAthleteId: Int,
-    ): Match? {
-        val entity = matchJpa.findByIdOrNull(id) ?: return null
-        entity.winnerAthlete =
-            when (winnerAthleteId) {
-                entity.athleteRed?.id -> entity.athleteRed
-                entity.athleteBlue?.id -> entity.athleteBlue
-                else -> return null
-            }
-        return matchJpa.save(entity).toDomain()
-    }
 
     override fun createMatchProgress(
         matchId: Int,
@@ -93,54 +71,23 @@ class MatchRepository(
 
     override fun findProgressByMatchId(matchId: Int): MatchProgress? = matchProgJpa.findByMatchId(matchId)?.toDomain()
 
-    override fun updateReps(
-        matchId: Int,
-        redReps: Int,
-        blueReps: Int,
-        updatedAt: Instant,
+    override fun updateMatchProgress(
+        progress: MatchProgress,
+        redCurrentExerciseId: Int?,
+        blueCurrentExerciseId: Int?,
     ): MatchProgress? {
-        val entity = matchProgJpa.findByMatchId(matchId) ?: return null
-        entity.redCurrentReps = redReps
-        entity.blueCurrentReps = blueReps
-        entity.updatedAt = updatedAt.epochSecond
-        return matchProgJpa.save(entity).toDomain()
-    }
+        val match = matchJpa.findByIdOrNull(progress.matchId) ?: return null
+        matchProgJpa.findByIdOrNull(progress.id) ?: return null
 
-    override fun updateTimer(
-        matchId: Int,
-        timerStartedAt: Instant?,
-        timerRemainingSeconds: Int?,
-        updatedAt: Instant,
-    ): MatchProgress? {
-        val entity = matchProgJpa.findByMatchId(matchId) ?: return null
-        entity.timerStartedAt = timerStartedAt?.epochSecond
-        entity.timerRemainingSeconds = timerRemainingSeconds
-        entity.updatedAt = updatedAt.epochSecond
-        return matchProgJpa.save(entity).toDomain()
-    }
+        if (redCurrentExerciseId != null || blueCurrentExerciseId != null) {
+            val redCurrentExercise = redCurrentExerciseId?.let { exerciseJpa.findByIdOrNull(it) }
+            val blueCurrentExercise = blueCurrentExerciseId?.let { exerciseJpa.findByIdOrNull(it) }
 
-    override fun createEvent(
-        matchId: Int,
-        judgeId: Int,
-        eventType: MatchEventType,
-        payload: String?,
-        createdAt: Instant,
-    ): MatchEvent? {
-        val match = matchJpa.findByIdOrNull(matchId) ?: return null
-        val judge = userJpa.findByIdOrNull(judgeId) ?: return null
-        return matchEventJpa
-            .save(
-                MatchEventEntity(
-                    match = match,
-                    judge = judge,
-                    eventType = eventType,
-                    payload = payload,
-                    createdAt = createdAt.epochSecond,
-                ),
-            ).toDomain()
-    }
+            return matchProgJpa.save(progress.fromDomain(match, redCurrentExercise, blueCurrentExercise)).toDomain()
+        }
 
-    override fun findEventsByMatchId(matchId: Int): List<MatchEvent> = matchEventJpa.findByMatchId(matchId).map(MatchEventEntity::toDomain)
+        return matchProgJpa.save(progress.fromDomain(match, null, null)).toDomain()
+    }
 
     override fun findById(id: Int): Match? = matchJpa.findByIdOrNull(id)?.toDomain()
 
@@ -148,13 +95,13 @@ class MatchRepository(
 
     override fun save(entity: Match): Match? {
         val bracket = bracketJpa.findByIdOrNull(entity.bracketId) ?: return null
-        return matchJpa.save(entity.fromDomain(bracket, null, null, null)).toDomain()
+        val judge = userJpa.findByIdOrNull(entity.judgeId) ?: return null
+        return matchJpa.save(entity.fromDomain(bracket, null, null, judge, null)).toDomain()
     }
 
     override fun deleteById(id: Int) = matchJpa.deleteById(id)
 
     override fun clear() {
-        matchEventJpa.deleteAll()
         matchProgJpa.deleteAll()
         matchJpa.clearFromMatchReferences()
         matchJpa.deleteAll()

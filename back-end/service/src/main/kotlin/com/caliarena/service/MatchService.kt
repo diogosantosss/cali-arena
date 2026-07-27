@@ -2,12 +2,10 @@ package com.caliarena.service
 
 import com.caliarena.TransactionManager
 import com.caliarena.domain.match.Match
-import com.caliarena.domain.match.MatchEvent
 import com.caliarena.domain.match.MatchProgress
 import com.caliarena.domain.match.MatchStatus
 import org.springframework.stereotype.Service
 import java.time.Clock
-import java.time.Instant
 
 sealed class MatchError {
     data object MatchNotFound : MatchError()
@@ -25,6 +23,18 @@ sealed class MatchError {
     data object ProgressNotFound : MatchError()
 
     data object ProgressAlreadyExists : MatchError()
+
+    data object AthleteNotFound : MatchError()
+
+    data object AthletesNotAssigned : MatchError()
+
+    data object JudgeNotFound : MatchError()
+
+    data object SameAthleteOnBothSides : MatchError()
+
+    data object ErrorCreatingMatchProg : MatchError()
+
+    data object ExerciseNotFound : MatchError()
 }
 
 @Service
@@ -35,6 +45,7 @@ class MatchService(
     fun createMatch(
         bracketId: Int,
         routineId: Int,
+        judgeId: Int,
         redFromMatchId: Int?,
         blueFromMatchId: Int?,
     ): Either<MatchError, Match> =
@@ -45,16 +56,136 @@ class MatchService(
             repoEnduranceRoutine.findById(routineId)
                 ?: return@run failure(MatchError.RoutineNotFound)
 
+            repoUser.findById(judgeId)
+                ?: return@run failure(MatchError.JudgeNotFound)
+
             val match =
                 repoMatch.createMatch(
                     bracketId = bracketId,
                     routineId = routineId,
+                    judgeId = judgeId,
                     redFromMatchId = redFromMatchId,
                     blueFromMatchId = blueFromMatchId,
                     createdAt = clock.instant(),
                 ) ?: return@run failure(MatchError.BracketNotFound)
 
             success(match)
+        }
+
+    fun assignAthletesToMatch(
+        matchId: Int,
+        athleteRedId: Int,
+        athleteBlueId: Int,
+    ): Either<MatchError, Match> =
+        trxManager.run {
+            val match =
+                repoMatch.findById(matchId)
+                    ?: return@run failure(MatchError.MatchNotFound)
+
+            if (athleteRedId == athleteBlueId) {
+                return@run failure(MatchError.SameAthleteOnBothSides)
+            }
+
+            repoAthlete.findById(athleteBlueId)
+                ?: return@run failure(MatchError.AthleteNotFound)
+            repoAthlete.findById(athleteRedId)
+                ?: return@run failure(MatchError.AthleteNotFound)
+
+            val result =
+                repoMatch.save(
+                    match.copy(
+                        athleteBlueId = athleteBlueId,
+                        athleteRedId = athleteRedId,
+                    ),
+                ) ?: return@run failure(MatchError.MatchNotFound)
+
+            success(result)
+        }
+
+    fun startMatch(matchId: Int): Either<MatchError, MatchProgress> =
+        trxManager.run {
+            val match =
+                repoMatch.findById(matchId)
+                    ?: return@run failure(MatchError.MatchNotFound)
+
+            if (repoMatch.findProgressByMatchId(matchId) != null) {
+                return@run failure(MatchError.ProgressAlreadyExists)
+            }
+
+            if (match.athleteBlueId == null || match.athleteRedId == null) {
+                return@run failure(MatchError.AthletesNotAssigned)
+            }
+
+            val now = clock.instant()
+
+            repoMatch.save(
+                match.copy(
+                    status = MatchStatus.RUNNING,
+                    startedAt = now,
+                ),
+            ) ?: return@run failure(MatchError.MatchNotFound)
+
+            val progress =
+                repoMatch.createMatchProgress(
+                    matchId = matchId,
+                    updatedAt = now,
+                ) ?: return@run failure(MatchError.ErrorCreatingMatchProg)
+
+            success(progress)
+        }
+
+    fun updateAthletesReps(
+        matchId: Int,
+        redReps: Int? = null,
+        blueReps: Int? = null,
+    ): Either<MatchError, MatchProgress> =
+        trxManager.run {
+            val match =
+                repoMatch.findById(matchId)
+                    ?: return@run failure(MatchError.MatchNotFound)
+
+            if (match.status != MatchStatus.RUNNING) {
+                return@run failure(MatchError.MatchNotRunning)
+            }
+
+            val prog =
+                repoMatch.findProgressByMatchId(matchId)
+                    ?: return@run failure(MatchError.ProgressNotFound)
+
+            val exercises = repoEnduranceRoutine.findExercisesByRoutineId(match.routineId)
+
+            if (redReps != null && exercises.none { it.id == prog.redCurrentExerciseId }) {
+                return@run failure(MatchError.ExerciseNotFound)
+            }
+            if (blueReps != null && exercises.none { it.id == prog.blueCurrentExerciseId }) {
+                return@run failure(MatchError.ExerciseNotFound)
+            }
+
+            val now = clock.instant()
+            val newProg = prog.advance(redReps, blueReps, exercises, now)
+
+            val updated =
+                repoMatch.updateMatchProgress(
+                    progress = newProg,
+                    redCurrentExerciseId = newProg.redCurrentExerciseId,
+                    blueCurrentExerciseId = newProg.blueCurrentExerciseId,
+                ) ?: return@run failure(MatchError.ProgressNotFound)
+
+            val (redFinishedAt, blueFinishedAt) = updated.redFinishedAt to updated.blueFinishedAt
+
+            if (redFinishedAt != null || blueFinishedAt != null) {
+                val redWon = redFinishedAt != null
+
+                repoMatch.save(
+                    match.copy(
+                        status = MatchStatus.FINISHED,
+                        winnerAthleteId = if (redWon) match.athleteRedId else match.athleteBlueId,
+                        finishedAt = if (redWon) redFinishedAt else blueFinishedAt,
+                    ),
+                ) ?: return@run failure(MatchError.MatchNotFound)
+            }
+
+            success(updated)
         }
 
     fun getMatchById(id: Int): Either<MatchError, Match> =
@@ -74,64 +205,6 @@ class MatchService(
             success(repoMatch.findByBracketId(bracketId))
         }
 
-    fun updateMatchStatus(
-        id: Int,
-        newStatus: MatchStatus,
-    ): Either<MatchError, Match> =
-        trxManager.run {
-            val match =
-                repoMatch.findById(id)
-                    ?: return@run failure(MatchError.MatchNotFound)
-
-            if (!isValidStatusTransition(match.status, newStatus)) {
-                return@run failure(MatchError.InvalidStatusTransition)
-            }
-
-            val updated =
-                repoMatch.updateStatus(id, newStatus)
-                    ?: return@run failure(MatchError.MatchNotFound)
-
-            success(updated)
-        }
-
-    fun setMatchWinner(
-        id: Int,
-        winnerAthleteId: Int,
-    ): Either<MatchError, Match> =
-        trxManager.run {
-            val match =
-                repoMatch.findById(id)
-                    ?: return@run failure(MatchError.MatchNotFound)
-
-            if (match.athleteRedId != winnerAthleteId && match.athleteBlueId != winnerAthleteId) {
-                return@run failure(MatchError.AthleteNotInMatch)
-            }
-
-            val updated =
-                repoMatch.updateWinner(id, winnerAthleteId)
-                    ?: return@run failure(MatchError.MatchNotFound)
-
-            success(updated)
-        }
-
-    fun initMatchProgress(matchId: Int): Either<MatchError, MatchProgress> =
-        trxManager.run {
-            repoMatch.findById(matchId)
-                ?: return@run failure(MatchError.MatchNotFound)
-
-            if (repoMatch.findProgressByMatchId(matchId) != null) {
-                return@run failure(MatchError.ProgressAlreadyExists)
-            }
-
-            val progress =
-                repoMatch.createMatchProgress(
-                    matchId = matchId,
-                    updatedAt = clock.instant(),
-                ) ?: return@run failure(MatchError.MatchNotFound)
-
-            success(progress)
-        }
-
     fun getMatchProgress(matchId: Int): Either<MatchError, MatchProgress> =
         trxManager.run {
             repoMatch.findById(matchId)
@@ -142,75 +215,5 @@ class MatchService(
                     ?: return@run failure(MatchError.ProgressNotFound)
 
             success(progress)
-        }
-
-    fun updateReps(
-        matchId: Int,
-        redReps: Int,
-        blueReps: Int,
-    ): Either<MatchError, MatchProgress> =
-        trxManager.run {
-            val match =
-                repoMatch.findById(matchId)
-                    ?: return@run failure(MatchError.MatchNotFound)
-
-            if (match.status != MatchStatus.RUNNING) {
-                return@run failure(MatchError.MatchNotRunning)
-            }
-
-            val updated =
-                repoMatch.updateReps(
-                    matchId = matchId,
-                    redReps = redReps,
-                    blueReps = blueReps,
-                    updatedAt = clock.instant(),
-                ) ?: return@run failure(MatchError.ProgressNotFound)
-
-            success(updated)
-        }
-
-    fun updateTimer(
-        matchId: Int,
-        timerStartedAt: Instant?,
-        timerRemainingSeconds: Int?,
-    ): Either<MatchError, MatchProgress> =
-        trxManager.run {
-            val match =
-                repoMatch.findById(matchId)
-                    ?: return@run failure(MatchError.MatchNotFound)
-
-            if (match.status != MatchStatus.RUNNING) {
-                return@run failure(MatchError.MatchNotRunning)
-            }
-
-            val updated =
-                repoMatch.updateTimer(
-                    matchId = matchId,
-                    timerStartedAt = timerStartedAt,
-                    timerRemainingSeconds = timerRemainingSeconds,
-                    updatedAt = clock.instant(),
-                ) ?: return@run failure(MatchError.ProgressNotFound)
-
-            success(updated)
-        }
-
-    fun getMatchEvents(matchId: Int): Either<MatchError, List<MatchEvent>> =
-        trxManager.run {
-            repoMatch.findById(matchId)
-                ?: return@run failure(MatchError.MatchNotFound)
-
-            success(repoMatch.findEventsByMatchId(matchId))
-        }
-
-    private fun isValidStatusTransition(
-        current: MatchStatus,
-        next: MatchStatus,
-    ): Boolean =
-        when (current) {
-            MatchStatus.PENDING -> next == MatchStatus.READY
-            MatchStatus.READY -> next == MatchStatus.RUNNING
-            MatchStatus.RUNNING -> next == MatchStatus.PAUSED || next == MatchStatus.FINISHED
-            MatchStatus.PAUSED -> next == MatchStatus.RUNNING
-            MatchStatus.FINISHED -> false
         }
 }

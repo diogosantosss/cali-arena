@@ -6,7 +6,7 @@ import com.caliarena.RepositoryTournament
 import com.caliarena.RepositoryUser
 import com.caliarena.domain.athlete.GenderType
 import com.caliarena.domain.bracket.BracketStage
-import com.caliarena.domain.match.MatchEventType
+import com.caliarena.domain.match.MatchProgress
 import com.caliarena.domain.match.MatchStatus
 import com.caliarena.domain.user.PasswordValidationInfo
 import com.caliarena.domain.user.UserRole
@@ -46,8 +46,9 @@ class MatchRepositoryTest {
             trx.run {
                 val bracketId = newTournamentWithBracket(repoTournament)
                 val routineId = newRoutine(repoEnduranceRoutine)
+                val judgeId = newJudge(repoUser)
 
-                val match = newMatch(repoMatch, bracketId, routineId)
+                val match = newMatch(repoMatch, bracketId, routineId, judgeId)
 
                 assertNotEquals(0, match.id)
                 assertEquals(bracketId, match.bracketId)
@@ -64,6 +65,7 @@ class MatchRepositoryTest {
                     repoMatch.createMatch(
                         bracketId = -1,
                         routineId = routineId,
+                        judgeId = -1,
                         redFromMatchId = null,
                         blueFromMatchId = null,
                         createdAt = Instant.now().truncatedTo(ChronoUnit.SECONDS),
@@ -77,12 +79,14 @@ class MatchRepositoryTest {
             trx.run {
                 val bracketId = newTournamentWithBracket(repoTournament)
                 val routineId = newRoutine(repoEnduranceRoutine)
-                val prev = newMatch(repoMatch, bracketId, routineId)
+                val judgeId = newJudge(repoUser)
+                val prev = newMatch(repoMatch, bracketId, routineId, judgeId)
 
                 val next =
                     repoMatch.createMatch(
                         bracketId = bracketId,
                         routineId = routineId,
+                        judgeId = judgeId,
                         redFromMatchId = prev.id,
                         blueFromMatchId = prev.id,
                         createdAt = Instant.now().truncatedTo(ChronoUnit.SECONDS),
@@ -100,8 +104,9 @@ class MatchRepositoryTest {
             trx.run {
                 val bracketId = newTournamentWithBracket(repoTournament)
                 val routineId = newRoutine(repoEnduranceRoutine)
-                newMatch(repoMatch, bracketId, routineId)
-                newMatch(repoMatch, bracketId, routineId)
+                val judgeId = newJudge(repoUser)
+                newMatch(repoMatch, bracketId, routineId, judgeId)
+                newMatch(repoMatch, bracketId, routineId, judgeId)
 
                 val matches = repoMatch.findByBracketId(bracketId)
 
@@ -122,118 +127,26 @@ class MatchRepositoryTest {
     @Nested
     inner class FindByStatus {
         @Test
-        fun `should return matches with the given status`() =
+        fun `should return matches with given status`() =
             trx.run {
                 val bracketId = newTournamentWithBracket(repoTournament)
                 val routineId = newRoutine(repoEnduranceRoutine)
-                val m1 = newMatch(repoMatch, bracketId, routineId)
-                newMatch(repoMatch, bracketId, routineId)
+                val judgeId = newJudge(repoUser)
 
-                repoMatch.updateStatus(m1.id, MatchStatus.RUNNING)
+                newMatch(repoMatch, bracketId, routineId, judgeId)
+                newMatch(repoMatch, bracketId, routineId, judgeId)
 
-                val running = repoMatch.findByStatus(MatchStatus.RUNNING)
-                val pending = repoMatch.findByStatus(MatchStatus.PENDING)
+                val pendingMatches = repoMatch.findByStatus(MatchStatus.PENDING)
 
-                assertEquals(1, running.size)
-                assertEquals(1, pending.size)
-            }
-    }
-
-    @Nested
-    inner class UpdateStatus {
-        @Test
-        fun `should update the match status`() =
-            trx.run {
-                val bracketId = newTournamentWithBracket(repoTournament)
-                val routineId = newRoutine(repoEnduranceRoutine)
-                val match = newMatch(repoMatch, bracketId, routineId)
-
-                val updated = repoMatch.updateStatus(match.id, MatchStatus.FINISHED)
-
-                assertNotNull(updated)
-                assertEquals(MatchStatus.FINISHED, updated?.status)
+                assertEquals(2, pendingMatches.size)
+                assertEquals(MatchStatus.PENDING, pendingMatches.first().status)
             }
 
         @Test
-        fun `should return null when match does not exist`() =
+        fun `should return empty list when no matches with status`() =
             trx.run {
-                assertNull(repoMatch.updateStatus(-1, MatchStatus.RUNNING))
-            }
-    }
-
-    @Nested
-    inner class FindById {
-        @Test
-        fun `should find an existing match by id`() =
-            trx.run {
-                val bracketId = newTournamentWithBracket(repoTournament)
-                val routineId = newRoutine(repoEnduranceRoutine)
-                val created = newMatch(repoMatch, bracketId, routineId)
-
-                val found = repoMatch.findById(created.id)
-
-                assertNotNull(found)
-                assertEquals(created.id, found?.id)
-            }
-
-        @Test
-        fun `should return null when id does not exist`() =
-            trx.run {
-                assertNull(repoMatch.findById(-1))
-            }
-    }
-
-    @Nested
-    inner class FindAll {
-        @Test
-        fun `should return all created matches`() =
-            trx.run {
-                val bracketId = newTournamentWithBracket(repoTournament)
-                val routineId = newRoutine(repoEnduranceRoutine)
-                newMatch(repoMatch, bracketId, routineId)
-                newMatch(repoMatch, bracketId, routineId)
-
-                val matches = repoMatch.findAll()
-
-                assertEquals(2, matches.size)
-            }
-
-        @Test
-        fun `should return empty list when there are no matches`() =
-            trx.run {
-                assertTrue(repoMatch.findAll().isEmpty())
-            }
-    }
-
-    @Nested
-    inner class DeleteById {
-        @Test
-        fun `should remove the match`() =
-            trx.run {
-                val bracketId = newTournamentWithBracket(repoTournament)
-                val routineId = newRoutine(repoEnduranceRoutine)
-                val created = newMatch(repoMatch, bracketId, routineId)
-
-                repoMatch.deleteById(created.id)
-
-                assertNull(repoMatch.findById(created.id))
-            }
-    }
-
-    @Nested
-    inner class Clear {
-        @Test
-        fun `should remove all matches, progress and events`() =
-            trx.run {
-                val bracketId = newTournamentWithBracket(repoTournament)
-                val routineId = newRoutine(repoEnduranceRoutine)
-                val match = newMatch(repoMatch, bracketId, routineId)
-                repoMatch.createMatchProgress(match.id, Instant.now().truncatedTo(ChronoUnit.SECONDS))
-
-                repoMatch.clear()
-
-                assertTrue(repoMatch.findAll().isEmpty())
-                assertNull(repoMatch.findProgressByMatchId(match.id))
+                val result = repoMatch.findByStatus(MatchStatus.FINISHED)
+                assertTrue(result.isEmpty())
             }
     }
 
@@ -244,7 +157,8 @@ class MatchRepositoryTest {
             trx.run {
                 val bracketId = newTournamentWithBracket(repoTournament)
                 val routineId = newRoutine(repoEnduranceRoutine)
-                val match = newMatch(repoMatch, bracketId, routineId)
+                val judgeId = newJudge(repoUser)
+                val match = newMatch(repoMatch, bracketId, routineId, judgeId)
 
                 val progress =
                     repoMatch.createMatchProgress(
@@ -277,7 +191,8 @@ class MatchRepositoryTest {
             trx.run {
                 val bracketId = newTournamentWithBracket(repoTournament)
                 val routineId = newRoutine(repoEnduranceRoutine)
-                val match = newMatch(repoMatch, bracketId, routineId)
+                val judgeId = newJudge(repoUser)
+                val match = newMatch(repoMatch, bracketId, routineId, judgeId)
                 repoMatch.createMatchProgress(match.id, Instant.now().truncatedTo(ChronoUnit.SECONDS))
 
                 val progress = repoMatch.findProgressByMatchId(match.id)
@@ -294,188 +209,126 @@ class MatchRepositoryTest {
     }
 
     @Nested
-    inner class UpdateReps {
+    inner class UpdateMatchProgress {
         @Test
-        fun `should update red and blue reps`() =
+        fun `should update the match progress correctly`() =
             trx.run {
                 val bracketId = newTournamentWithBracket(repoTournament)
                 val routineId = newRoutine(repoEnduranceRoutine)
-                val match = newMatch(repoMatch, bracketId, routineId)
+                val judgeId = newJudge(repoUser)
+                val match = newMatch(repoMatch, bracketId, routineId, judgeId)
+
+                val progress =
+                    repoMatch.createMatchProgress(
+                        matchId = match.id,
+                        updatedAt = Instant.now().truncatedTo(ChronoUnit.SECONDS),
+                    )
+
+                assertNotNull(progress)
+                assertEquals(progress?.redCurrentReps, 0)
+                assertEquals(progress?.blueCurrentReps, 0)
+
+                val toUpdate =
+                    repoMatch.updateMatchProgress(
+                        progress!!.copy(
+                            redCurrentReps = 1,
+                            blueCurrentReps = 1,
+                        ),
+                        null,
+                        null,
+                    )
+
+                assertNotNull(toUpdate)
+                assertEquals(toUpdate?.redCurrentReps, 1)
+                assertEquals(toUpdate?.blueCurrentReps, 1)
+            }
+
+        @Test
+        fun `should return null when theres no match or progress`() =
+            trx.run {
+                val progress = MatchProgress(-1, -1, null, null, -1, -1, null, null, null, null, Instant.now())
+                val result = repoMatch.updateMatchProgress(progress, null, null)
+                assertNull(result)
+            }
+    }
+
+    @Nested
+    inner class FindById {
+        @Test
+        fun `should find an existing match by id`() =
+            trx.run {
+                val bracketId = newTournamentWithBracket(repoTournament)
+                val routineId = newRoutine(repoEnduranceRoutine)
+                val judgeId = newJudge(repoUser)
+                val created = newMatch(repoMatch, bracketId, routineId, judgeId)
+
+                val found = repoMatch.findById(created.id)
+
+                assertNotNull(found)
+                assertEquals(created.id, found?.id)
+            }
+
+        @Test
+        fun `should return null when id does not exist`() =
+            trx.run {
+                assertNull(repoMatch.findById(-1))
+            }
+    }
+
+    @Nested
+    inner class FindAll {
+        @Test
+        fun `should return all created matches`() =
+            trx.run {
+                val bracketId = newTournamentWithBracket(repoTournament)
+                val routineId = newRoutine(repoEnduranceRoutine)
+                val judgeId = newJudge(repoUser)
+                newMatch(repoMatch, bracketId, routineId, judgeId)
+                newMatch(repoMatch, bracketId, routineId, judgeId)
+
+                val matches = repoMatch.findAll()
+
+                assertEquals(2, matches.size)
+            }
+
+        @Test
+        fun `should return empty list when there are no matches`() =
+            trx.run {
+                assertTrue(repoMatch.findAll().isEmpty())
+            }
+    }
+
+    @Nested
+    inner class DeleteById {
+        @Test
+        fun `should remove the match`() =
+            trx.run {
+                val bracketId = newTournamentWithBracket(repoTournament)
+                val routineId = newRoutine(repoEnduranceRoutine)
+                val judgeId = newJudge(repoUser)
+                val created = newMatch(repoMatch, bracketId, routineId, judgeId)
+
+                repoMatch.deleteById(created.id)
+
+                assertNull(repoMatch.findById(created.id))
+            }
+    }
+
+    @Nested
+    inner class Clear {
+        @Test
+        fun `should remove all matches, progress and events`() =
+            trx.run {
+                val bracketId = newTournamentWithBracket(repoTournament)
+                val routineId = newRoutine(repoEnduranceRoutine)
+                val judgeId = newJudge(repoUser)
+                val match = newMatch(repoMatch, bracketId, routineId, judgeId)
                 repoMatch.createMatchProgress(match.id, Instant.now().truncatedTo(ChronoUnit.SECONDS))
 
-                val updated =
-                    repoMatch.updateReps(
-                        matchId = match.id,
-                        redReps = 10,
-                        blueReps = 8,
-                        updatedAt = Instant.now().truncatedTo(ChronoUnit.SECONDS),
-                    )
+                repoMatch.clear()
 
-                assertNotNull(updated)
-                assertEquals(10, updated?.redCurrentReps)
-                assertEquals(8, updated?.blueCurrentReps)
-            }
-
-        @Test
-        fun `should return null when progress does not exist`() =
-            trx.run {
-                assertNull(
-                    repoMatch.updateReps(
-                        matchId = -1,
-                        redReps = 5,
-                        blueReps = 5,
-                        updatedAt = Instant.now().truncatedTo(ChronoUnit.SECONDS),
-                    ),
-                )
-            }
-    }
-
-    @Nested
-    inner class UpdateTimer {
-        @Test
-        fun `should update the timer fields`() =
-            trx.run {
-                val bracketId = newTournamentWithBracket(repoTournament)
-                val routineId = newRoutine(repoEnduranceRoutine)
-                val match = newMatch(repoMatch, bracketId, routineId)
-                repoMatch.createMatchProgress(match.id, Instant.now().truncatedTo(ChronoUnit.SECONDS))
-
-                val timerStart = Instant.now().truncatedTo(ChronoUnit.SECONDS)
-                val updated =
-                    repoMatch.updateTimer(
-                        matchId = match.id,
-                        timerStartedAt = timerStart,
-                        timerRemainingSeconds = 300,
-                        updatedAt = Instant.now().truncatedTo(ChronoUnit.SECONDS),
-                    )
-
-                assertNotNull(updated)
-                assertEquals(timerStart, updated?.timerStartedAt)
-                assertEquals(300, updated?.timerRemainingSeconds)
-            }
-
-        @Test
-        fun `should return null when progress does not exist`() =
-            trx.run {
-                assertNull(
-                    repoMatch.updateTimer(
-                        matchId = -1,
-                        timerStartedAt = null,
-                        timerRemainingSeconds = null,
-                        updatedAt = Instant.now().truncatedTo(ChronoUnit.SECONDS),
-                    ),
-                )
-            }
-    }
-
-    @Nested
-    inner class CreateEvent {
-        @Test
-        fun `should create an event for an existing match and judge`() =
-            trx.run {
-                val bracketId = newTournamentWithBracket(repoTournament)
-                val routineId = newRoutine(repoEnduranceRoutine)
-                val match = newMatch(repoMatch, bracketId, routineId)
-                val judgeId = newJudge(repoUser)
-
-                val event =
-                    repoMatch.createEvent(
-                        matchId = match.id,
-                        judgeId = judgeId,
-                        eventType = MatchEventType.MATCH_STARTED,
-                        payload = null,
-                        createdAt = Instant.now().truncatedTo(ChronoUnit.SECONDS),
-                    )
-
-                assertNotNull(event)
-                assertEquals(match.id, event?.matchId)
-                assertEquals(judgeId, event?.judgeId)
-                assertEquals(MatchEventType.MATCH_STARTED, event?.eventType)
-            }
-
-        @Test
-        fun `should store payload when provided`() =
-            trx.run {
-                val bracketId = newTournamentWithBracket(repoTournament)
-                val routineId = newRoutine(repoEnduranceRoutine)
-                val match = newMatch(repoMatch, bracketId, routineId)
-                val judgeId = newJudge(repoUser)
-
-                val event =
-                    repoMatch.createEvent(
-                        matchId = match.id,
-                        judgeId = judgeId,
-                        eventType = MatchEventType.REP_ADDED,
-                        payload = """{"athlete":"red","reps":1}""",
-                        createdAt = Instant.now().truncatedTo(ChronoUnit.SECONDS),
-                    )
-
-                assertEquals("""{"athlete":"red","reps":1}""", event?.payload)
-            }
-
-        @Test
-        fun `should return null when match does not exist`() =
-            trx.run {
-                val judgeId = newJudge(repoUser)
-
-                assertNull(
-                    repoMatch.createEvent(
-                        matchId = -1,
-                        judgeId = judgeId,
-                        eventType = MatchEventType.MATCH_STARTED,
-                        payload = null,
-                        createdAt = Instant.now().truncatedTo(ChronoUnit.SECONDS),
-                    ),
-                )
-            }
-
-        @Test
-        fun `should return null when judge does not exist`() =
-            trx.run {
-                val bracketId = newTournamentWithBracket(repoTournament)
-                val routineId = newRoutine(repoEnduranceRoutine)
-                val match = newMatch(repoMatch, bracketId, routineId)
-
-                assertNull(
-                    repoMatch.createEvent(
-                        matchId = match.id,
-                        judgeId = -1,
-                        eventType = MatchEventType.MATCH_STARTED,
-                        payload = null,
-                        createdAt = Instant.now().truncatedTo(ChronoUnit.SECONDS),
-                    ),
-                )
-            }
-    }
-
-    @Nested
-    inner class FindEventsByMatchId {
-        @Test
-        fun `should return all events for a match`() =
-            trx.run {
-                val bracketId = newTournamentWithBracket(repoTournament)
-                val routineId = newRoutine(repoEnduranceRoutine)
-                val match = newMatch(repoMatch, bracketId, routineId)
-                val judgeId = newJudge(repoUser)
-
-                repoMatch.createEvent(match.id, judgeId, MatchEventType.MATCH_STARTED, null, Instant.now().truncatedTo(ChronoUnit.SECONDS))
-                repoMatch.createEvent(match.id, judgeId, MatchEventType.REP_ADDED, null, Instant.now().truncatedTo(ChronoUnit.SECONDS))
-
-                val events = repoMatch.findEventsByMatchId(match.id)
-
-                assertEquals(2, events.size)
-            }
-
-        @Test
-        fun `should return empty list when match has no events`() =
-            trx.run {
-                val bracketId = newTournamentWithBracket(repoTournament)
-                val routineId = newRoutine(repoEnduranceRoutine)
-                val match = newMatch(repoMatch, bracketId, routineId)
-
-                val events = repoMatch.findEventsByMatchId(match.id)
-
-                assertTrue(events.isEmpty())
+                assertTrue(repoMatch.findAll().isEmpty())
+                assertNull(repoMatch.findProgressByMatchId(match.id))
             }
     }
 
@@ -513,9 +366,11 @@ class MatchRepositoryTest {
         repoMatch: RepositoryMatch,
         bracketId: Int,
         routineId: Int,
+        judgeId: Int,
     ) = repoMatch.createMatch(
         bracketId = bracketId,
         routineId = routineId,
+        judgeId,
         redFromMatchId = null,
         blueFromMatchId = null,
         createdAt = Instant.now().truncatedTo(ChronoUnit.SECONDS),

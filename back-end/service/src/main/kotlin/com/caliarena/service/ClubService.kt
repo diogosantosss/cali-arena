@@ -10,7 +10,7 @@ sealed class ClubError {
 
     data object ClubNotFound : ClubError()
 
-    data object CreatingClub : ClubError()
+    data object UpdatingClub : ClubError()
 }
 
 @Service
@@ -68,7 +68,7 @@ class ClubService(
 
             val updated =
                 repoClub.save(existing.copy(name = name, shortName = shortName))
-                    ?: return@run failure(ClubError.CreatingClub)
+                    ?: return@run failure(ClubError.UpdatingClub)
 
             success(updated)
         }

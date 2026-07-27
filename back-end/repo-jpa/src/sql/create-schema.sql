@@ -1,7 +1,6 @@
-DROP TABLE IF EXISTS match_events;
 DROP TABLE IF EXISTS match_progress;
-DROP TABLE IF EXISTS matches;
 DROP TABLE IF EXISTS tournament_state;
+DROP TABLE IF EXISTS matches;
 DROP TABLE IF EXISTS brackets;
 DROP TABLE IF EXISTS exercises;
 DROP TABLE IF EXISTS endurance_routines;
@@ -96,23 +95,24 @@ CREATE TABLE exercises
 
 CREATE TABLE matches
 (
-    id                SERIAL PRIMARY KEY,
-    bracket_id        INT REFERENCES brackets (id),
-    routine_id        INT REFERENCES endurance_routines (id),
+    id                  SERIAL PRIMARY KEY,
+    bracket_id          INT REFERENCES brackets (id),
+    routine_id          INT REFERENCES endurance_routines (id),
+    judge_id            INT REFERENCES users (id),
 
-    athlete_red_id    INT REFERENCES athletes (id),
-    athlete_blue_id   INT REFERENCES athletes (id),
-    red_from_match_id INT REFERENCES matches (id),
-    blue_from_match_id INT REFERENCES matches (id),
+    athlete_red_id      INT REFERENCES athletes (id),
+    athlete_blue_id     INT REFERENCES athletes (id),
+    red_from_match_id   INT REFERENCES matches (id),
+    blue_from_match_id  INT REFERENCES matches (id),
 
-    winner_athlete_id INT REFERENCES athletes (id),
+    winner_athlete_id   INT REFERENCES athletes (id),
 
-    status            VARCHAR(20) NOT NULL,
+    status              VARCHAR(20) NOT NULL,
 
-    started_at        BIGINT,
-    finished_at       BIGINT,
+    started_at          BIGINT,
+    finished_at         BIGINT,
 
-    created_at        BIGINT       NOT NULL
+    created_at          BIGINT       NOT NULL
 );
 
 
@@ -145,18 +145,4 @@ CREATE TABLE match_progress
     timer_remaining_seconds  INT,
 
     updated_at               BIGINT NOT NULL
-);
-
-
-CREATE TABLE match_events
-(
-    id         SERIAL PRIMARY KEY,
-    match_id   INT REFERENCES matches (id),
-    judge_id   INT REFERENCES users (id),
-
-    event_type VARCHAR(20) NOT NULL,
-
-    payload    TEXT,
-
-    created_at BIGINT           NOT NULL
 );

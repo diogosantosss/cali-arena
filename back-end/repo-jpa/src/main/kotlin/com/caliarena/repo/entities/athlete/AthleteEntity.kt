@@ -21,17 +21,17 @@ import java.time.Instant
 class AthleteEntity(
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    val id: Int = 0,
+    var id: Int = 0,
     @Column(nullable = false)
-    val name: String = "",
+    var name: String = "",
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
-    val gender: GenderType = GenderType.MALE,
+    var gender: GenderType = GenderType.MALE,
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "club_id", nullable = false)
-    val club: ClubEntity = ClubEntity(),
+    var club: ClubEntity = ClubEntity(),
     @Column(name = "created_at", nullable = false)
-    val createdAt: Long = 0L,
+    var createdAt: Long = 0L,
 ) {
     fun toDomain() =
         Athlete(

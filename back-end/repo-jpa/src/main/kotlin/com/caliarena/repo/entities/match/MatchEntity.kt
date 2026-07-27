@@ -4,6 +4,7 @@ import com.caliarena.domain.match.Match
 import com.caliarena.domain.match.MatchStatus
 import com.caliarena.repo.entities.athlete.AthleteEntity
 import com.caliarena.repo.entities.tournament.BracketEntity
+import com.caliarena.repo.entities.user.UserEntity
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
@@ -28,6 +29,9 @@ class MatchEntity(
     var bracket: BracketEntity = BracketEntity(),
     @Column(name = "routine_id", nullable = false)
     var routineId: Int = 0,
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "judge_id", nullable = false)
+    var judge: UserEntity = UserEntity(),
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "athlete_red_id")
     var athleteRed: AthleteEntity? = null,
@@ -56,6 +60,7 @@ class MatchEntity(
             id = id,
             bracketId = bracket.id,
             routineId = routineId,
+            judgeId = judge.id,
             athleteRedId = athleteRed?.id,
             athleteBlueId = athleteBlue?.id,
             redFromMatchId = redFromMatchId,
@@ -72,11 +77,13 @@ class MatchEntity(
             bracket: BracketEntity,
             athleteRed: AthleteEntity?,
             athleteBlue: AthleteEntity?,
+            judge: UserEntity,
             winnerAthlete: AthleteEntity?,
         ) = MatchEntity(
             id = this.id,
             bracket = bracket,
             routineId = this.routineId,
+            judge = judge,
             athleteRed = athleteRed,
             athleteBlue = athleteBlue,
             redFromMatchId = this.redFromMatchId,

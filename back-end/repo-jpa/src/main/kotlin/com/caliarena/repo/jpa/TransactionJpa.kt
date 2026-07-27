@@ -7,8 +7,10 @@ import com.caliarena.RepositoryMatch
 import com.caliarena.RepositoryTournament
 import com.caliarena.RepositoryUser
 import com.caliarena.Transaction
+import org.springframework.stereotype.Component
 import org.springframework.transaction.interceptor.TransactionAspectSupport
 
+@Component
 class TransactionJpa(
     override val repoAthlete: RepositoryAthlete,
     override val repoClub: RepositoryClub,
