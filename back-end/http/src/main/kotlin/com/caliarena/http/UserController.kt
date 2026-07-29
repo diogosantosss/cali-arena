@@ -27,6 +27,16 @@ import org.springframework.web.bind.annotation.RestController
 class UserController(
     private val userService: UserAuthService,
 ) {
+    @GetMapping
+    fun getAllUsers(): ResponseEntity<Any> =
+        ResponseEntity.ok(
+            userService
+                .getUsers()
+                .map { user ->
+                    UserInfoOutput(user.id, user.username, user.role, user.createdAt)
+                },
+        )
+
     @PostMapping
     fun createUser(
         @RequestBody userInput: CreateUserInput,

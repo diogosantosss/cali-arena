@@ -169,4 +169,9 @@ class UserAuthService(
 
             success(updatedUser)
         }
+
+    fun getUsers(): List<User> =
+        trxManager.run {
+            repoUser.findAll()
+        }
 }
