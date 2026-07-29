@@ -1,11 +1,14 @@
 import './index.css'
-import React from "react";
+import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { RouterProvider } from "react-router-dom";
 import { router } from "./router";
+import { AuthProvider } from './AuthContext';
 
 createRoot(document.getElementById("container")!).render(
-  <React.StrictMode>
-    <RouterProvider router={router} />
-  </React.StrictMode>
+  <StrictMode>
+    <AuthProvider>
+      <RouterProvider router={router} />
+    </AuthProvider>
+  </StrictMode>
 );

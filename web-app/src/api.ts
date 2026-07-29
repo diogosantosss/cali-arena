@@ -52,6 +52,12 @@ export async function fetchApi<T>(
 
 export const api = {
   // user-related API calls
+  async getUsers(): Promise<User[]> {
+    return fetchApi<User[]>("/users", {
+      method: "GET",
+    })
+  },
+
   async createUser(
     input: CreateUserInput
   ): Promise<User> {
@@ -61,12 +67,25 @@ export const api = {
     });
   },
 
-  async login(
+  async createToken(
     input: LoginInput
   ): Promise<LoginOutput> {
     return fetchApi<LoginOutput>("/users/token", {
       method: "POST",
       body: JSON.stringify(input),
+    });
+  },
+
+  async logout(): Promise<void> {
+    return fetchApi<void>("/users/logout", {
+      method: "POST",
+      headers: getAuthHeaders(),
+    });
+  },
+
+  async getMe(): Promise<User> {
+    return fetchApi<User>("/users/me", {
+      headers: getAuthHeaders(),
     });
   },
 
