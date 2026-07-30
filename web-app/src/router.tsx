@@ -1,4 +1,4 @@
-import { createBrowserRouter } from "react-router-dom";
+import { createBrowserRouter, redirect } from "react-router-dom";
 import { TournamentsPage } from "./pages/TournamentsPage.tsx";
 import { LoginPage } from "./pages/LoginPage";
 import { DashboardLayout } from "./components/layout/DashboardLayout.tsx";
@@ -8,7 +8,15 @@ import { ClubsPage } from "./pages/ClubsPage.tsx";
 import { UsersPage } from "./pages/UsersPage.tsx";
 
 export const router = createBrowserRouter([
-  { path: "/", element: <LoginPage /> },
+  { 
+    path: "/", 
+    element: <LoginPage />,
+    loader: () => {
+      if (localStorage.getItem("token")) 
+        return redirect("/dashboard");
+      return null;
+    }, 
+  },
   {
     path: "/dashboard",
     element: <DashboardLayout />,
