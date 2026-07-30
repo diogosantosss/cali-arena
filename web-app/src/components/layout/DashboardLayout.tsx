@@ -38,7 +38,7 @@ export function DashboardLayout() {
 
   return (
     <SidebarProvider>
-      <div className="flex min-h-screen w-full bg-background">
+      <div className="flex min-h-screen w-full">
         <Sidebar>
           <SidebarHeader className="p-4">
             <div className="flex items-center gap-3">

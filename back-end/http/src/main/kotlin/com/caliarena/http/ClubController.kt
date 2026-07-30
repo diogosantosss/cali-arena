@@ -7,6 +7,7 @@ import com.caliarena.http.model.club.UpdateClubInput
 import com.caliarena.http.utils.toResponse
 import com.caliarena.service.ClubError
 import com.caliarena.service.ClubService
+import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.GetMapping
@@ -32,7 +33,7 @@ class ClubController(
                 onSuccess = { club ->
                     ResponseEntity
                         .status(HttpStatus.CREATED)
-                        .header("Location", "/api/clubs/${club.id}")
+                        .header(HttpHeaders.LOCATION, "/api/clubs/${club.id}")
                         .body(club)
                 },
                 onError = { it.toResponseEntity() },

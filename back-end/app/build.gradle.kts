@@ -55,7 +55,6 @@ kotlin {
  */
 val dockerImageJvm = "caliarena-jvm"
 val dockerImagePostgres = "caliarena-postgres"
-val dockerImageUbuntu = "caliarena-ubuntu"
 val dockerExe =
     when (
         org.gradle.internal.os.OperatingSystem
@@ -101,11 +100,6 @@ tasks.register<Exec>("buildImagePostgres") {
     )
 }
 
-tasks.register<Exec>("buildImageUbuntu") {
-    description = "Builds the Docker image for Ubuntu using the specified Dockerfile and build context."
-    commandLine(dockerExe, "build", "-t", dockerImageUbuntu, "-f", "docker/Dockerfile-ubuntu", ".")
-}
-
 tasks.register<Exec>("buildImageNginx") {
     description = "Builds the Docker image for Nginx using the specified Dockerfile and build context."
     workingDir(rootProject.projectDir.parentFile) // corre a partir da raiz do projeto
@@ -113,10 +107,9 @@ tasks.register<Exec>("buildImageNginx") {
 }
 
 tasks.register("buildImageAll") {
-    description = "Builds all Docker images (JVM, Postgres, Ubuntu) by executing the individual build tasks for each image."
+    description = "Builds all Docker images (JVM, Postgres) by executing the individual build tasks for each image."
     dependsOn("buildImageJvm")
     dependsOn("buildImagePostgres")
-    dependsOn("buildImageUbuntu")
     dependsOn("buildImageNginx")
 }
 

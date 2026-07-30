@@ -16,8 +16,6 @@ sealed class MatchError {
 
     data object AthleteNotInMatch : MatchError()
 
-    data object InvalidStatusTransition : MatchError()
-
     data object MatchNotRunning : MatchError()
 
     data object ProgressNotFound : MatchError()

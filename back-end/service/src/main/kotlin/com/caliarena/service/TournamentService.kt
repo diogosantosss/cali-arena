@@ -18,7 +18,7 @@ sealed class TournamentError {
 
     data object TournamentAlreadyExists : TournamentError()
 
-    data object InvalidStatusTransition : TournamentError()
+    data object InvalidTournamentStatus : TournamentError()
 
     data object BracketNotFound : TournamentError()
 
@@ -97,7 +97,7 @@ class TournamentService(
 
             val status =
                 TournamentStatus.entries.find { it.name.equals(newStatus, true) }
-                    ?: return@run failure(TournamentError.InvalidStatusTransition)
+                    ?: return@run failure(TournamentError.InvalidTournamentStatus)
 
             val updated =
                 repoTournament.updateStatus(id, status)

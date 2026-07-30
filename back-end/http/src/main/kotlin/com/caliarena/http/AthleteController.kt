@@ -7,6 +7,7 @@ import com.caliarena.http.model.athlete.UpdateAthleteInput
 import com.caliarena.http.utils.toResponse
 import com.caliarena.service.AthleteError
 import com.caliarena.service.AthleteService
+import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.GetMapping
@@ -32,7 +33,7 @@ class AthleteController(
                 onSuccess = { athlete ->
                     ResponseEntity
                         .status(HttpStatus.CREATED)
-                        .header("Location", "/api/athletes/${athlete.id}")
+                        .header(HttpHeaders.LOCATION, "/api/athletes/${athlete.id}")
                         .body(athlete)
                 },
                 onError = { it.toResponseEntity() },

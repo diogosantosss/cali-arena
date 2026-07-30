@@ -1,9 +1,4 @@
 services:
-  ubuntu:
-    container_name: ubuntu
-    image: caliarena-ubuntu
-    tty: true
-
   caliarena-postgres:
     container_name: caliarena-postgres
     image: caliarena-postgres

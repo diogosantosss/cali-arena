@@ -18,3 +18,7 @@ VALUES
     ('token-carlos-1', 3, 1700000030000, 1700000030000),
     ('token-carlos-2', 3, 1700000031000, 1700000031000),
     ('token-carlos-3', 3, 1700000032000, 1700000032000);
+
+INSERT INTO clubs(name, short_name, created_at)
+VALUES
+    ('BG BARS TEAM', 'BG BARS', 1700000030000);

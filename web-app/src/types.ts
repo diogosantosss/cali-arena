@@ -186,3 +186,41 @@ export interface Match {
   finishedAt: string | null;
   createdAt: string;
 }
+export interface CreateMatchInput {
+  bracketId: number;
+  routineId: number;
+  judgeId: number;
+
+  redFromMatchId: number | null;
+  blueFromMatchId: number | null;
+}
+
+export interface AssignAthletesInput {
+  athleteRedId: number;
+  athleteBlueId: number;
+}
+
+export interface UpdateRepsInput {
+  repReps: number | null;
+  blueReps: number | null;
+}
+
+export interface MatchProgress {
+  id: number;
+  matchId: number;
+  
+  redCurrentExerciseId: number | null;
+  blueCurrentExerciseId: number | null;
+
+  redCurrentReps: number;
+  blueCurrentReps: number;
+
+  redFinishedAt: string | null;
+  blueFinishedAt: string | null;
+
+  timerStartedAt: string | null;
+  timerRemainingSeconds: number | null;
+
+  updatedAt: string;
+}
+
