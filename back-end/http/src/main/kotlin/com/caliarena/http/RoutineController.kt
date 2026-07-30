@@ -6,6 +6,7 @@ import com.caliarena.http.model.routine.CreateRoutineInput
 import com.caliarena.http.utils.toResponse
 import com.caliarena.service.RoutineError
 import com.caliarena.service.RoutineService
+import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.GetMapping
@@ -32,7 +33,7 @@ class RoutineController(
                 onSuccess = { routine ->
                     ResponseEntity
                         .status(HttpStatus.CREATED)
-                        .header("Location", "/api/routines/${routine.id}")
+                        .header(HttpHeaders.LOCATION, "/api/routines/${routine.id}")
                         .body(routine)
                 },
                 onError = { it.toResponseEntity() },
@@ -55,7 +56,7 @@ class RoutineController(
                 onSuccess = { exercise ->
                     ResponseEntity
                         .status(HttpStatus.CREATED)
-                        .header("Location", "/api/routines/${exercise.routineId}/exercises/${exercise.id}")
+                        .header(HttpHeaders.LOCATION, "/api/routines/${exercise.routineId}/exercises/${exercise.id}")
                         .body(exercise)
                 },
                 onError = { it.toResponseEntity() },

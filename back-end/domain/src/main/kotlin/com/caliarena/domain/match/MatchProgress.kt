@@ -50,7 +50,6 @@ data class MatchProgress(
         exercises: List<Exercise>,
         now: Instant,
     ): SideState {
-        // não mexe se não veio reps novas, ou se este lado já terminou a rotina
         if (newReps == null || currentFinishedAt != null || currentExerciseId == null) {
             return SideState(currentExerciseId, currentReps, currentFinishedAt)
         }
@@ -65,9 +64,9 @@ data class MatchProgress(
         val next = exercises.filter { it.exerciseOrder > current.exerciseOrder }.minByOrNull { it.exerciseOrder }
 
         return if (next != null) {
-            SideState(next.id, 0, null) // avança de exercício, reseta reps
+            SideState(next.id, 0, null)
         } else {
-            SideState(null, current.targetReps, now) // acabou a rotina toda -> marca como terminado
+            SideState(null, current.targetReps, now)
         }
     }
 }

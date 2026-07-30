@@ -7,6 +7,7 @@ import com.caliarena.http.model.tournament.UpdateScreenInput
 import com.caliarena.http.utils.toResponse
 import com.caliarena.service.TournamentError
 import com.caliarena.service.TournamentService
+import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.GetMapping
@@ -17,6 +18,8 @@ import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneOffset
 
 @RestController
 @RequestMapping("/api/tournaments")
@@ -31,8 +34,8 @@ class TournamentController(
             .createTournament(
                 name = input.name,
                 location = input.location,
-                startDate = input.startDate?.let { Instant.parse(it) },
-                endDate = input.endDate?.let { Instant.parse(it) },
+                startDate = input.startDate?.convertDate(),
+                endDate = input.endDate?.convertDate(),
             ).toResponse(
                 onSuccess = { tournament ->
                     ResponseEntity
@@ -56,7 +59,7 @@ class TournamentController(
                 onSuccess = { tournament ->
                     ResponseEntity
                         .status(HttpStatus.OK)
-                        .header("Location", "/api/tournaments/${tournament.id}")
+                        .header(HttpHeaders.LOCATION, "/api/tournaments/${tournament.id}")
                         .body(tournament)
                 },
                 onError = { it.toResponseEntity() },
@@ -75,7 +78,7 @@ class TournamentController(
                 onSuccess = { bracket ->
                     ResponseEntity
                         .status(HttpStatus.CREATED)
-                        .header("Location", "/api/tournaments/bracket/${bracket.id}")
+                        .header(HttpHeaders.LOCATION, "/api/tournaments/bracket/${bracket.id}")
                         .body(bracket)
                 },
                 onError = { it.toResponseEntity() },
@@ -162,14 +165,16 @@ class TournamentController(
                 onError = { it.toResponseEntity() },
             )
 
+    private fun String.convertDate(): Instant = LocalDate.parse(this).atStartOfDay().toInstant(ZoneOffset.UTC)
+
     private fun TournamentError.toResponseEntity(): ResponseEntity<Any> =
         when (this) {
             TournamentError.InvalidBracketStage ->
                 Problem.InvalidBracketStage.response(HttpStatus.BAD_REQUEST)
             TournamentError.InvalidGender ->
                 Problem.InvalidGender.response(HttpStatus.BAD_REQUEST)
-            TournamentError.InvalidStatusTransition ->
-                Problem.InvalidStatusTransition.response(HttpStatus.BAD_REQUEST)
+            TournamentError.InvalidTournamentStatus ->
+                Problem.InvalidTournamentStatus.response(HttpStatus.BAD_REQUEST)
             TournamentError.InvalidScreenState ->
                 Problem.InvalidScreenState.response(HttpStatus.BAD_REQUEST)
             TournamentError.TournamentStateNotFound ->

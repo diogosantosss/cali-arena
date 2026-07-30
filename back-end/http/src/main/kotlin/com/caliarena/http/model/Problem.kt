@@ -52,21 +52,6 @@ sealed class Problem(
 
     data object CreatingClub : Problem(URI("$PROBLEM_URI_PATH/creating-club"))
 
-    // Match related Errors
-    data object MatchNotFound : Problem(URI("$PROBLEM_URI_PATH/match-not-found"))
-
-    data object BracketNotFound : Problem(URI("$PROBLEM_URI_PATH/bracket-not-found"))
-
-    data object AthleteNotInMatch : Problem(URI("$PROBLEM_URI_PATH/athlete-not-in-match"))
-
-    data object InvalidStatusTransition : Problem(URI("$PROBLEM_URI_PATH/invalid-status-transition"))
-
-    data object MatchNotRunning : Problem(URI("$PROBLEM_URI_PATH/match-not-running"))
-
-    data object ProgressNotFound : Problem(URI("$PROBLEM_URI_PATH/progress-not-found"))
-
-    data object ProgressAlreadyExists : Problem(URI("$PROBLEM_URI_PATH/progress-already-exists"))
-
     // Routines related Errors
     data object RoutineNotFound : Problem(URI("$PROBLEM_URI_PATH/routine-not-found"))
 
@@ -88,6 +73,31 @@ sealed class Problem(
     data object InvalidBracketStage : Problem(URI("$PROBLEM_URI_PATH/invalid-bracket-stage"))
 
     data object InvalidScreenState : Problem(URI("$PROBLEM_URI_PATH/invalid-screen-state"))
+
+    data object InvalidTournamentStatus : Problem(URI("$PROBLEM_URI_PATH/invalid-tournament-status"))
+
+    // Match related Errors
+    data object MatchNotFound : Problem(URI("$PROBLEM_URI_PATH/match-not-found"))
+
+    data object BracketNotFound : Problem(URI("$PROBLEM_URI_PATH/bracket-not-found"))
+
+    data object AthleteNotInMatch : Problem(URI("$PROBLEM_URI_PATH/athlete-not-in-match"))
+
+    data object MatchNotRunning : Problem(URI("$PROBLEM_URI_PATH/match-not-running"))
+
+    data object ProgressNotFound : Problem(URI("$PROBLEM_URI_PATH/progress-not-found"))
+
+    data object ProgressAlreadyExists : Problem(URI("$PROBLEM_URI_PATH/progress-already-exists"))
+
+    data object AthletesNotAssigned : Problem(URI("$PROBLEM_URI_PATH/athletes-not-assigned"))
+
+    data object JudgeNotFound : Problem(URI("$PROBLEM_URI_PATH/judge-not-found"))
+
+    data object SameAthleteOnBothSides : Problem(URI("$PROBLEM_URI_PATH/same-athlete-on-both-sides"))
+
+    data object ErrorCreatingMatchProg : Problem(URI("$PROBLEM_URI_PATH/error-creating-match-prog"))
+
+    data object ExerciseNotFound : Problem(URI("$PROBLEM_URI_PATH/exercise-not-found"))
 
     private data class ProblemBody(
         val type: String,
