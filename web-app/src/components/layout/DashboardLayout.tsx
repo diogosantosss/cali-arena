@@ -19,6 +19,7 @@ import {
   PersonStanding,
   Building2,
   LogOut,
+  Dumbbell,
 } from "lucide-react";
 
 const navItems = [
@@ -26,6 +27,7 @@ const navItems = [
   { to: "/dashboard/athletes", label: "Athletes", icon: PersonStanding },
   { to: "/dashboard/clubs", label: "Clubs", icon: Building2 },
   { to: "/dashboard/users", label: "Users", icon: Users },
+  { to: "/dashboard/routines", label: "Routines", icon: Dumbbell },
 ];
 
 export function DashboardLayout() {

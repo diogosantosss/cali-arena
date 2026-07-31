@@ -146,6 +146,12 @@ export const api = {
   },
 
   // routines-related API calls
+  async getRoutines(): Promise<Routine[]> {
+    return fetchApi<Routine[]>(`/routines`, {
+      method: "GET",
+    });
+  },
+
   async createRoutine(
     input: CreateRoutineInput
   ): Promise<Routine> {
@@ -158,14 +164,14 @@ export const api = {
   async createExercise(
     input: CreateExerciseInput
   ): Promise<Exercise> {
-    return fetchApi<Exercise>("/exercises", {
+    return fetchApi<Exercise>("/routines/exercises", {
       method: "POST",
       body: JSON.stringify(input),
     });
   },
 
   async getRoutineOverview(
-    routineName: number
+    routineName: string
   ): Promise<RoutineOverview> {
     return fetchApi<RoutineOverview>(`/routines/${routineName}/overview`, {
       method: "GET",
