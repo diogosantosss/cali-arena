@@ -176,9 +176,6 @@ export interface Match {
   athleteRedId: number | null;
   athleteBlueId: number | null;
 
-  redFromMatchId: number | null;
-  blueFromMatchId: number | null;
-
   winnerAthleteId: number | null;
 
   status: MatchStatus;
@@ -191,8 +188,8 @@ export interface CreateMatchInput {
   routineId: number;
   judgeId: number;
 
-  redFromMatchId: number | null;
-  blueFromMatchId: number | null;
+  athleteRedId: number;
+  athleteBlueId: number;
 }
 
 export interface AssignAthletesInput {

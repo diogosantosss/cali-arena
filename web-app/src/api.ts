@@ -203,7 +203,7 @@ export const api = {
   async getTournamentState(
     tournamentId: number
   ): Promise<TournamentState> {
-    return fetchApi<TournamentState>(`tournaments/${tournamentId}/state`, {
+    return fetchApi<TournamentState>(`/tournaments/${tournamentId}/state`, {
       method: "GET"
     })
   },
@@ -211,7 +211,7 @@ export const api = {
   async createBracket(
     input: CreateBracketInput
   ): Promise<Bracket> {
-    return fetchApi<Bracket>(`/brackets`, {
+    return fetchApi<Bracket>(`/tournaments/bracket`, {
       method: "POST",
       body: JSON.stringify(input),
     });
@@ -236,7 +236,7 @@ export const api = {
     tournamentId: number,
     input: UpdateScreenInput
   ): Promise<TournamentState> {
-    return fetchApi<TournamentState>(`tournaments/${tournamentId}/state/screen`, {
+    return fetchApi<TournamentState>(`/tournaments/${tournamentId}/state/screen`, {
       method: "PUT",
       body: JSON.stringify(input)
     })
@@ -246,7 +246,7 @@ export const api = {
   async createMatch(
     input: CreateMatchInput
   ): Promise<Match> {
-    return fetchApi<Match>(`matches`, {
+    return fetchApi<Match>(`/matches`, {
       method: "POST",
       body: JSON.stringify(input),
     });
@@ -256,7 +256,7 @@ export const api = {
     matchId: number,
     input: AssignAthletesInput
   ): Promise<Match> {
-    return fetchApi<Match>(`matches/${matchId}/athletes`, {
+    return fetchApi<Match>(`/matches/${matchId}/athletes`, {
       method: "PUT",
       body: JSON.stringify(input),
     });
@@ -265,7 +265,7 @@ export const api = {
   async startMatch(
     matchId: number
   ): Promise<MatchProgress> {
-    return fetchApi<MatchProgress>(`matches/${matchId}/start`, {
+    return fetchApi<MatchProgress>(`/matches/${matchId}/start`, {
       method: "PUT",
     });
   },
@@ -274,7 +274,7 @@ export const api = {
     matchId: number,
     input: UpdateRepsInput
   ): Promise<MatchProgress> {
-    return fetchApi<MatchProgress>(`matches/${matchId}/reps`, {
+    return fetchApi<MatchProgress>(`/matches/${matchId}/reps`, {
       method: "PUT",
       body: JSON.stringify(input),
     });
@@ -283,7 +283,7 @@ export const api = {
   async getMatchById(
     matchId: number
   ): Promise<Match> {
-    return fetchApi<Match>(`matches/${matchId}`, {
+    return fetchApi<Match>(`/matches/${matchId}`, {
       method: "GET"
     });
   },
@@ -291,7 +291,7 @@ export const api = {
   async getProgressByMatchId(
     matchId: number
   ): Promise<MatchProgress> {
-    return fetchApi<MatchProgress>(`matches/${matchId}/progress`, {
+    return fetchApi<MatchProgress>(`/matches/${matchId}/progress`, {
       method: "GET"
     });
   },
@@ -299,7 +299,7 @@ export const api = {
   async getMatchesByBracketId(
     bracketId: number
   ): Promise<Match[]> {
-    return fetchApi<Match[]>(`matches/bracket/${bracketId}`, {
+    return fetchApi<Match[]>(`/matches/bracket/${bracketId}`, {
       method: "GET"
     });
   },
