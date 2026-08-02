@@ -47,7 +47,7 @@ function reducer(state: LocalState, action: Action): LocalState {
 
 const screenLabels: Record<ScreenState, string> = {
   WAITING: "Waiting",
-  BRACKET: "Bracket",
+  ROUTINES: "Routines",
   BATTLE: "Battle",
   WINNER: "Winner",
   LEADERBOARD: "Leaderboard",

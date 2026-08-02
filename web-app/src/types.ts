@@ -127,8 +127,7 @@ export interface Tournament {
   createdAt: string;
 }
 
-export type ScreenState = "WAITING" | "BRACKET" | "BATTLE" | "WINNER" | "LEADERBOARD";
-
+export type ScreenState = "WAITING" | "ROUTINES" | "BATTLE" | "WINNER" | "LEADERBOARD";
 export interface TournamentState {
   id: number;
   tournamentId: number;
@@ -221,3 +220,20 @@ export interface MatchProgress {
   updatedAt: string;
 }
 
+// ========== Screen Routine ==========
+export interface ScreenRoutine {
+  id: number;
+  tournamentId: number;
+  routineId: number;
+  displayOrder: number;
+  isVisible: boolean;
+  label: string | null;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface CreateScreenRoutineInput {
+  routineId: number;
+  displayOrder: number;
+  label?: string;
+}

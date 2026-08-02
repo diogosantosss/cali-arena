@@ -1,5 +1,5 @@
 import { getErrorDescription } from "./errorDescriptions";
-import type { AssignAthletesInput, Athlete, Bracket, BracketOverview, Club, CreateAthleteInput, CreateBracketInput, CreateClubInput, CreateExerciseInput, CreateMatchInput, CreateRoutineInput, CreateTournamentInput, CreateUserInput, Exercise, LoginInput, LoginOutput, Match, MatchProgress, Routine, RoutineOverview, Tournament, TournamentState, UpdateRepsInput, UpdateScreenInput, User } from "./types";
+import type { AssignAthletesInput, Athlete, Bracket, BracketOverview, Club, CreateAthleteInput, CreateBracketInput, CreateClubInput, CreateExerciseInput, CreateMatchInput, CreateRoutineInput, CreateScreenRoutineInput, CreateTournamentInput, CreateUserInput, Exercise, LoginInput, LoginOutput, Match, MatchProgress, Routine, RoutineOverview, ScreenRoutine, Tournament, TournamentState, UpdateRepsInput, UpdateScreenInput, User } from "./types";
 
 const API_BASE_URL = "/api";
 
@@ -303,6 +303,41 @@ export const api = {
       method: "GET"
     });
   },
+
+
+  // screen routine-related API calls
+  async getScreenRoutines(tournamentId: number): Promise<ScreenRoutine[]> {
+  return fetchApi<ScreenRoutine[]>(`/tournaments/${tournamentId}/screen-routines`, {
+    method: "GET",
+  });
+},
+
+async createScreenRoutine(tournamentId: number, input: CreateScreenRoutineInput): Promise<ScreenRoutine> {
+  return fetchApi<ScreenRoutine>(`/tournaments/${tournamentId}/screen-routines`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+},
+
+async updateScreenRoutineVisibility(tournamentId: number, id: number, isVisible: boolean): Promise<ScreenRoutine> {
+  return fetchApi<ScreenRoutine>(`/tournaments/${tournamentId}/screen-routines/${id}/visibility`, {
+    method: "PATCH",
+    body: JSON.stringify({ isVisible }),
+  });
+},
+
+async updateScreenRoutineDisplayOrder(tournamentId: number, id: number, displayOrder: number): Promise<ScreenRoutine> {
+  return fetchApi<ScreenRoutine>(`/tournaments/${tournamentId}/screen-routines/${id}/order`, {
+    method: "PATCH",
+    body: JSON.stringify({ displayOrder }),
+  });
+},
+
+async deleteScreenRoutine(tournamentId: number, id: number): Promise<void> {
+  return fetchApi<void>(`/tournaments/${tournamentId}/screen-routines/${id}`, {
+    method: "DELETE",
+  });
+},
 };
 
 export { ApiError };

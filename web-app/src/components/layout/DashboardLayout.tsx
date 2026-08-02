@@ -20,6 +20,7 @@ import {
   Building2,
   LogOut,
   Dumbbell,
+  Monitor,
 } from "lucide-react";
 
 const navItems = [
@@ -28,6 +29,7 @@ const navItems = [
   { to: "/dashboard/clubs", label: "Clubs", icon: Building2 },
   { to: "/dashboard/users", label: "Users", icon: Users },
   { to: "/dashboard/routines", label: "Routines", icon: Dumbbell },
+  { to: "/dashboard/screen", label: "Screen", icon: Monitor },
 ];
 
 export function DashboardLayout() {
