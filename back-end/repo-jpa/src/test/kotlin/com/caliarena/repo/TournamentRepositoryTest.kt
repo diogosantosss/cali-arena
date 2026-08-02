@@ -159,13 +159,13 @@ class TournamentRepositoryTest {
                 val updated =
                     repoTournament.updateScreen(
                         tournamentId = tournament.id,
-                        screen = ScreenState.BRACKET,
+                        screen = ScreenState.WAITING,
                         currentMatchId = null,
                         updatedAt = Instant.now().plusSeconds(10).truncatedTo(ChronoUnit.SECONDS),
                     )
 
                 assertNotNull(updated)
-                assertEquals(ScreenState.BRACKET, updated?.currentScreen)
+                assertEquals(ScreenState.WAITING, updated?.currentScreen)
             }
 
         @Test
@@ -174,7 +174,7 @@ class TournamentRepositoryTest {
                 assertNull(
                     repoTournament.updateScreen(
                         tournamentId = -1,
-                        screen = ScreenState.BRACKET,
+                        screen = ScreenState.WAITING,
                         currentMatchId = null,
                         updatedAt = Instant.now().truncatedTo(ChronoUnit.SECONDS),
                     ),

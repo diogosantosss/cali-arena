@@ -2,7 +2,7 @@ package com.caliarena.domain.tournament
 
 enum class ScreenState {
     WAITING,
-    BRACKET,
+    ROUTINES,
     BATTLE,
     WINNER,
     LEADERBOARD
