@@ -356,8 +356,6 @@ class TournamentServiceTest : ServiceTest() {
                     bracketId = 10,
                     routineId = 5,
                     judgeId = 1,
-                    redFromMatchId = null,
-                    blueFromMatchId = null,
                     athleteRedId = 100,
                     athleteBlueId = 200,
                     status = MatchStatus.PENDING,

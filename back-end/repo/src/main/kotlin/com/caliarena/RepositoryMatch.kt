@@ -13,8 +13,8 @@ interface RepositoryMatch : Repository<Match> {
         bracketId: Int,
         routineId: Int,
         judgeId: Int,
-        redFromMatchId: Int?,
-        blueFromMatchId: Int?,
+        athleteRed: Int,
+        athleteBlue: Int,
         createdAt: Instant,
     ): Match?
 

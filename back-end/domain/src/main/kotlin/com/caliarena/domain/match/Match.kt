@@ -11,9 +11,6 @@ data class Match(
     val athleteRedId: Int?,
     val athleteBlueId: Int?,
 
-    val redFromMatchId: Int?,
-    val blueFromMatchId: Int?,
-
     val winnerAthleteId: Int?,
 
     val status: MatchStatus,

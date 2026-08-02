@@ -102,8 +102,6 @@ CREATE TABLE matches
 
     athlete_red_id      INT REFERENCES athletes (id),
     athlete_blue_id     INT REFERENCES athletes (id),
-    red_from_match_id   INT REFERENCES matches (id),
-    blue_from_match_id  INT REFERENCES matches (id),
 
     winner_athlete_id   INT REFERENCES athletes (id),
 

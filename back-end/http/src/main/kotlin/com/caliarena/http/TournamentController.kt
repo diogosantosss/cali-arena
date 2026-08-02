@@ -65,7 +65,7 @@ class TournamentController(
                 onError = { it.toResponseEntity() },
             )
 
-    @PostMapping("bracket")
+    @PostMapping("/bracket")
     fun createBracket(
         @RequestBody input: CreateBracketInput,
     ): ResponseEntity<Any> =

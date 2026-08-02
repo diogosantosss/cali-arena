@@ -44,8 +44,8 @@ class MatchService(
         bracketId: Int,
         routineId: Int,
         judgeId: Int,
-        redFromMatchId: Int?,
-        blueFromMatchId: Int?,
+        athleteRedId: Int,
+        athleteBlueId: Int,
     ): Either<MatchError, Match> =
         trxManager.run {
             repoTournament.findByBracketId(bracketId)
@@ -57,47 +57,23 @@ class MatchService(
             repoUser.findById(judgeId)
                 ?: return@run failure(MatchError.JudgeNotFound)
 
+            repoAthlete.findById(athleteRedId)
+                ?: return@run failure(MatchError.AthleteNotFound)
+
+            repoAthlete.findById(athleteBlueId)
+                ?: return@run failure(MatchError.AthleteNotFound)
+
             val match =
                 repoMatch.createMatch(
                     bracketId = bracketId,
                     routineId = routineId,
                     judgeId = judgeId,
-                    redFromMatchId = redFromMatchId,
-                    blueFromMatchId = blueFromMatchId,
+                    athleteRed = athleteRedId,
+                    athleteBlue = athleteBlueId,
                     createdAt = clock.instant(),
                 ) ?: return@run failure(MatchError.BracketNotFound)
 
             success(match)
-        }
-
-    fun assignAthletesToMatch(
-        matchId: Int,
-        athleteRedId: Int,
-        athleteBlueId: Int,
-    ): Either<MatchError, Match> =
-        trxManager.run {
-            val match =
-                repoMatch.findById(matchId)
-                    ?: return@run failure(MatchError.MatchNotFound)
-
-            if (athleteRedId == athleteBlueId) {
-                return@run failure(MatchError.SameAthleteOnBothSides)
-            }
-
-            repoAthlete.findById(athleteBlueId)
-                ?: return@run failure(MatchError.AthleteNotFound)
-            repoAthlete.findById(athleteRedId)
-                ?: return@run failure(MatchError.AthleteNotFound)
-
-            val result =
-                repoMatch.save(
-                    match.copy(
-                        athleteBlueId = athleteBlueId,
-                        athleteRedId = athleteRedId,
-                    ),
-                ) ?: return@run failure(MatchError.MatchNotFound)
-
-            success(result)
         }
 
     fun startMatch(matchId: Int): Either<MatchError, MatchProgress> =

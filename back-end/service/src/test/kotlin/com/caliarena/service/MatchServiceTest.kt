@@ -63,7 +63,7 @@ class MatchServiceTest : ServiceTest() {
         athleteRedId: Int? = 10,
         athleteBlueId: Int? = 20,
         status: MatchStatus = MatchStatus.PENDING,
-    ) = Match(id, 1, 2, 3, athleteRedId, athleteBlueId, null, null, null, status, null, null, now)
+    ) = Match(id, 1, 2, 3, athleteRedId, athleteBlueId, null, status, null, null, now)
 
     private fun mockProgress(
         id: Int = 1,
@@ -98,16 +98,22 @@ class MatchServiceTest : ServiceTest() {
         @Test
         fun `should fail when bracket not found`() {
             whenever(repoTournament.findByBracketId(1)).thenReturn(null)
-            val result = service.createMatch(1, 2, 3, null, null)
+
+            val result = service.createMatch(1, 2, 3, 10, 20)
+
             assertEquals(failure(MatchError.BracketNotFound), result)
+            verify(repoMatch, never()).createMatch(any(), any(), any(), any(), any(), any())
         }
 
         @Test
         fun `should fail when routine not found`() {
             whenever(repoTournament.findByBracketId(1)).thenReturn(mockBracket())
             whenever(repoEnduranceRoutine.findById(2)).thenReturn(null)
-            val result = service.createMatch(1, 2, 3, null, null)
+
+            val result = service.createMatch(1, 2, 3, 10, 20)
+
             assertEquals(failure(MatchError.RoutineNotFound), result)
+            verify(repoMatch, never()).createMatch(any(), any(), any(), any(), any(), any())
         }
 
         @Test
@@ -115,8 +121,38 @@ class MatchServiceTest : ServiceTest() {
             whenever(repoTournament.findByBracketId(1)).thenReturn(mockBracket())
             whenever(repoEnduranceRoutine.findById(2)).thenReturn(mockRoutine())
             whenever(repoUser.findById(3)).thenReturn(null)
-            val result = service.createMatch(1, 2, 3, null, null)
+
+            val result = service.createMatch(1, 2, 3, 10, 20)
+
             assertEquals(failure(MatchError.JudgeNotFound), result)
+            verify(repoMatch, never()).createMatch(any(), any(), any(), any(), any(), any())
+        }
+
+        @Test
+        fun `should fail when red athlete not found`() {
+            whenever(repoTournament.findByBracketId(1)).thenReturn(mockBracket())
+            whenever(repoEnduranceRoutine.findById(2)).thenReturn(mockRoutine())
+            whenever(repoUser.findById(3)).thenReturn(mockUser())
+            whenever(repoAthlete.findById(10)).thenReturn(null)
+
+            val result = service.createMatch(1, 2, 3, 10, 20)
+
+            assertEquals(failure(MatchError.AthleteNotFound), result)
+            verify(repoMatch, never()).createMatch(any(), any(), any(), any(), any(), any())
+        }
+
+        @Test
+        fun `should fail when blue athlete not found`() {
+            whenever(repoTournament.findByBracketId(1)).thenReturn(mockBracket())
+            whenever(repoEnduranceRoutine.findById(2)).thenReturn(mockRoutine())
+            whenever(repoUser.findById(3)).thenReturn(mockUser())
+            whenever(repoAthlete.findById(10)).thenReturn(mockAthlete(10))
+            whenever(repoAthlete.findById(20)).thenReturn(null)
+
+            val result = service.createMatch(1, 2, 3, 10, 20)
+
+            assertEquals(failure(MatchError.AthleteNotFound), result)
+            verify(repoMatch, never()).createMatch(any(), any(), any(), any(), any(), any())
         }
 
         @Test
@@ -124,79 +160,30 @@ class MatchServiceTest : ServiceTest() {
             whenever(repoTournament.findByBracketId(1)).thenReturn(mockBracket())
             whenever(repoEnduranceRoutine.findById(2)).thenReturn(mockRoutine())
             whenever(repoUser.findById(3)).thenReturn(mockUser())
-            whenever(repoMatch.createMatch(any(), any(), any(), any(), any(), any())).thenReturn(null)
-            val result = service.createMatch(1, 2, 3, 4, 5)
+            whenever(repoAthlete.findById(10)).thenReturn(mockAthlete(10))
+            whenever(repoAthlete.findById(20)).thenReturn(mockAthlete(20))
+            whenever(repoMatch.createMatch(1, 2, 3, 10, 20, now)).thenReturn(null)
+
+            val result = service.createMatch(1, 2, 3, 10, 20)
+
             assertEquals(failure(MatchError.BracketNotFound), result)
         }
 
         @Test
         fun `should succeed`() {
             val match = mockMatch()
+
             whenever(repoTournament.findByBracketId(1)).thenReturn(mockBracket())
             whenever(repoEnduranceRoutine.findById(2)).thenReturn(mockRoutine())
             whenever(repoUser.findById(3)).thenReturn(mockUser())
-            whenever(repoMatch.createMatch(any(), any(), any(), any(), any(), any())).thenReturn(match)
-            val result = service.createMatch(1, 2, 3, 4, 5)
+            whenever(repoAthlete.findById(10)).thenReturn(mockAthlete(10))
+            whenever(repoAthlete.findById(20)).thenReturn(mockAthlete(20))
+            whenever(repoMatch.createMatch(1, 2, 3, 10, 20, now)).thenReturn(match)
+
+            val result = service.createMatch(1, 2, 3, 10, 20)
+
             assertEquals(success(match), result)
-            verify(repoMatch).createMatch(1, 2, 3, 4, 5, now)
-        }
-    }
-
-    @Nested
-    inner class AssignAthletesToMatch {
-        @Test
-        fun `should fail when match not found`() {
-            whenever(repoMatch.findById(1)).thenReturn(null)
-            val result = service.assignAthletesToMatch(1, 10, 20)
-            assertEquals(failure(MatchError.MatchNotFound), result)
-        }
-
-        @Test
-        fun `should fail when same athlete on both sides`() {
-            whenever(repoMatch.findById(1)).thenReturn(mockMatch())
-            val result = service.assignAthletesToMatch(1, 10, 10)
-            assertEquals(failure(MatchError.SameAthleteOnBothSides), result)
-            verify(repoAthlete, never()).findById(any())
-        }
-
-        @Test
-        fun `should fail when blue athlete not found`() {
-            whenever(repoMatch.findById(1)).thenReturn(mockMatch())
-            whenever(repoAthlete.findById(20)).thenReturn(null)
-            val result = service.assignAthletesToMatch(1, 10, 20)
-            assertEquals(failure(MatchError.AthleteNotFound), result)
-        }
-
-        @Test
-        fun `should fail when red athlete not found`() {
-            whenever(repoMatch.findById(1)).thenReturn(mockMatch())
-            whenever(repoAthlete.findById(20)).thenReturn(mockAthlete(20))
-            whenever(repoAthlete.findById(10)).thenReturn(null)
-            val result = service.assignAthletesToMatch(1, 10, 20)
-            assertEquals(failure(MatchError.AthleteNotFound), result)
-        }
-
-        @Test
-        fun `should fail when save returns null`() {
-            whenever(repoMatch.findById(1)).thenReturn(mockMatch())
-            whenever(repoAthlete.findById(20)).thenReturn(mockAthlete(20))
-            whenever(repoAthlete.findById(10)).thenReturn(mockAthlete(10))
-            whenever(repoMatch.save(any())).thenReturn(null)
-            val result = service.assignAthletesToMatch(1, 10, 20)
-            assertEquals(failure(MatchError.MatchNotFound), result)
-        }
-
-        @Test
-        fun `should succeed`() {
-            val match = mockMatch()
-            val updated = match.copy(athleteRedId = 10, athleteBlueId = 20)
-            whenever(repoMatch.findById(1)).thenReturn(match)
-            whenever(repoAthlete.findById(20)).thenReturn(mockAthlete(20))
-            whenever(repoAthlete.findById(10)).thenReturn(mockAthlete(10))
-            whenever(repoMatch.save(any())).thenReturn(updated)
-            val result = service.assignAthletesToMatch(1, 10, 20)
-            assertEquals(success(updated), result)
-            verify(repoMatch).save(match.copy(athleteRedId = 10, athleteBlueId = 20))
+            verify(repoMatch).createMatch(1, 2, 3, 10, 20, now)
         }
     }
 

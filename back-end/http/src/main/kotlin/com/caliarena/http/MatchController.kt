@@ -3,7 +3,6 @@ package com.caliarena.http
 import com.caliarena.domain.match.Match
 import com.caliarena.domain.match.MatchProgress
 import com.caliarena.http.model.Problem
-import com.caliarena.http.model.match.AssignAthletesInput
 import com.caliarena.http.model.match.CreateMatchInput
 import com.caliarena.http.model.match.UpdateRepsInput
 import com.caliarena.http.utils.toResponse
@@ -30,29 +29,12 @@ class MatchController(
         @RequestBody input: CreateMatchInput,
     ): ResponseEntity<Any> =
         matchService
-            .createMatch(input.bracketId, input.routineId, input.judgeId, input.blueFromMatchId, input.redFromMatchId)
+            .createMatch(input.bracketId, input.routineId, input.judgeId, input.athleteRedId, input.athleteBlueId)
             .toResponse(
                 onSuccess = { match: Match ->
                     ResponseEntity
                         .status(HttpStatus.CREATED)
                         .header(HttpHeaders.LOCATION, "/api/matches/${match.id}")
-                        .body(match)
-                },
-                onError = { it.toResponseEntity() },
-            )
-
-    @PutMapping("/{matchId}/athletes")
-    fun assignAthleteToMatch(
-        @PathVariable matchId: Int,
-        @RequestBody input: AssignAthletesInput,
-    ): ResponseEntity<Any> =
-        matchService
-            .assignAthletesToMatch(matchId, input.athleteRedId, input.athleteBlueId)
-            .toResponse(
-                onSuccess = { match: Match ->
-                    ResponseEntity
-                        .status(HttpStatus.ACCEPTED)
-                        .header(HttpHeaders.LOCATION, "/api/matches/$matchId")
                         .body(match)
                 },
                 onError = { it.toResponseEntity() },
