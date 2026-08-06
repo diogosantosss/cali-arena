@@ -1,5 +1,6 @@
 package com.caliarena.http
 
+import com.caliarena.domain.routine.ScreenRoutine
 import com.caliarena.http.model.Problem
 import com.caliarena.http.model.screen.CreateScreenRoutineInput
 import com.caliarena.http.model.screen.UpdateDisplayOrderInput
@@ -7,6 +8,7 @@ import com.caliarena.http.model.screen.UpdateVisibilityInput
 import com.caliarena.http.utils.toResponse
 import com.caliarena.service.ScreenRoutineError
 import com.caliarena.service.ScreenRoutineService
+import com.caliarena.service.sse.SpectatorPublisher
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -18,12 +20,29 @@ import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter
+import java.util.concurrent.TimeUnit
 
 @RestController
 @RequestMapping("/api/tournaments/{tournamentId}/screen-routines")
 class ScreenRoutineController(
     private val service: ScreenRoutineService,
+    private val publisher: SpectatorPublisher,
 ) {
+    @GetMapping("/listen")
+    fun listen(
+        @PathVariable tournamentId: Int,
+    ): SseEmitter {
+        val sseEmitter = SseEmitter(TimeUnit.HOURS.toMillis(1))
+        publisher.addEmitter(
+            tournamentId,
+            SseSpectatorEmitterAdapter(
+                sseEmitter,
+            ),
+        )
+        return sseEmitter
+    }
+
     @GetMapping
     fun getAll(
         @PathVariable tournamentId: Int,
@@ -48,10 +67,10 @@ class ScreenRoutineController(
         service
             .create(tournamentId, input.routineId, input.displayOrder, input.label)
             .toResponse(
-                onSuccess = {
+                onSuccess = { screenRoutine: ScreenRoutine ->
                     ResponseEntity
                         .status(HttpStatus.CREATED)
-                        .body(it)
+                        .body(screenRoutine)
                 },
                 onError = { it.toResponseEntity() },
             )

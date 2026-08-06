@@ -59,16 +59,21 @@ class MatchRepository(
 
     override fun createMatchProgress(
         matchId: Int,
-        updatedAt: Instant,
+        firstExerciseId: Int,
+        now: Instant,
     ): MatchProgress? {
         val match = matchJpa.findByIdOrNull(matchId) ?: return null
+        val exercise = exerciseJpa.findByIdOrNull(firstExerciseId) ?: return null
         return matchProgJpa
             .save(
                 MatchProgressEntity(
                     match = match,
                     redCurrentReps = 0,
                     blueCurrentReps = 0,
-                    updatedAt = updatedAt.epochSecond,
+                    blueCurrentExercise = exercise,
+                    redCurrentExercise = exercise,
+                    timerStartedAt = now.epochSecond,
+                    updatedAt = now.epochSecond,
                 ),
             ).toDomain()
     }

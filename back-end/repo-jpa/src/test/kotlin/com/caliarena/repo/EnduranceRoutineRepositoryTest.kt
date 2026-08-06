@@ -16,7 +16,7 @@ import java.math.BigDecimal
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 
-@SpringBootTest(classes = [TestConfiguration::class])
+@SpringBootTest(classes = [TestConfig::class])
 class EnduranceRoutineRepositoryTest {
     @Autowired
     lateinit var trx: TransactionManagerJpa

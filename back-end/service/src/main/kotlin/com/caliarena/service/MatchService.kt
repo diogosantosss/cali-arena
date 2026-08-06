@@ -4,6 +4,7 @@ import com.caliarena.TransactionManager
 import com.caliarena.domain.match.Match
 import com.caliarena.domain.match.MatchProgress
 import com.caliarena.domain.match.MatchStatus
+import com.caliarena.domain.routine.Exercise
 import org.springframework.stereotype.Service
 import java.time.Clock
 
@@ -33,6 +34,8 @@ sealed class MatchError {
     data object ErrorCreatingMatchProg : MatchError()
 
     data object ExerciseNotFound : MatchError()
+
+    data object MatchAlreadyStarted : MatchError()
 }
 
 @Service
@@ -90,6 +93,14 @@ class MatchService(
                 return@run failure(MatchError.AthletesNotAssigned)
             }
 
+            if (match.status == MatchStatus.RUNNING || match.status == MatchStatus.FINISHED) {
+                return@run failure(MatchError.MatchAlreadyStarted)
+            }
+
+            val firstExercise: Exercise =
+                repoEnduranceRoutine.findExercisesByRoutineId(match.routineId).firstOrNull()
+                    ?: return@run failure(MatchError.RoutineNotFound)
+
             val now = clock.instant()
 
             repoMatch.save(
@@ -102,7 +113,8 @@ class MatchService(
             val progress =
                 repoMatch.createMatchProgress(
                     matchId = matchId,
-                    updatedAt = now,
+                    firstExerciseId = firstExercise.id,
+                    now = now,
                 ) ?: return@run failure(MatchError.ErrorCreatingMatchProg)
 
             success(progress)
@@ -152,7 +164,7 @@ class MatchService(
 
                 repoMatch.save(
                     match.copy(
-                        status = MatchStatus.FINISHED,
+                        status = if (redFinishedAt != null && blueFinishedAt != null) MatchStatus.FINISHED else MatchStatus.RUNNING,
                         winnerAthleteId = if (redWon) match.athleteRedId else match.athleteBlueId,
                         finishedAt = if (redWon) redFinishedAt else blueFinishedAt,
                     ),

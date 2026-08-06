@@ -99,6 +99,8 @@ sealed class Problem(
 
     data object ExerciseNotFound : Problem(URI("$PROBLEM_URI_PATH/exercise-not-found"))
 
+    data object MatchAlreadyStarted : Problem(URI("$PROBLEM_URI_PATH/match-already-started"))
+
     // Screen Routine related Errors
     data object ScreenRoutineNotFound : Problem(URI("$PROBLEM_URI_PATH/screen-routine-not-found"))
 

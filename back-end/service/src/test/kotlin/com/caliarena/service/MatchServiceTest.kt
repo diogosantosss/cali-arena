@@ -220,6 +220,7 @@ class MatchServiceTest : ServiceTest() {
             val match = mockMatch()
             whenever(repoMatch.findById(1)).thenReturn(match)
             whenever(repoMatch.findProgressByMatchId(1)).thenReturn(null)
+            whenever(repoEnduranceRoutine.findExercisesByRoutineId(2)).thenReturn(exercises(1))
             whenever(repoMatch.save(any())).thenReturn(null)
             val result = service.startMatch(1)
             assertEquals(failure(MatchError.MatchNotFound), result)
@@ -231,8 +232,9 @@ class MatchServiceTest : ServiceTest() {
             val updated = match.copy(status = MatchStatus.RUNNING, startedAt = now)
             whenever(repoMatch.findById(1)).thenReturn(match)
             whenever(repoMatch.findProgressByMatchId(1)).thenReturn(null)
+            whenever(repoEnduranceRoutine.findExercisesByRoutineId(2)).thenReturn(exercises(1))
             whenever(repoMatch.save(any())).thenReturn(updated)
-            whenever(repoMatch.createMatchProgress(1, now)).thenReturn(null)
+            whenever(repoMatch.createMatchProgress(1, 1, now)).thenReturn(null)
             val result = service.startMatch(1)
             assertEquals(failure(MatchError.ErrorCreatingMatchProg), result)
         }
@@ -244,12 +246,13 @@ class MatchServiceTest : ServiceTest() {
             val progress = mockProgress()
             whenever(repoMatch.findById(1)).thenReturn(match)
             whenever(repoMatch.findProgressByMatchId(1)).thenReturn(null)
+            whenever(repoEnduranceRoutine.findExercisesByRoutineId(2)).thenReturn(exercises(1))
             whenever(repoMatch.save(any())).thenReturn(updated)
-            whenever(repoMatch.createMatchProgress(1, now)).thenReturn(progress)
+            whenever(repoMatch.createMatchProgress(1, 1, now)).thenReturn(progress)
             val result = service.startMatch(1)
             assertEquals(success(progress), result)
             verify(repoMatch).save(match.copy(status = MatchStatus.RUNNING, startedAt = now))
-            verify(repoMatch).createMatchProgress(1, now)
+            verify(repoMatch).createMatchProgress(1, 1, now)
         }
     }
 
@@ -323,7 +326,7 @@ class MatchServiceTest : ServiceTest() {
                 )
             val finishedMatch =
                 match.copy(
-                    status = MatchStatus.FINISHED,
+                    status = MatchStatus.RUNNING,
                     winnerAthleteId = match.athleteRedId,
                     finishedAt = now,
                 )
@@ -359,7 +362,7 @@ class MatchServiceTest : ServiceTest() {
                 )
             val finishedMatch =
                 match.copy(
-                    status = MatchStatus.FINISHED,
+                    status = MatchStatus.RUNNING,
                     winnerAthleteId = match.athleteBlueId,
                     finishedAt = now,
                 )

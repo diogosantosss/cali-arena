@@ -14,7 +14,7 @@ import org.springframework.boot.test.context.SpringBootTest
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 
-@SpringBootTest(classes = [TestConfiguration::class])
+@SpringBootTest(classes = [TestConfig::class])
 class ClubRepositoryTest {
     @Autowired
     lateinit var trx: TransactionManagerJpa

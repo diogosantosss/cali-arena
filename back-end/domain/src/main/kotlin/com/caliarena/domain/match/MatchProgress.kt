@@ -6,14 +6,14 @@ import java.time.Instant
 data class MatchProgress(
     val id: Int,
     val matchId: Int,
-    val redCurrentExerciseId: Int?,
-    val blueCurrentExerciseId: Int?,
+    val redCurrentExerciseId: Int? = null,
+    val blueCurrentExerciseId: Int? = null,
     val redCurrentReps: Int,
     val blueCurrentReps: Int,
-    val redFinishedAt: Instant?,
-    val blueFinishedAt: Instant?,
-    val timerStartedAt: Instant?,
-    val timerRemainingSeconds: Int?,
+    val redFinishedAt: Instant? = null,
+    val blueFinishedAt: Instant? = null,
+    val timerStartedAt: Instant? = null,
+    val timerRemainingSeconds: Int? = null,
     val updatedAt: Instant,
 ) {
     fun advance(

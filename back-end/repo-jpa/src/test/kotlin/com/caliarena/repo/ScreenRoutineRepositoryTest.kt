@@ -18,7 +18,7 @@ import org.springframework.boot.test.context.SpringBootTest
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 
-@SpringBootTest(classes = [TestConfiguration::class])
+@SpringBootTest(classes = [TestConfig::class])
 class ScreenRoutineRepositoryTest {
     @Autowired
     lateinit var trx: TransactionManagerJpa
@@ -59,7 +59,7 @@ class ScreenRoutineRepositoryTest {
                 val found = repoScreenRoutine.findById(created.id)
 
                 assertNotNull(found)
-                assertEquals(created.id, found?.id)
+                assertEquals(created.id, found.id)
             }
 
         @Test
@@ -115,7 +115,7 @@ class ScreenRoutineRepositoryTest {
                 val found = repoScreenRoutine.findById(created.id)
 
                 assertNotNull(found)
-                assertEquals(created.id, found?.id)
+                assertEquals(created.id, found.id)
             }
 
         @Test
