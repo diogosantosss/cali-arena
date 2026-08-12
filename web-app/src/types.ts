@@ -172,8 +172,8 @@ export interface Match {
   routineId: number;
   judgeId: number;  
 
-  athleteRedId: number | null;
-  athleteBlueId: number | null;
+  athleteRedId: number;
+  athleteBlueId: number;
 
   winnerAthleteId: number | null;
 
@@ -237,3 +237,41 @@ export interface CreateScreenRoutineInput {
   displayOrder: number;
   label?: string;
 }
+
+// ========== SSE ==========
+
+export const SPECTATOR_ACTIONS = [
+  "TOURNAMENT_STATE_UPDATED",
+  "SCREEN_ROUTINES_CREATED",
+  "SCREEN_ROUTINES_UPDATED",
+  "SCREEN_ROUTINES_DELETED",
+  "KEEP_ALIVE",
+] as const;
+
+export type SpectatorAction = typeof SPECTATOR_ACTIONS[number];
+
+interface SpectatorEventBase {
+  tournamentId: number;
+  action: SpectatorAction;
+}
+
+export interface TournamentStateUpdatedEvent extends SpectatorEventBase {
+  action: "TOURNAMENT_STATE_UPDATED";
+  state: TournamentState;
+}
+
+export interface ScreenRoutinesEvent extends SpectatorEventBase {
+  action: "SCREEN_ROUTINES_CREATED" | "SCREEN_ROUTINES_UPDATED";
+  screenRoutine: ScreenRoutine;
+  routineOverview: RoutineOverview | null;
+}
+
+export interface ScreenRoutineDeletedEvent extends SpectatorEventBase {
+  action: "SCREEN_ROUTINES_DELETED";
+  screenRoutineId: number;
+}
+
+export type SpectatorEvent =
+  | TournamentStateUpdatedEvent
+  | ScreenRoutinesEvent
+  | ScreenRoutineDeletedEvent;

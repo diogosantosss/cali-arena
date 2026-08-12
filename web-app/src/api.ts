@@ -21,7 +21,7 @@ export async function fetchApi<T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> {
-  await delay(1000) // simulate network latency
+  //await delay(1000) // simulate network latency
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
     ...options,
     headers: {

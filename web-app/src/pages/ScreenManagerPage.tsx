@@ -6,14 +6,14 @@ import type {
   Match,
   Routine,
   ScreenRoutine,
+  Athlete,
+  RoutineOverview,
 } from "@/types";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Eye, EyeOff, Trash2, Plus, ArrowUp, ArrowDown, Monitor } from "lucide-react";
+import { Eye, EyeOff, Trash2, Plus, ArrowUp, ArrowDown, ExternalLink, ChevronRight } from "lucide-react";
 import { ScreenControl } from "./tournament/ScreenControl";
 
 interface State {
@@ -23,6 +23,8 @@ interface State {
   matches: Match[];
   routines: Routine[];
   screenRoutines: ScreenRoutine[];
+  athletes: Athlete[];
+  overviews: Record<string, RoutineOverview>;
   loading: boolean;
   error: string | null;
 }
@@ -38,7 +40,9 @@ type Action =
   | { type: "updateScreenRoutine"; screenRoutine: ScreenRoutine }
   | { type: "removeScreenRoutine"; id: number }
   | { type: "setLoading"; loading: boolean }
-  | { type: "setError"; message: string };
+  | { type: "setError"; message: string }
+  | { type: "setOverview"; routineName: string; overview: RoutineOverview }
+  | { type: "setAthletes"; athletes: Athlete[] };
 
 const initialState: State = {
   tournaments: [],
@@ -47,6 +51,8 @@ const initialState: State = {
   matches: [],
   routines: [],
   screenRoutines: [],
+  athletes: [],
+  overviews: {},
   loading: false,
   error: null,
 };
@@ -75,6 +81,10 @@ function reducer(state: State, action: Action): State {
       return { ...state, loading: action.loading };
     case "setError":
       return { ...state, loading: false, error: action.message };
+    case "setAthletes":
+      return { ...state, athletes: action.athletes };
+    case "setOverview":
+      return { ...state, overviews: { ...state.overviews, [action.routineName]: action.overview } };
     default:
       throw new Error("Unknown action");
   }
@@ -106,16 +116,25 @@ export function ScreenManagerPage() {
     async function loadTournamentData() {
       dispatch({ type: "setLoading", loading: true });
       try {
-        const [tournamentState, brackets, screenRoutines] = await Promise.all([
+        const [tournamentState, brackets, screenRoutines, athletes] = await Promise.all([
           api.getTournamentState(id),
           api.getBracketsByTournamentId(id),
           api.getScreenRoutines(id),
+          api.getAthletes(),
         ]);
         dispatch({ type: "setTournamentState", state: tournamentState });
         dispatch({ type: "setScreenRoutines", screenRoutines });
+        dispatch({ type: "setAthletes", athletes });
 
         const allMatches = await Promise.all(brackets.map((b) => api.getMatchesByBracketId(b.id)));
         dispatch({ type: "setMatches", matches: allMatches.flat() });
+
+        await Promise.all(
+          state.routines.map(async (r) => {
+            const overview = await api.getRoutineOverview(r.name);
+            dispatch({ type: "setOverview", routineName: r.name, overview });
+          })
+        );
       } catch (err) {
         if (err instanceof ApiError) dispatch({ type: "setError", message: err.message });
       } finally {
@@ -180,11 +199,11 @@ export function ScreenManagerPage() {
   const sorted = [...state.screenRoutines].sort((a, b) => a.displayOrder - b.displayOrder);
 
   return (
-    <div className="max-w-3xl space-y-6">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Screen Manager</h1>
-          <p className="text-sm text-muted-foreground mt-1">Control what spectators see on the public screen.</p>
+          <h1 className="text-xl font-semibold tracking-tight">Screen Manager</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">Control what spectators see on the public display.</p>
         </div>
         {selectedTournament && (
           <Button
@@ -192,14 +211,14 @@ export function ScreenManagerPage() {
             size="sm"
             onClick={() => window.open(`/screen/${selectedTournament.id}`, "_blank")}
           >
-            <Monitor className="w-4 h-4 mr-2" />
-            Open Screen
+            Open screen
+            <ExternalLink className="w-3.5 h-3.5 ml-1.5" />
           </Button>
         )}
       </div>
 
-      <div className="space-y-1.5">
-        <p className="text-xs text-muted-foreground uppercase tracking-wider">Tournament</p>
+      <div className="flex items-center gap-2">
+        <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
         <Select
           value={state.selectedTournamentId ? String(state.selectedTournamentId) : ""}
           onValueChange={(v) => dispatch({ type: "selectTournament", id: Number(v) })}
@@ -209,79 +228,114 @@ export function ScreenManagerPage() {
           </SelectTrigger>
           <SelectContent>
             {state.tournaments.map((t) => (
-              <SelectItem key={t.id} value={String(t.id)}>{t.name}</SelectItem>
+              <SelectItem key={t.id} value={String(t.id)}>
+                <span className="flex items-center gap-2">
+                  {t.name}
+                  <span className="text-xs text-muted-foreground">{t.status}</span>
+                </span>
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
       </div>
 
       {state.loading && (
-        <div className="space-y-3">
-          <Skeleton className="h-24 w-full" />
-          <Skeleton className="h-48 w-full" />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Skeleton className="h-48 w-full rounded-xl" />
+          <Skeleton className="h-64 w-full rounded-xl" />
         </div>
       )}
 
       {!state.loading && selectedTournament && (
-        <>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
           <ScreenControl
             tournamentId={selectedTournament.id}
             state={state.tournamentState}
             matches={state.matches}
+            athletes={state.athletes}
+            routines={state.routines}
+            overviews={state.overviews}
             onUpdated={(s) => dispatch({ type: "setTournamentState", state: s })}
           />
 
-          <Separator />
+          <div className="border rounded-xl overflow-hidden">
+            <div className="px-4 py-3 border-b bg-muted/30 flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium">Screen Routines</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Shown when screen is set to Routines</p>
+              </div>
+              <Badge variant="secondary" className="text-xs tabular-nums">
+                {sorted.filter((r) => r.isVisible).length}/{sorted.length} visible
+              </Badge>
+            </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Screen Routines</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {sorted.length === 0 && (
-                <p className="text-sm text-muted-foreground">No routines added yet.</p>
-              )}
-
-              {sorted.map((sr, idx) => (
-                <div key={sr.id} className="flex items-center gap-3 p-3 border rounded-lg bg-muted/30">
-                  <div className="flex flex-col gap-0.5">
-                    <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => handleMove(sr, "up")} disabled={idx === 0}>
-                      <ArrowUp className="w-3 h-3" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => handleMove(sr, "down")} disabled={idx === sorted.length - 1}>
-                      <ArrowDown className="w-3 h-3" />
-                    </Button>
-                  </div>
-
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">
-                      {state.routines.find((r) => r.id === sr.routineId)?.name ?? `Routine #${sr.routineId}`}
-                    </p>
-                    {sr.label && (
-                      <p className="text-xs text-muted-foreground">{sr.label}</p>
-                    )}
-                  </div>
-
-                  <Badge variant={sr.isVisible ? "default" : "outline"} className="text-xs">
-                    {sr.isVisible ? "Visible" : "Hidden"}
-                  </Badge>
-
-                  <Button variant="ghost" size="icon" onClick={() => handleToggleVisibility(sr)}>
-                    {sr.isVisible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </Button>
-
-                  <Button variant="ghost" size="icon" onClick={() => handleDelete(sr)}>
-                    <Trash2 className="w-4 h-4 text-destructive" />
-                  </Button>
+            <div className="divide-y">
+              {sorted.length === 0 ? (
+                <div className="px-4 py-10 text-center">
+                  <p className="text-sm text-muted-foreground">No routines added yet.</p>
                 </div>
-              ))}
+              ) : (
+                sorted.map((sr, idx) => {
+                  const routineName = state.routines.find((r) => r.id === sr.routineId)?.name ?? `Routine #${sr.routineId}`;
+                  return (
+                    <div
+                      key={sr.id}
+                      className={`flex items-center gap-3 px-4 py-3 transition-colors ${sr.isVisible ? "" : "opacity-50"}`}
+                    >
+                      <div className="flex flex-col gap-0.5 shrink-0">
+                        <button
+                          onClick={() => handleMove(sr, "up")}
+                          disabled={idx === 0}
+                          className="p-0.5 rounded text-muted-foreground hover:text-foreground disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
+                        >
+                          <ArrowUp className="w-3 h-3" />
+                        </button>
+                        <button
+                          onClick={() => handleMove(sr, "down")}
+                          disabled={idx === sorted.length - 1}
+                          className="p-0.5 rounded text-muted-foreground hover:text-foreground disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
+                        >
+                          <ArrowDown className="w-3 h-3" />
+                        </button>
+                      </div>
 
-              <Separator />
+                      <div className="w-6 h-6 rounded-md bg-muted flex items-center justify-center text-xs font-bold text-muted-foreground shrink-0">
+                        {idx + 1}
+                      </div>
 
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{routineName}</p>
+                        {sr.label && (
+                          <p className="text-xs text-muted-foreground truncate">{sr.label}</p>
+                        )}
+                      </div>
+
+                      <button
+                        onClick={() => handleToggleVisibility(sr)}
+                        className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shrink-0"
+                        title={sr.isVisible ? "Hide" : "Show"}
+                      >
+                        {sr.isVisible ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                      </button>
+
+                      <button
+                        onClick={() => handleDelete(sr)}
+                        className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors shrink-0"
+                        title="Delete"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            <div className="px-4 py-3 border-t bg-muted/20">
               <AddScreenRoutineRow routines={state.routines} onAdd={handleAdd} />
-            </CardContent>
-          </Card>
-        </>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
@@ -303,8 +357,8 @@ function AddScreenRoutineRow({
         value={routineId ? String(routineId) : ""}
         onValueChange={(v) => setRoutineId(Number(v))}
       >
-        <SelectTrigger className="w-56">
-          <SelectValue placeholder="Select routine" />
+        <SelectTrigger className="h-8 text-xs flex-1 min-w-0">
+          <SelectValue placeholder="Add a routine…" />
         </SelectTrigger>
         <SelectContent>
           {routines.map((r) => (
@@ -314,19 +368,20 @@ function AddScreenRoutineRow({
       </Select>
 
       <input
-        className="h-9 rounded-md border border-input bg-transparent px-3 text-sm w-36 placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-        placeholder="Label (optional)"
+        className="h-8 rounded-md border border-input bg-transparent px-2.5 text-xs w-28 placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring shrink-0"
+        placeholder="Label"
         value={label}
         onChange={(e) => setLabel(e.target.value)}
       />
 
       <Button
         size="sm"
-        variant="outline"
+        variant="secondary"
+        className="h-8 px-2.5 text-xs shrink-0"
         disabled={!routineId}
         onClick={() => routineId && onAdd(routineId, label)}
       >
-        <Plus className="w-4 h-4 mr-1" />
+        <Plus className="w-3.5 h-3.5 mr-1" />
         Add
       </Button>
     </div>

@@ -1,7 +1,7 @@
 import { useReducer, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { api, ApiError } from "@/api";
-import type { Athlete, Bracket, BracketStage, Gender, Match, Routine, Tournament, TournamentState, User } from "@/types";
+import type { Athlete, Bracket, BracketStage, Gender, Match, Routine, RoutineOverview, Tournament, TournamentState, User } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -20,6 +20,7 @@ interface State {
   matches: Match[];
   athletes: Athlete[];
   routines: Routine[];
+  overviews: Record<string, RoutineOverview>;
   judges: User[];
 }
 
@@ -35,6 +36,7 @@ type Action =
   | { type: "updateMatch"; match: Match }
   | { type: "setAthletes"; athletes: Athlete[] }
   | { type: "setRoutines"; routines: Routine[] }
+  | { type: "setOverview"; routineName: string; overview: RoutineOverview }
   | { type: "setJudges"; judges: User[] };
 
 const initialState: State = {
@@ -46,6 +48,7 @@ const initialState: State = {
   matches: [],
   athletes: [],
   routines: [],
+  overviews: {},
   judges: [],
 };
 
@@ -75,6 +78,8 @@ function reducer(state: State, action: Action): State {
       return { ...state, routines: action.routines };
     case "setJudges":
       return { ...state, judges: action.judges };
+    case "setOverview":
+  return { ...state, overviews: { ...state.overviews, [action.routineName]: action.overview } };
     default:
       throw new Error("Unknown action");
   }
@@ -116,6 +121,13 @@ export function TournamentDetailPage() {
         brackets.map((b) => api.getMatchesByBracketId(b.id))
       );
       dispatch({ type: "setMatches", matches: allMatches.flat() });
+      
+      await Promise.all(
+        routines.map(async (r) => {
+          const overview = await api.getRoutineOverview(r.name);
+          dispatch({ type: "setOverview", routineName: r.name, overview });
+        })
+      );
     } catch (err) {
       if (err instanceof ApiError) {
         dispatch({ type: "setTournamentError", message: err.message });
@@ -205,6 +217,9 @@ export function TournamentDetailPage() {
         tournamentId={tournamentId}
         state={state.tournamentState}
         matches={state.matches}
+        athletes={state.athletes}
+        routines={state.routines}
+        overviews={state.overviews}
         onUpdated={(s) => dispatch({ type: "setTournamentState", state: s })}
       />
 
