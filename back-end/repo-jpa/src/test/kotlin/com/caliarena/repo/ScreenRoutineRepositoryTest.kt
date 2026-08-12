@@ -50,28 +50,11 @@ class ScreenRoutineRepositoryTest {
             }
 
         @Test
-        fun `should persist the screen routine so it can be found by id`() =
-            trx.run {
-                val tournament = newTournament()
-                val routine = newRoutine()
-                val created = newScreenRoutine(tournament.id, routine.id)
-
-                val found = repoScreenRoutine.findById(created.id)
-
-                assertNotNull(found)
-                assertEquals(created.id, found.id)
-            }
-
-        @Test
         fun `should persist label when provided`() =
             trx.run {
-                val tournament = newTournament()
-                val routine = newRoutine()
-                val sr = newScreenRoutine(tournament.id, routine.id, label = "Quartos de Final")
+                val sr = newScreenRoutine(newTournament().id, newRoutine().id, label = "Quartos de Final")
 
-                val found = repoScreenRoutine.findById(sr.id)
-
-                assertEquals("Quartos de Final", found?.label)
+                assertEquals("Quartos de Final", repoScreenRoutine.findById(sr.id)?.label)
             }
     }
 
@@ -89,17 +72,13 @@ class ScreenRoutineRepositoryTest {
                 val result = repoScreenRoutine.findByTournamentId(tournament.id)
 
                 assertEquals(3, result.size)
-                assertEquals(0, result[0].displayOrder)
-                assertEquals(1, result[1].displayOrder)
-                assertEquals(2, result[2].displayOrder)
+                assertEquals(listOf(0, 1, 2), result.map { it.displayOrder })
             }
 
         @Test
         fun `should return empty list when no screen routines exist for tournament`() =
             trx.run {
-                val result = repoScreenRoutine.findByTournamentId(999)
-
-                assertTrue(result.isEmpty())
+                assertTrue(repoScreenRoutine.findByTournamentId(999).isEmpty())
             }
     }
 
@@ -108,9 +87,7 @@ class ScreenRoutineRepositoryTest {
         @Test
         fun `should find an existing screen routine by id`() =
             trx.run {
-                val tournament = newTournament()
-                val routine = newRoutine()
-                val created = newScreenRoutine(tournament.id, routine.id)
+                val created = newScreenRoutine(newTournament().id, newRoutine().id)
 
                 val found = repoScreenRoutine.findById(created.id)
 
@@ -121,9 +98,7 @@ class ScreenRoutineRepositoryTest {
         @Test
         fun `should return null when id does not exist`() =
             trx.run {
-                val found = repoScreenRoutine.findById(-1)
-
-                assertNull(found)
+                assertNull(repoScreenRoutine.findById(-1))
             }
     }
 
@@ -134,21 +109,15 @@ class ScreenRoutineRepositoryTest {
             trx.run {
                 val tournament = newTournament()
                 val routine = newRoutine()
-                newScreenRoutine(tournament.id, routine.id, displayOrder = 0)
-                newScreenRoutine(tournament.id, routine.id, displayOrder = 1)
-                newScreenRoutine(tournament.id, routine.id, displayOrder = 2)
+                repeat(3) { i -> newScreenRoutine(tournament.id, routine.id, displayOrder = i) }
 
-                val result = repoScreenRoutine.findAll()
-
-                assertEquals(3, result.size)
+                assertEquals(3, repoScreenRoutine.findAll().size)
             }
 
         @Test
         fun `should return empty list when there are no screen routines`() =
             trx.run {
-                val result = repoScreenRoutine.findAll()
-
-                assertTrue(result.isEmpty())
+                assertTrue(repoScreenRoutine.findAll().isEmpty())
             }
     }
 
@@ -157,18 +126,9 @@ class ScreenRoutineRepositoryTest {
         @Test
         fun `should update visibility`() =
             trx.run {
-                val tournament = newTournament()
-                val routine = newRoutine()
-                val created = newScreenRoutine(tournament.id, routine.id)
+                val created = newScreenRoutine(newTournament().id, newRoutine().id)
 
-                val updated =
-                    repoScreenRoutine.update(
-                        created.id,
-                        isVisible = false,
-                        displayOrder = null,
-                        label = null,
-                        now = Instant.now(),
-                    )
+                val updated = repoScreenRoutine.update(created.id, isVisible = false, displayOrder = null, label = null, now = now())
 
                 assertEquals(false, updated?.isVisible)
             }
@@ -176,11 +136,9 @@ class ScreenRoutineRepositoryTest {
         @Test
         fun `should update displayOrder`() =
             trx.run {
-                val tournament = newTournament()
-                val routine = newRoutine()
-                val created = newScreenRoutine(tournament.id, routine.id, displayOrder = 0)
+                val created = newScreenRoutine(newTournament().id, newRoutine().id, displayOrder = 0)
 
-                val updated = repoScreenRoutine.update(created.id, isVisible = null, displayOrder = 5, label = null, now = Instant.now())
+                val updated = repoScreenRoutine.update(created.id, isVisible = null, displayOrder = 5, label = null, now = now())
 
                 assertEquals(5, updated?.displayOrder)
             }
@@ -188,18 +146,9 @@ class ScreenRoutineRepositoryTest {
         @Test
         fun `should update label`() =
             trx.run {
-                val tournament = newTournament()
-                val routine = newRoutine()
-                val created = newScreenRoutine(tournament.id, routine.id)
+                val created = newScreenRoutine(newTournament().id, newRoutine().id)
 
-                val updated =
-                    repoScreenRoutine.update(
-                        created.id,
-                        isVisible = null,
-                        displayOrder = null,
-                        label = "Semi-Final",
-                        now = Instant.now(),
-                    )
+                val updated = repoScreenRoutine.update(created.id, isVisible = null, displayOrder = null, label = "Semi-Final", now = now())
 
                 assertEquals("Semi-Final", updated?.label)
             }
@@ -207,9 +156,7 @@ class ScreenRoutineRepositoryTest {
         @Test
         fun `should return null when id does not exist`() =
             trx.run {
-                val updated = repoScreenRoutine.update(-1, isVisible = false, displayOrder = null, label = null, now = Instant.now())
-
-                assertNull(updated)
+                assertNull(repoScreenRoutine.update(-1, isVisible = false, displayOrder = null, label = null, now = now()))
             }
     }
 
@@ -218,9 +165,7 @@ class ScreenRoutineRepositoryTest {
         @Test
         fun `should remove the screen routine`() =
             trx.run {
-                val tournament = newTournament()
-                val routine = newRoutine()
-                val created = newScreenRoutine(tournament.id, routine.id)
+                val created = newScreenRoutine(newTournament().id, newRoutine().id)
 
                 repoScreenRoutine.deleteById(created.id)
 
@@ -244,6 +189,8 @@ class ScreenRoutineRepositoryTest {
             }
     }
 
+    private fun Transaction.now() = Instant.now().truncatedTo(ChronoUnit.SECONDS)
+
     private fun Transaction.newScreenRoutine(
         tournamentId: Int,
         routineId: Int,
@@ -255,22 +202,22 @@ class ScreenRoutineRepositoryTest {
             routineId = routineId,
             displayOrder = displayOrder,
             label = label,
-            now = Instant.now().truncatedTo(ChronoUnit.SECONDS),
+            now = now(),
         )
 
     private fun Transaction.newTournament(): Tournament =
         repoTournament.createTournament(
-            name = "Test Tournament",
+            name = "tournament-${System.nanoTime()}",
             location = null,
             startDate = null,
             endDate = null,
-            createdAt = Instant.now().truncatedTo(ChronoUnit.SECONDS),
+            createdAt = now(),
         )
 
     private fun Transaction.newRoutine(): EnduranceRoutine =
         repoEnduranceRoutine.createRoutine(
-            name = "Test Routine",
+            name = "routine-${System.nanoTime()}",
             timeCapSeconds = null,
-            createdAt = Instant.now().truncatedTo(ChronoUnit.SECONDS),
+            createdAt = now(),
         )
 }

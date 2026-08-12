@@ -1,5 +1,6 @@
 package com.caliarena.repo
 
+import com.caliarena.Transaction
 import com.caliarena.domain.athlete.GenderType
 import com.caliarena.domain.bracket.BracketStage
 import com.caliarena.domain.match.MatchProgress
@@ -39,452 +40,362 @@ class MatchRepositoryTest {
         }
     }
 
-    private data class FullMatchContext(
+    private data class MatchContext(
         val bracketId: Int,
         val routineId: Int,
         val judgeId: Int,
-        val athleteRed: Int,
-        val athleteBlue: Int,
+        val athleteRedId: Int,
+        val athleteBlueId: Int,
         val matchId: Int,
     )
 
-    private class TestDataFactory(
-        private val trx: TransactionManagerJpa,
-    ) {
-        fun createFullMatch(): FullMatchContext =
-            trx.run {
-                // 1. Tournament + bracket
-                val tournament =
-                    repoTournament.createTournament(
-                        name = "t-${System.nanoTime()}",
-                        location = null,
-                        startDate = null,
-                        endDate = null,
-                        createdAt = now(),
-                    )
-                val bracket =
-                    repoTournament.createBracket(
-                        tournamentId = tournament.id,
-                        gender = GenderType.MALE,
-                        stage = BracketStage.QUALIFIERS,
-                        createdAt = now(),
-                    )!!
+    private fun Transaction.now() = Instant.now().truncatedTo(ChronoUnit.SECONDS)
 
-                // 2. Routine
-                val routine =
-                    repoEnduranceRoutine.createRoutine(
-                        name = "routine-${System.nanoTime()}",
-                        timeCapSeconds = 600,
-                        createdAt = now(),
-                    )
-
-                // 3. Judge
-                val judge =
-                    repoUser.createUser(
-                        username = "judge-${System.nanoTime()}",
-                        passwordValidationInfo = PasswordValidationInfo("hashed"),
-                        role = UserRole.JUDGE,
-                        createdAt = now(),
-                    )
-
-                // 4. Two athletes (each with a fresh club)
-                val athleteRed = createAthlete()
-                val athleteBlue = createAthlete()
-
-                // 5. Match
-                val match =
-                    repoMatch.createMatch(
-                        bracketId = bracket.id,
-                        routineId = routine.id,
-                        judgeId = judge.id,
-                        athleteRed = athleteRed,
-                        athleteBlue = athleteBlue,
-                        createdAt = now(),
-                    )!!
-
-                FullMatchContext(
-                    bracketId = bracket.id,
-                    routineId = routine.id,
-                    judgeId = judge.id,
-                    athleteRed = athleteRed,
-                    athleteBlue = athleteBlue,
-                    matchId = match.id,
-                )
-            }
-
-        // Helper to create a single athlete (with club)
-        fun createAthlete(): Int =
-            trx.run {
-                val club =
-                    repoClub.createClub(
-                        name = "club-${System.nanoTime()}",
-                        shortName = null,
-                        createdAt = now(),
-                    )
-                repoAthlete
-                    .createAthlete(
-                        name = "athlete-${System.nanoTime()}",
-                        gender = GenderType.MALE,
-                        clubId = club.id,
-                        createdAt = now(),
-                    )!!
-                    .id
-            }
-
-        // Helper to create an exercise inside a routine
-        fun createExercise(routineId: Int): Int =
-            trx.run {
-                repoEnduranceRoutine
-                    .createExercise(
-                        routineId = routineId,
-                        name = "ex-${System.nanoTime()}",
-                        targetReps = 10,
-                        exerciseOrder = 1,
-                        type = ExerciseType.NORMAL,
-                        addedWeight = null,
-                        supersetOrder = null,
-                    )!!
-                    .id
-            }
-
-        private fun now() = Instant.now().truncatedTo(ChronoUnit.SECONDS)
+    private fun Transaction.newAthlete(): Int {
+        val club =
+            repoClub.createClub(
+                name = "club-${System.nanoTime()}",
+                shortName = null,
+                createdAt = now(),
+            )
+        return repoAthlete
+            .createAthlete(
+                name = "athlete-${System.nanoTime()}",
+                gender = GenderType.MALE,
+                clubId = club.id,
+                createdAt = now(),
+            )!!
+            .id
     }
 
-    private lateinit var factory: TestDataFactory
+    private fun Transaction.newExercise(routineId: Int): Int =
+        repoEnduranceRoutine
+            .createExercise(
+                routineId = routineId,
+                name = "ex-${System.nanoTime()}",
+                targetReps = 10,
+                exerciseOrder = 1,
+                type = ExerciseType.NORMAL,
+                addedWeight = null,
+                supersetOrder = null,
+            )!!
+            .id
 
-    @BeforeEach
-    fun initFactory() {
-        factory = TestDataFactory(trx)
+    private fun Transaction.newMatch(): MatchContext {
+        val tournament =
+            repoTournament.createTournament(
+                name = "t-${System.nanoTime()}",
+                location = null,
+                startDate = null,
+                endDate = null,
+                createdAt = now(),
+            )
+        val bracket =
+            repoTournament.createBracket(
+                tournamentId = tournament.id,
+                gender = GenderType.MALE,
+                stage = BracketStage.QUALIFIERS,
+                createdAt = now(),
+            )!!
+        val routine =
+            repoEnduranceRoutine.createRoutine(
+                name = "routine-${System.nanoTime()}",
+                timeCapSeconds = 600,
+                createdAt = now(),
+            )
+        val judge =
+            repoUser.createUser(
+                username = "judge-${System.nanoTime()}",
+                passwordValidationInfo = PasswordValidationInfo("hashed"),
+                role = UserRole.JUDGE,
+                createdAt = now(),
+            )
+        val athleteRed = newAthlete()
+        val athleteBlue = newAthlete()
+        val match =
+            repoMatch.createMatch(
+                bracketId = bracket.id,
+                routineId = routine.id,
+                judgeId = judge.id,
+                athleteRed = athleteRed,
+                athleteBlue = athleteBlue,
+                createdAt = now(),
+            )!!
+
+        return MatchContext(
+            bracketId = bracket.id,
+            routineId = routine.id,
+            judgeId = judge.id,
+            athleteRedId = athleteRed,
+            athleteBlueId = athleteBlue,
+            matchId = match.id,
+        )
     }
 
     @Nested
     inner class CreateMatch {
         @Test
-        fun `should create a match for an existing bracket`() {
-            val context = factory.createFullMatch()
+        fun `should create a match for an existing bracket`() =
+            trx.run {
+                val ctx = newMatch()
 
-            val match =
-                trx.run {
+                val match =
                     repoMatch.createMatch(
-                        bracketId = context.bracketId,
-                        routineId = context.routineId,
-                        judgeId = context.judgeId,
-                        athleteRed = context.athleteRed,
-                        athleteBlue = context.athleteBlue,
-                        createdAt = Instant.now().truncatedTo(ChronoUnit.SECONDS),
-                    )
-                }!!
+                        bracketId = ctx.bracketId,
+                        routineId = ctx.routineId,
+                        judgeId = ctx.judgeId,
+                        athleteRed = newAthlete(),
+                        athleteBlue = newAthlete(),
+                        createdAt = now(),
+                    )!!
 
-            assertAll(
-                { assertNotEquals(0, match.id) },
-                { assertEquals(context.bracketId, match.bracketId) },
-                { assertEquals(context.routineId, match.routineId) },
-                { assertEquals(context.athleteRed, match.athleteRedId) },
-                { assertEquals(context.athleteBlue, match.athleteBlueId) },
-                { assertEquals(MatchStatus.PENDING, match.status) },
-            )
-        }
+                assertAll(
+                    { assertNotEquals(0, match.id) },
+                    { assertEquals(ctx.bracketId, match.bracketId) },
+                    { assertEquals(ctx.routineId, match.routineId) },
+                    { assertEquals(MatchStatus.PENDING, match.status) },
+                )
+            }
 
         @Test
-        fun `should return null when bracket does not exist`() {
-            val context = factory.createFullMatch()
-            val match =
-                trx.run {
+        fun `should return null when bracket does not exist`() =
+            trx.run {
+                val ctx = newMatch()
+
+                val match =
                     repoMatch.createMatch(
                         bracketId = -1,
-                        routineId = context.routineId,
-                        judgeId = context.judgeId,
-                        athleteRed = context.athleteRed,
-                        athleteBlue = context.athleteBlue,
-                        createdAt = Instant.now().truncatedTo(ChronoUnit.SECONDS),
+                        routineId = ctx.routineId,
+                        judgeId = ctx.judgeId,
+                        athleteRed = ctx.athleteRedId,
+                        athleteBlue = ctx.athleteBlueId,
+                        createdAt = now(),
                     )
-                }
-            assertNull(match)
-        }
+
+                assertNull(match)
+            }
     }
 
     @Nested
     inner class FindByBracketId {
         @Test
-        fun `should return all matches for a bracket`() {
-            val context = factory.createFullMatch()
+        fun `should return all matches for a bracket`() =
+            trx.run {
+                val ctx = newMatch()
 
-            // Add two extra matches under the same bracket
-            repeat(2) {
-                trx.run {
+                repeat(2) {
                     repoMatch.createMatch(
-                        bracketId = context.bracketId,
-                        routineId = context.routineId,
-                        judgeId = context.judgeId,
-                        athleteRed = factory.createAthlete(),
-                        athleteBlue = factory.createAthlete(),
-                        createdAt = Instant.now().truncatedTo(ChronoUnit.SECONDS),
+                        bracketId = ctx.bracketId,
+                        routineId = ctx.routineId,
+                        judgeId = ctx.judgeId,
+                        athleteRed = newAthlete(),
+                        athleteBlue = newAthlete(),
+                        createdAt = now(),
                     )
                 }
+
+                val matches = repoMatch.findByBracketId(ctx.bracketId)
+                assertEquals(3, matches.size)
             }
 
-            val matches = trx.run { repoMatch.findByBracketId(context.bracketId) }
-            assertEquals(3, matches.size) // 1 from factory + 2 added
-        }
-
         @Test
-        fun `should return empty list when bracket has no matches`() {
-            // Create a bracket without any match
-            val bracketId =
-                trx.run {
-                    val tournament =
-                        repoTournament.createTournament(
-                            name = "t-${System.nanoTime()}",
-                            location = null,
-                            startDate = null,
-                            endDate = null,
-                            createdAt = Instant.now().truncatedTo(ChronoUnit.SECONDS),
-                        )
-                    repoTournament
-                        .createBracket(
-                            tournamentId = tournament.id,
-                            gender = GenderType.MALE,
-                            stage = BracketStage.QUALIFIERS,
-                            createdAt = Instant.now().truncatedTo(ChronoUnit.SECONDS),
-                        )!!
-                        .id
-                }
+        fun `should return empty list when bracket has no matches`() =
+            trx.run {
+                val tournament = repoTournament.createTournament("t-${System.nanoTime()}", null, null, null, now())
+                val bracket = repoTournament.createBracket(tournament.id, GenderType.MALE, BracketStage.QUALIFIERS, now())!!
 
-            val matches = trx.run { repoMatch.findByBracketId(bracketId) }
-            assertTrue(matches.isEmpty())
-        }
+                assertTrue(repoMatch.findByBracketId(bracket.id).isEmpty())
+            }
     }
 
     @Nested
     inner class FindByStatus {
         @Test
-        fun `should return matches with given status`() {
-            val context = factory.createFullMatch()
+        fun `should return matches with given status`() =
+            trx.run {
+                val ctx = newMatch()
 
-            // Add two more PENDING matches
-            repeat(2) {
-                trx.run {
+                repeat(2) {
                     repoMatch.createMatch(
-                        bracketId = context.bracketId,
-                        routineId = context.routineId,
-                        judgeId = context.judgeId,
-                        athleteRed = factory.createAthlete(),
-                        athleteBlue = factory.createAthlete(),
-                        createdAt = Instant.now().truncatedTo(ChronoUnit.SECONDS),
+                        bracketId = ctx.bracketId,
+                        routineId = ctx.routineId,
+                        judgeId = ctx.judgeId,
+                        athleteRed = newAthlete(),
+                        athleteBlue = newAthlete(),
+                        createdAt = now(),
                     )
                 }
+
+                val pending = repoMatch.findByStatus(MatchStatus.PENDING)
+                assertEquals(3, pending.size)
+                assertTrue(pending.all { it.status == MatchStatus.PENDING })
             }
 
-            val pending = trx.run { repoMatch.findByStatus(MatchStatus.PENDING) }
-            assertEquals(3, pending.size)
-            assertTrue(pending.all { it.status == MatchStatus.PENDING })
-        }
-
         @Test
-        fun `should return empty list when no matches with status`() {
-            val result = trx.run { repoMatch.findByStatus(MatchStatus.FINISHED) }
-            assertTrue(result.isEmpty())
-        }
+        fun `should return empty list when no matches with status`() =
+            trx.run {
+                assertTrue(repoMatch.findByStatus(MatchStatus.FINISHED).isEmpty())
+            }
     }
 
     @Nested
     inner class CreateMatchProgress {
         @Test
-        fun `should create progress for an existing match`() {
-            val context = factory.createFullMatch()
-            val exerciseId = factory.createExercise(context.routineId)
+        fun `should create progress for an existing match`() =
+            trx.run {
+                val ctx = newMatch()
+                val exerciseId = newExercise(ctx.routineId)
 
-            val progress =
-                trx.run {
+                val progress =
                     repoMatch.createMatchProgress(
-                        matchId = context.matchId,
+                        matchId = ctx.matchId,
                         firstExerciseId = exerciseId,
-                        now = Instant.now().truncatedTo(ChronoUnit.SECONDS),
+                        now = now(),
                     )
-                }
 
-            assertNotNull(progress)
-            assertEquals(context.matchId, progress?.matchId)
-            assertEquals(0, progress?.redCurrentReps)
-            assertEquals(0, progress?.blueCurrentReps)
-        }
+                assertNotNull(progress)
+                assertEquals(ctx.matchId, progress?.matchId)
+                assertEquals(0, progress?.redCurrentReps)
+                assertEquals(0, progress?.blueCurrentReps)
+            }
 
         @Test
-        fun `should return null when match does not exist`() {
-            val progress =
-                trx.run {
-                    repoMatch.createMatchProgress(
-                        matchId = -1,
-                        firstExerciseId = 1,
-                        now = Instant.now().truncatedTo(ChronoUnit.SECONDS),
-                    )
-                }
-            assertNull(progress)
-        }
+        fun `should return null when match does not exist`() =
+            trx.run {
+                assertNull(repoMatch.createMatchProgress(matchId = -1, firstExerciseId = 1, now = now()))
+            }
     }
 
     @Nested
     inner class FindProgressByMatchId {
         @Test
-        fun `should find progress for an existing match`() {
-            val context = factory.createFullMatch()
-            val exerciseId = factory.createExercise(context.routineId)
-
+        fun `should find progress for an existing match`() =
             trx.run {
-                repoMatch.createMatchProgress(
-                    context.matchId,
-                    exerciseId,
-                    Instant.now().truncatedTo(ChronoUnit.SECONDS),
-                )
+                val ctx = newMatch()
+                val exerciseId = newExercise(ctx.routineId)
+                repoMatch.createMatchProgress(ctx.matchId, exerciseId, now())
+
+                val progress = repoMatch.findProgressByMatchId(ctx.matchId)
+
+                assertNotNull(progress)
+                assertEquals(ctx.matchId, progress?.matchId)
             }
 
-            val progress = trx.run { repoMatch.findProgressByMatchId(context.matchId) }
-            assertNotNull(progress)
-            assertEquals(context.matchId, progress?.matchId)
-        }
-
         @Test
-        fun `should return null when match has no progress`() {
-            val progress = trx.run { repoMatch.findProgressByMatchId(-1) }
-            assertNull(progress)
-        }
+        fun `should return null when match has no progress`() =
+            trx.run {
+                assertNull(repoMatch.findProgressByMatchId(-1))
+            }
     }
 
     @Nested
     inner class UpdateMatchProgress {
         @Test
-        fun `should update the match progress correctly`() {
-            val context = factory.createFullMatch()
-            val exerciseId = factory.createExercise(context.routineId)
+        fun `should update reps on an existing progress`() =
+            trx.run {
+                val ctx = newMatch()
+                val exerciseId = newExercise(ctx.routineId)
+                val initial = repoMatch.createMatchProgress(ctx.matchId, exerciseId, now())!!
 
-            val initialProgress =
-                trx.run {
-                    repoMatch.createMatchProgress(
-                        matchId = context.matchId,
-                        firstExerciseId = exerciseId,
-                        now = Instant.now().truncatedTo(ChronoUnit.SECONDS),
-                    )
-                }!!
-
-            assertEquals(0, initialProgress.redCurrentReps)
-            assertEquals(0, initialProgress.blueCurrentReps)
-
-            val updated =
-                trx.run {
+                val updated =
                     repoMatch.updateMatchProgress(
-                        initialProgress.copy(
-                            redCurrentReps = 1,
-                            blueCurrentReps = 1,
-                        ),
+                        initial.copy(redCurrentReps = 5, blueCurrentReps = 3),
                         null,
                         null,
                     )
-                }
 
-            assertNotNull(updated)
-            assertEquals(1, updated?.redCurrentReps)
-            assertEquals(1, updated?.blueCurrentReps)
-        }
+                assertNotNull(updated)
+                assertEquals(5, updated?.redCurrentReps)
+                assertEquals(3, updated?.blueCurrentReps)
+            }
 
         @Test
-        fun `should return null when there is no match or progress`() {
-            val dummyProgress =
-                MatchProgress(
-                    id = -1,
-                    matchId = -1,
-                    redCurrentReps = 0,
-                    blueCurrentReps = 0,
-                    updatedAt = Instant.now().truncatedTo(ChronoUnit.SECONDS),
-                )
+        fun `should return null when match does not exist`() =
+            trx.run {
+                val dummy =
+                    MatchProgress(
+                        id = -1,
+                        matchId = -1,
+                        redCurrentReps = 0,
+                        blueCurrentReps = 0,
+                        updatedAt = now(),
+                    )
 
-            val result =
-                trx.run {
-                    repoMatch.updateMatchProgress(dummyProgress, null, null)
-                }
-
-            assertNull(result)
-        }
+                assertNull(repoMatch.updateMatchProgress(dummy, null, null))
+            }
     }
 
     @Nested
     inner class FindById {
         @Test
-        fun `should find an existing match by id`() {
-            val context = factory.createFullMatch()
-            val found = trx.run { repoMatch.findById(context.matchId) }
-            assertNotNull(found)
-            assertEquals(context.matchId, found?.id)
-        }
+        fun `should find an existing match by id`() =
+            trx.run {
+                val ctx = newMatch()
+
+                val found = repoMatch.findById(ctx.matchId)
+
+                assertNotNull(found)
+                assertEquals(ctx.matchId, found?.id)
+            }
 
         @Test
-        fun `should return null when id does not exist`() {
-            val found = trx.run { repoMatch.findById(-1) }
-            assertNull(found)
-        }
+        fun `should return null when id does not exist`() =
+            trx.run {
+                assertNull(repoMatch.findById(-1))
+            }
     }
 
     @Nested
     inner class FindAll {
         @Test
-        fun `should return all created matches`() {
-            val context = factory.createFullMatch()
-            // Create one more match
+        fun `should return all created matches`() =
             trx.run {
+                val ctx = newMatch()
                 repoMatch.createMatch(
-                    bracketId = context.bracketId,
-                    routineId = context.routineId,
-                    judgeId = context.judgeId,
-                    athleteRed = factory.createAthlete(),
-                    athleteBlue = factory.createAthlete(),
-                    createdAt = Instant.now().truncatedTo(ChronoUnit.SECONDS),
+                    bracketId = ctx.bracketId,
+                    routineId = ctx.routineId,
+                    judgeId = ctx.judgeId,
+                    athleteRed = newAthlete(),
+                    athleteBlue = newAthlete(),
+                    createdAt = now(),
                 )
+
+                assertEquals(2, repoMatch.findAll().size)
             }
 
-            val all = trx.run { repoMatch.findAll() }
-            assertEquals(2, all.size)
-        }
-
         @Test
-        fun `should return empty list when there are no matches`() {
-            // cleanup already cleared everything, so findAll should be empty
-            val all = trx.run { repoMatch.findAll() }
-            assertTrue(all.isEmpty())
-        }
+        fun `should return empty list when there are no matches`() =
+            trx.run {
+                assertTrue(repoMatch.findAll().isEmpty())
+            }
     }
 
     @Nested
     inner class DeleteById {
         @Test
-        fun `should remove the match`() {
-            val context = factory.createFullMatch()
-            trx.run { repoMatch.deleteById(context.matchId) }
+        fun `should remove the match`() =
+            trx.run {
+                val ctx = newMatch()
 
-            val found = trx.run { repoMatch.findById(context.matchId) }
-            assertNull(found)
-        }
+                repoMatch.deleteById(ctx.matchId)
+
+                assertNull(repoMatch.findById(ctx.matchId))
+            }
     }
 
     @Nested
     inner class Clear {
         @Test
-        fun `should remove all matches, progress and events`() {
-            val context = factory.createFullMatch()
-            val exerciseId = factory.createExercise(context.routineId)
-
+        fun `should remove all matches and progress`() =
             trx.run {
-                repoMatch.createMatchProgress(
-                    context.matchId,
-                    exerciseId,
-                    Instant.now().truncatedTo(ChronoUnit.SECONDS),
-                )
+                val ctx = newMatch()
+                val exerciseId = newExercise(ctx.routineId)
+                repoMatch.createMatchProgress(ctx.matchId, exerciseId, now())
+
                 repoMatch.clear()
+
+                assertTrue(repoMatch.findAll().isEmpty())
+                assertNull(repoMatch.findProgressByMatchId(ctx.matchId))
             }
-
-            val matches = trx.run { repoMatch.findAll() }
-            val progress = trx.run { repoMatch.findProgressByMatchId(context.matchId) }
-
-            assertTrue(matches.isEmpty())
-            assertNull(progress)
-        }
     }
 }

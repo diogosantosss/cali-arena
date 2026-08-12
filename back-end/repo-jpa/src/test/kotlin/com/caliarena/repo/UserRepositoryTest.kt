@@ -1,9 +1,10 @@
 package com.caliarena.repo
 
-import com.caliarena.RepositoryUser
+import com.caliarena.Transaction
 import com.caliarena.domain.token.Token
 import com.caliarena.domain.token.TokenValidationInfo
 import com.caliarena.domain.user.PasswordValidationInfo
+import com.caliarena.domain.user.User
 import com.caliarena.domain.user.UserRole
 import com.caliarena.repo.jpa.TransactionManagerJpa
 import org.junit.jupiter.api.Assertions.assertDoesNotThrow
@@ -37,7 +38,7 @@ class UserRepositoryTest {
         @Test
         fun `should create a user with the given fields`() =
             trx.run {
-                val user = newUser(repoUser, "alice")
+                val user = newUser("alice")
 
                 assertNotEquals(0, user.id)
                 assertEquals("alice", user.username)
@@ -47,7 +48,7 @@ class UserRepositoryTest {
         @Test
         fun `should persist the user so it can be found by id`() =
             trx.run {
-                val created = newUser(repoUser, "bob")
+                val created = newUser("bob")
 
                 val found = repoUser.findById(created.id)
 
@@ -61,7 +62,7 @@ class UserRepositoryTest {
         @Test
         fun `should find an existing user by username`() =
             trx.run {
-                newUser(repoUser, "carlos")
+                newUser("carlos")
 
                 val found = repoUser.findByUsername("carlos")
 
@@ -72,9 +73,7 @@ class UserRepositoryTest {
         @Test
         fun `should return null when username does not exist`() =
             trx.run {
-                val found = repoUser.findByUsername("does-not-exist")
-
-                assertNull(found)
+                assertNull(repoUser.findByUsername("does-not-exist"))
             }
     }
 
@@ -83,7 +82,7 @@ class UserRepositoryTest {
         @Test
         fun `should find an existing user by id`() =
             trx.run {
-                val created = newUser(repoUser)
+                val created = newUser()
 
                 val found = repoUser.findById(created.id)
 
@@ -94,9 +93,7 @@ class UserRepositoryTest {
         @Test
         fun `should return null when id does not exist`() =
             trx.run {
-                val found = repoUser.findById(-1)
-
-                assertNull(found)
+                assertNull(repoUser.findById(-1))
             }
     }
 
@@ -105,21 +102,17 @@ class UserRepositoryTest {
         @Test
         fun `should return all created users`() =
             trx.run {
-                newUser(repoUser, "u1")
-                newUser(repoUser, "u2")
-                newUser(repoUser, "u3")
+                newUser("u1")
+                newUser("u2")
+                newUser("u3")
 
-                val users = repoUser.findAll()
-
-                assertEquals(3, users.size)
+                assertEquals(3, repoUser.findAll().size)
             }
 
         @Test
         fun `should return empty list when there are no users`() =
             trx.run {
-                val users = repoUser.findAll()
-
-                assertTrue(users.isEmpty())
+                assertTrue(repoUser.findAll().isEmpty())
             }
     }
 
@@ -128,7 +121,7 @@ class UserRepositoryTest {
         @Test
         fun `should update an existing user`() =
             trx.run {
-                val created = newUser(repoUser, "dave")
+                val created = newUser("dave")
                 val updated = created.copy(username = "dave-updated")
 
                 val saved = repoUser.save(updated)
@@ -143,7 +136,7 @@ class UserRepositoryTest {
         @Test
         fun `should remove the user`() =
             trx.run {
-                val created = newUser(repoUser)
+                val created = newUser()
 
                 repoUser.deleteById(created.id)
 
@@ -156,8 +149,8 @@ class UserRepositoryTest {
         @Test
         fun `should remove all users`() =
             trx.run {
-                newUser(repoUser, "u1")
-                newUser(repoUser, "u2")
+                newUser("u1")
+                newUser("u2")
 
                 repoUser.clear()
 
@@ -170,7 +163,7 @@ class UserRepositoryTest {
         @Test
         fun `should create a token for an existing user`() =
             trx.run {
-                val user = newUser(repoUser)
+                val user = newUser()
                 val token = newToken(user.id)
 
                 repoUser.createToken(token, maxToken = 3)
@@ -183,8 +176,8 @@ class UserRepositoryTest {
         @Test
         fun `should delete the oldest token when max tokens is exceeded`() =
             trx.run {
-                val user = newUser(repoUser)
-                val base = Instant.now().truncatedTo(ChronoUnit.SECONDS)
+                val user = newUser()
+                val base = now()
 
                 val t1 = newToken(user.id, "token-1", base)
                 val t2 = newToken(user.id, "token-2", base.plusSeconds(1))
@@ -215,7 +208,7 @@ class UserRepositoryTest {
         @Test
         fun `should return the user and token when validation exists`() =
             trx.run {
-                val user = newUser(repoUser)
+                val user = newUser()
                 val token = newToken(user.id)
                 repoUser.createToken(token, maxToken = 3)
 
@@ -229,9 +222,7 @@ class UserRepositoryTest {
         @Test
         fun `should return null when token validation does not exist`() =
             trx.run {
-                val result = repoUser.getTokenByTokenValidation(TokenValidationInfo("does-not-exist"))
-
-                assertNull(result)
+                assertNull(repoUser.getTokenByTokenValidation(TokenValidationInfo("does-not-exist")))
             }
     }
 
@@ -240,11 +231,11 @@ class UserRepositoryTest {
         @Test
         fun `should update the last used timestamp`() =
             trx.run {
-                val user = newUser(repoUser)
+                val user = newUser()
                 val token = newToken(user.id)
                 repoUser.createToken(token, maxToken = 3)
 
-                val newTime = Instant.now().plusSeconds(60).truncatedTo(ChronoUnit.SECONDS)
+                val newTime = now().plusSeconds(60)
                 repoUser.updateTokenLastUsed(token, newTime)
 
                 val result = repoUser.getTokenByTokenValidation(token.tokenValidationInfo)
@@ -257,7 +248,7 @@ class UserRepositoryTest {
                 val nonExisting = newToken(userId = -1, validation = "ghost-token")
 
                 assertDoesNotThrow {
-                    repoUser.updateTokenLastUsed(nonExisting, Instant.now())
+                    repoUser.updateTokenLastUsed(nonExisting, now())
                 }
             }
     }
@@ -267,7 +258,7 @@ class UserRepositoryTest {
         @Test
         fun `should remove an existing token and return 1`() =
             trx.run {
-                val user = newUser(repoUser)
+                val user = newUser()
                 val token = newToken(user.id)
                 repoUser.createToken(token, maxToken = 3)
 
@@ -280,23 +271,21 @@ class UserRepositoryTest {
         @Test
         fun `should return 0 when token does not exist`() =
             trx.run {
-                val deletions = repoUser.removeTokenByTokenValidation(TokenValidationInfo("does-not-exist"))
-
-                assertEquals(0, deletions)
+                assertEquals(0, repoUser.removeTokenByTokenValidation(TokenValidationInfo("does-not-exist")))
             }
     }
 
-    private fun newUser(
-        repoUser: RepositoryUser,
-        username: String = "user-${System.nanoTime()}",
-    ) = repoUser.createUser(
-        username = username,
-        passwordValidationInfo = PasswordValidationInfo("hashed_pw"),
-        role = UserRole.JUDGE,
-        createdAt = Instant.now().truncatedTo(ChronoUnit.SECONDS),
-    )
+    private fun Transaction.now() = Instant.now().truncatedTo(ChronoUnit.SECONDS)
 
-    private fun newToken(
+    private fun Transaction.newUser(username: String = "user-${System.nanoTime()}"): User =
+        repoUser.createUser(
+            username = username,
+            passwordValidationInfo = PasswordValidationInfo("hashed_pw"),
+            role = UserRole.JUDGE,
+            createdAt = now(),
+        )
+
+    private fun Transaction.newToken(
         userId: Int,
         validation: String = "token-${System.nanoTime()}",
         lastUsedAt: Instant = Instant.now().truncatedTo(ChronoUnit.SECONDS),

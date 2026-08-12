@@ -1,8 +1,10 @@
 package com.caliarena.repo
 
+import com.caliarena.Transaction
 import com.caliarena.domain.athlete.GenderType
 import com.caliarena.domain.bracket.BracketStage
 import com.caliarena.domain.tournament.ScreenState
+import com.caliarena.domain.tournament.Tournament
 import com.caliarena.domain.tournament.TournamentStatus
 import com.caliarena.repo.jpa.TransactionManagerJpa
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -40,9 +42,9 @@ class TournamentRepositoryTest {
                     repoTournament.createTournament(
                         name = "open",
                         location = "porto",
-                        startDate = Instant.now().truncatedTo(ChronoUnit.SECONDS),
+                        startDate = now(),
                         endDate = null,
-                        createdAt = Instant.now().truncatedTo(ChronoUnit.SECONDS),
+                        createdAt = now(),
                     )
 
                 assertNotEquals(0, tournament.id)
@@ -57,8 +59,8 @@ class TournamentRepositoryTest {
         @Test
         fun `should return tournaments with the given status`() =
             trx.run {
-                repoTournament.createTournament("t1", null, null, null, Instant.now().truncatedTo(ChronoUnit.SECONDS))
-                repoTournament.createTournament("t2", null, null, null, Instant.now().truncatedTo(ChronoUnit.SECONDS))
+                newTournament()
+                newTournament()
 
                 val tournaments = repoTournament.findByStatus(TournamentStatus.DRAFT)
 
@@ -71,7 +73,7 @@ class TournamentRepositoryTest {
         @Test
         fun `should update the tournament status`() =
             trx.run {
-                val created = repoTournament.createTournament("t3", null, null, null, Instant.now().truncatedTo(ChronoUnit.SECONDS))
+                val created = newTournament()
 
                 val updated = repoTournament.updateStatus(created.id, TournamentStatus.LIVE)
 
@@ -91,12 +93,12 @@ class TournamentRepositoryTest {
         @Test
         fun `should find a tournament by name`() =
             trx.run {
-                repoTournament.createTournament("t7", null, null, null, Instant.now().truncatedTo(ChronoUnit.SECONDS))
+                val created = newTournament(name = "unique-open")
 
-                val tournament = repoTournament.findByName("t7")
+                val found = repoTournament.findByName("unique-open")
 
-                assertNotNull(tournament)
-                assertEquals("t7", tournament?.name)
+                assertNotNull(found)
+                assertEquals(created.name, found?.name)
             }
 
         @Test
@@ -111,9 +113,9 @@ class TournamentRepositoryTest {
         @Test
         fun `should create a tournament state for an existing tournament`() =
             trx.run {
-                val tournament = repoTournament.createTournament("t4", null, null, null, Instant.now().truncatedTo(ChronoUnit.SECONDS))
+                val tournament = newTournament()
 
-                val state = repoTournament.createTournamentState(tournament.id, Instant.now().truncatedTo(ChronoUnit.SECONDS))
+                val state = repoTournament.createTournamentState(tournament.id, now())
 
                 assertNotNull(state)
                 assertEquals(tournament.id, state?.tournamentId)
@@ -123,7 +125,7 @@ class TournamentRepositoryTest {
         @Test
         fun `should return null when tournament does not exist`() =
             trx.run {
-                assertNull(repoTournament.createTournamentState(-1, Instant.now().truncatedTo(ChronoUnit.SECONDS)))
+                assertNull(repoTournament.createTournamentState(-1, now()))
             }
     }
 
@@ -132,8 +134,8 @@ class TournamentRepositoryTest {
         @Test
         fun `should find an existing tournament state by tournament id`() =
             trx.run {
-                val tournament = repoTournament.createTournament("t5", null, null, null, Instant.now().truncatedTo(ChronoUnit.SECONDS))
-                repoTournament.createTournamentState(tournament.id, Instant.now().truncatedTo(ChronoUnit.SECONDS))
+                val tournament = newTournament()
+                repoTournament.createTournamentState(tournament.id, now())
 
                 val state = repoTournament.findStateByTournamentId(tournament.id)
 
@@ -153,19 +155,19 @@ class TournamentRepositoryTest {
         @Test
         fun `should update the tournament screen`() =
             trx.run {
-                val tournament = repoTournament.createTournament("t6", null, null, null, Instant.now().truncatedTo(ChronoUnit.SECONDS))
-                repoTournament.createTournamentState(tournament.id, Instant.now().truncatedTo(ChronoUnit.SECONDS))
+                val tournament = newTournament()
+                repoTournament.createTournamentState(tournament.id, now())
 
                 val updated =
                     repoTournament.updateScreen(
                         tournamentId = tournament.id,
-                        screen = ScreenState.WAITING,
+                        screen = ScreenState.ROUTINES,
                         currentMatchId = null,
-                        updatedAt = Instant.now().plusSeconds(10).truncatedTo(ChronoUnit.SECONDS),
+                        updatedAt = now().plusSeconds(10),
                     )
 
                 assertNotNull(updated)
-                assertEquals(ScreenState.WAITING, updated?.currentScreen)
+                assertEquals(ScreenState.ROUTINES, updated?.currentScreen)
             }
 
         @Test
@@ -176,7 +178,7 @@ class TournamentRepositoryTest {
                         tournamentId = -1,
                         screen = ScreenState.WAITING,
                         currentMatchId = null,
-                        updatedAt = Instant.now().truncatedTo(ChronoUnit.SECONDS),
+                        updatedAt = now(),
                     ),
                 )
             }
@@ -187,14 +189,14 @@ class TournamentRepositoryTest {
         @Test
         fun `should create a bracket for an existing tournament`() =
             trx.run {
-                val tournament = repoTournament.createTournament("t7", null, null, null, Instant.now().truncatedTo(ChronoUnit.SECONDS))
+                val tournament = newTournament()
 
                 val bracket =
                     repoTournament.createBracket(
                         tournamentId = tournament.id,
                         gender = GenderType.MALE,
                         stage = BracketStage.QUARTERFINALS,
-                        createdAt = Instant.now().truncatedTo(ChronoUnit.SECONDS),
+                        createdAt = now(),
                     )
 
                 assertNotNull(bracket)
@@ -210,7 +212,7 @@ class TournamentRepositoryTest {
                         tournamentId = -1,
                         gender = GenderType.MALE,
                         stage = BracketStage.FINALS,
-                        createdAt = Instant.now().truncatedTo(ChronoUnit.SECONDS),
+                        createdAt = now(),
                     ),
                 )
             }
@@ -221,19 +223,9 @@ class TournamentRepositoryTest {
         @Test
         fun `should return brackets for a tournament`() =
             trx.run {
-                val tournament = repoTournament.createTournament("t8", null, null, null, Instant.now().truncatedTo(ChronoUnit.SECONDS))
-                repoTournament.createBracket(
-                    tournament.id,
-                    GenderType.MALE,
-                    BracketStage.QUALIFIERS,
-                    Instant.now().truncatedTo(ChronoUnit.SECONDS),
-                )
-                repoTournament.createBracket(
-                    tournament.id,
-                    GenderType.FEMALE,
-                    BracketStage.SEMIFINALS,
-                    Instant.now().truncatedTo(ChronoUnit.SECONDS),
-                )
+                val tournament = newTournament()
+                repoTournament.createBracket(tournament.id, GenderType.MALE, BracketStage.QUALIFIERS, now())
+                repoTournament.createBracket(tournament.id, GenderType.FEMALE, BracketStage.SEMIFINALS, now())
 
                 val brackets = repoTournament.findBracketsByTournamentId(tournament.id)
 
@@ -244,21 +236,11 @@ class TournamentRepositoryTest {
     @Nested
     inner class FindBracketsByTournamentIdAndGender {
         @Test
-        fun `should return brackets for a tournament and gender`() =
+        fun `should return only brackets matching the given gender`() =
             trx.run {
-                val tournament = repoTournament.createTournament("t9", null, null, null, Instant.now().truncatedTo(ChronoUnit.SECONDS))
-                repoTournament.createBracket(
-                    tournament.id,
-                    GenderType.MALE,
-                    BracketStage.QUALIFIERS,
-                    Instant.now().truncatedTo(ChronoUnit.SECONDS),
-                )
-                repoTournament.createBracket(
-                    tournament.id,
-                    GenderType.FEMALE,
-                    BracketStage.SEMIFINALS,
-                    Instant.now().truncatedTo(ChronoUnit.SECONDS),
-                )
+                val tournament = newTournament()
+                repoTournament.createBracket(tournament.id, GenderType.MALE, BracketStage.QUALIFIERS, now())
+                repoTournament.createBracket(tournament.id, GenderType.FEMALE, BracketStage.SEMIFINALS, now())
 
                 val brackets = repoTournament.findBracketsByTournamentIdAndGender(tournament.id, GenderType.FEMALE)
 
@@ -272,7 +254,7 @@ class TournamentRepositoryTest {
         @Test
         fun `should find an existing tournament by id`() =
             trx.run {
-                val created = repoTournament.createTournament("t10", null, null, null, Instant.now().truncatedTo(ChronoUnit.SECONDS))
+                val created = newTournament()
 
                 val found = repoTournament.findById(created.id)
 
@@ -290,24 +272,16 @@ class TournamentRepositoryTest {
     @Nested
     inner class FindByBracketId {
         @Test
-        fun `should find the tournament by bracket id`() =
+        fun `should find the bracket by its id`() =
             trx.run {
-                val tournament = repoTournament.createTournament("t16", null, null, null, Instant.now().truncatedTo(ChronoUnit.SECONDS))
-                val bracket =
-                    repoTournament.createBracket(
-                        tournament.id,
-                        GenderType.MALE,
-                        BracketStage.QUALIFIERS,
-                        Instant.now().truncatedTo(ChronoUnit.SECONDS),
-                    )
+                val tournament = newTournament()
+                val bracket = repoTournament.createBracket(tournament.id, GenderType.MALE, BracketStage.QUALIFIERS, now())!!
 
-                assertNotNull(bracket)
+                val found = repoTournament.findByBracketId(bracket.id)
 
-                val foundBracket = repoTournament.findByBracketId(bracket!!.id)
-
-                assertNotNull(foundBracket)
-                assertEquals(bracket.id, foundBracket?.id)
-                assertEquals(tournament.id, foundBracket?.tournamentId)
+                assertNotNull(found)
+                assertEquals(bracket.id, found?.id)
+                assertEquals(tournament.id, found?.tournamentId)
             }
 
         @Test
@@ -322,12 +296,10 @@ class TournamentRepositoryTest {
         @Test
         fun `should return all created tournaments`() =
             trx.run {
-                repoTournament.createTournament("t11", null, null, null, Instant.now().truncatedTo(ChronoUnit.SECONDS))
-                repoTournament.createTournament("t12", null, null, null, Instant.now().truncatedTo(ChronoUnit.SECONDS))
+                newTournament()
+                newTournament()
 
-                val tournaments = repoTournament.findAll()
-
-                assertEquals(2, tournaments.size)
+                assertEquals(2, repoTournament.findAll().size)
             }
 
         @Test
@@ -342,13 +314,11 @@ class TournamentRepositoryTest {
         @Test
         fun `should update an existing tournament`() =
             trx.run {
-                val created = repoTournament.createTournament("t13", null, null, null, Instant.now().truncatedTo(ChronoUnit.SECONDS))
-                val updated = created.copy(name = "t13-updated")
-
-                val saved = repoTournament.save(updated)
+                val created = newTournament()
+                val saved = repoTournament.save(created.copy(name = "updated-name"))
 
                 assertNotNull(saved)
-                assertEquals("t13-updated", saved?.name)
+                assertEquals("updated-name", saved?.name)
                 assertEquals(created.id, saved?.id)
             }
     }
@@ -358,7 +328,7 @@ class TournamentRepositoryTest {
         @Test
         fun `should remove the tournament`() =
             trx.run {
-                val created = repoTournament.createTournament("t14", null, null, null, Instant.now().truncatedTo(ChronoUnit.SECONDS))
+                val created = newTournament()
 
                 repoTournament.deleteById(created.id)
 
@@ -371,18 +341,24 @@ class TournamentRepositoryTest {
         @Test
         fun `should remove tournaments, brackets and states`() =
             trx.run {
-                val tournament = repoTournament.createTournament("t15", null, null, null, Instant.now().truncatedTo(ChronoUnit.SECONDS))
-                repoTournament.createTournamentState(tournament.id, Instant.now().truncatedTo(ChronoUnit.SECONDS))
-                repoTournament.createBracket(
-                    tournament.id,
-                    GenderType.MALE,
-                    BracketStage.QUALIFIERS,
-                    Instant.now().truncatedTo(ChronoUnit.SECONDS),
-                )
+                val tournament = newTournament()
+                repoTournament.createTournamentState(tournament.id, now())
+                repoTournament.createBracket(tournament.id, GenderType.MALE, BracketStage.QUALIFIERS, now())
 
                 repoTournament.clear()
 
                 assertTrue(repoTournament.findAll().isEmpty())
             }
     }
+
+    private fun Transaction.now() = Instant.now().truncatedTo(ChronoUnit.SECONDS)
+
+    private fun Transaction.newTournament(name: String = "tournament-${System.nanoTime()}"): Tournament =
+        repoTournament.createTournament(
+            name = name,
+            location = null,
+            startDate = null,
+            endDate = null,
+            createdAt = now(),
+        )
 }

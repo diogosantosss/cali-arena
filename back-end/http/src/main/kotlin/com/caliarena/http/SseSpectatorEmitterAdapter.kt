@@ -1,17 +1,9 @@
 package com.caliarena.http
 
 import com.caliarena.service.sse.KeepAliveEvent
-import com.caliarena.service.sse.ScreenRoutinesUpdatedEvent
 import com.caliarena.service.sse.SpectatorEmitter
 import com.caliarena.service.sse.SpectatorEvent
-import com.caliarena.service.sse.TournamentStateUpdatedEvent
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter
-
-private enum class SpectatorEventType {
-    TOURNAMENT_STATE_UPDATED,
-    SCREEN_ROUTINES_UPDATED,
-    KEEP_ALIVE,
-}
 
 class SseSpectatorEmitterAdapter(
     private val emitter: SseEmitter,
@@ -20,19 +12,11 @@ class SseSpectatorEmitterAdapter(
         id: Long,
         event: SpectatorEvent,
     ) {
-        val type =
-            when (event) {
-                is TournamentStateUpdatedEvent ->
-                    SpectatorEventType.TOURNAMENT_STATE_UPDATED
-                is ScreenRoutinesUpdatedEvent ->
-                    SpectatorEventType.SCREEN_ROUTINES_UPDATED
-            }
-
         emitter.send(
             SseEmitter
                 .event()
                 .id(id.toString())
-                .name(type.name)
+                .name(event.action.name)
                 .data(event),
         )
     }
@@ -41,7 +25,7 @@ class SseSpectatorEmitterAdapter(
         emitter.send(
             SseEmitter
                 .event()
-                .name(SpectatorEventType.KEEP_ALIVE.name)
+                .name("KEEP_ALIVE")
                 .data(signal),
         )
     }
