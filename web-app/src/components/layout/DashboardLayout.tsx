@@ -1,18 +1,5 @@
-import { Outlet, NavLink, useNavigate } from "react-router-dom";
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarGroup,
-  SidebarGroupLabel,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarProvider,
-  SidebarTrigger,
-} from "@/components/ui/sidebar";
-import { Separator } from "@/components/ui/separator";
+import { Outlet, NavLink, useNavigate, useLocation } from "react-router-dom";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Trophy,
   Users,
@@ -32,8 +19,20 @@ const navItems = [
   { to: "/dashboard/screen", label: "Screen", icon: Monitor },
 ];
 
+const pageTitles: Record<string, string> = {
+  "/dashboard": "Tournaments",
+  "/dashboard/athletes": "Athletes",
+  "/dashboard/clubs": "Clubs",
+  "/dashboard/users": "Users",
+  "/dashboard/routines": "Routines",
+  "/dashboard/screen": "Screen Manager",
+};
+
 export function DashboardLayout() {
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const title = pageTitles[location.pathname] ?? "Dashboard";
 
   function handleLogout() {
     localStorage.removeItem("token");
@@ -41,72 +40,90 @@ export function DashboardLayout() {
   }
 
   return (
-    <SidebarProvider>
-      <div className="flex min-h-screen w-full">
-        <Sidebar>
-          <SidebarHeader className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#6339db] to-[#a855f7] flex items-center justify-center font-bold text-sm text-white">
-                C
-              </div>
-              <div>
-                <p className="text-sm font-semibold leading-tight">Cali Arena</p>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-widest">
-                  Admin Dashboard
-                </p>
-              </div>
+    <TooltipProvider>
+      <div className="flex min-h-screen w-full" style={{ background: "#0f0f11" }}>
+        <aside
+          className="flex flex-col items-center w-14 shrink-0 py-5 gap-1"
+          style={{ background: "#0f0f11", borderRight: "1px solid #252528" }}
+        >
+          <div className="mb-5">
+            <div
+              className="w-7 h-7 rounded flex items-center justify-center text-[11px] font-bold"
+              style={{ background: "#e8a020", color: "#0f0f11" }}
+            >
+              C
             </div>
-          </SidebarHeader>
+          </div>
 
-          <Separator />
+          <div className="flex-1 flex flex-col items-center gap-0.5 w-full px-2">
+            {navItems.map((item) => (
+              <Tooltip key={item.to}>
+                <TooltipTrigger asChild>
+                  <NavLink
+                    to={item.to}
+                    end={item.end}
+                    className={({ isActive }) =>
+                      `w-full flex items-center justify-center h-9 rounded transition-colors ${
+                        isActive
+                          ? "text-[#e8a020]"
+                          : "text-[#3a3a3d] hover:text-[#6b6560]"
+                      }`
+                    }
+                    style={({ isActive }) =>
+                      isActive ? { background: "rgba(232,160,32,0.08)" } : {}
+                    }
+                  >
+                    <item.icon className="w-[15px] h-[15px]" />
+                  </NavLink>
+                </TooltipTrigger>
+                <TooltipContent
+                  side="right"
+                  className="text-xs"
+                  style={{ background: "#17171a", color: "#f0ede8", border: "1px solid #252528" }}
+                >
+                  {item.label}
+                </TooltipContent>
+              </Tooltip>
+            ))}
+          </div>
 
-          <SidebarContent>
-            <SidebarGroup>
-              <SidebarGroupLabel>Management</SidebarGroupLabel>
-              <SidebarMenu>
-                {navItems.map((item) => (
-                  <SidebarMenuItem key={item.to}>
-                    <SidebarMenuButton asChild>
-                      <NavLink
-                        to={item.to}
-                        end={item.end}
-                        className={({ isActive }) =>
-                          isActive ? "text-primary font-medium" : ""
-                        }
-                      >
-                        <item.icon className="w-4 h-4" />
-                        <span>{item.label}</span>
-                      </NavLink>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarGroup>
-          </SidebarContent>
-
-          <SidebarFooter>
-            <Separator />
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton onClick={handleLogout}>
-                  <LogOut className="w-4 h-4" />
-                  <span>Logout</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarFooter>
-        </Sidebar>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={handleLogout}
+                className="w-10 h-9 flex items-center justify-center rounded transition-colors text-[#3a3a3d] hover:text-[#e8a020]"
+              >
+                <LogOut className="w-[15px] h-[15px]" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent
+              side="right"
+              className="text-xs"
+              style={{ background: "#17171a", color: "#f0ede8", border: "1px solid #252528" }}
+            >
+              Logout
+            </TooltipContent>
+          </Tooltip>
+        </aside>
 
         <div className="flex flex-col flex-1 min-w-0">
-          <header className="h-12 border-b flex items-center px-4 gap-2">
-            <SidebarTrigger />
-            <Separator orientation="vertical" className="h-4" />
+          <header
+            className="h-11 flex items-center px-7 shrink-0"
+            style={{ borderBottom: "1px solid #252528" }}
+          >
+            <span
+              className="text-xs tracking-widest uppercase"
+              style={{ color: "#6b6560", fontFamily: "Geist Variable, sans-serif" }}
+            >
+              {title}
+            </span>
           </header>
-          <main className="flex-1 p-6 overflow-auto">
+
+          <main className="flex-1 overflow-auto px-7 py-7">
             <Outlet />
           </main>
         </div>
       </div>
-    </SidebarProvider>
+    </TooltipProvider>
   );
 }

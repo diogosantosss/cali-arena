@@ -9,6 +9,8 @@ import com.caliarena.domain.tournament.ScreenState
 import com.caliarena.domain.tournament.Tournament
 import com.caliarena.domain.tournament.TournamentState
 import com.caliarena.domain.tournament.TournamentStatus
+import com.caliarena.service.sse.SpectatorPublisher
+import com.caliarena.service.sse.TournamentStateUpdatedEvent
 import jakarta.inject.Named
 import java.time.Clock
 import java.time.Instant
@@ -39,6 +41,7 @@ sealed class TournamentError {
 class TournamentService(
     private val trx: TransactionManager,
     private val clock: Clock,
+    private val publisher: SpectatorPublisher,
 ) {
     fun createTournament(
         name: String,
@@ -210,13 +213,19 @@ class TournamentService(
                 ScreenState.entries.find { it.name.equals(screen, true) }
                     ?: return@run failure(TournamentError.InvalidScreenState)
 
-            val updated =
+            val updated: TournamentState =
                 repoTournament.updateScreen(
                     tournamentId = tournamentId,
                     screen = screenState,
                     currentMatchId = currentMatchId,
                     updatedAt = clock.instant(),
                 ) ?: return@run failure(TournamentError.TournamentStateNotFound)
+
+            TournamentStateUpdatedEvent(
+                tournamentId = tournamentId,
+                state = updated,
+                currentMatchId = currentMatchId,
+            ).let { publisher.publish(it) }
 
             success(updated)
         }

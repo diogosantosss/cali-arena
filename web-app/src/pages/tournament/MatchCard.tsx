@@ -1,9 +1,6 @@
 import { useState } from "react";
 import type { Athlete, Match, Routine, User } from "@/types";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { UserRound, Swords, ChevronDown, ChevronUp } from "lucide-react";
+import { UserRound, ChevronDown, ChevronUp } from "lucide-react";
 
 interface Props {
   match: Match;
@@ -14,12 +11,12 @@ interface Props {
   onStartMatch: (match: Match) => void;
 }
 
-const statusVariant: Record<Match["status"], "default" | "secondary" | "outline" | "destructive"> = {
-  PENDING: "outline",
-  READY: "secondary",
-  RUNNING: "default",
-  PAUSED: "outline",
-  FINISHED: "destructive",
+const matchStatusStyles: Record<Match["status"], { label: string; color: string; bg: string }> = {
+  PENDING:  { label: "Pending",  color: "#6b6560", bg: "rgba(107,101,96,0.12)" },
+  READY:    { label: "Ready",    color: "#7eb8f7", bg: "rgba(126,184,247,0.12)" },
+  RUNNING:  { label: "Running",  color: "#e8a020", bg: "rgba(232,160,32,0.12)" },
+  PAUSED:   { label: "Paused",   color: "#a09a92", bg: "rgba(160,154,146,0.12)" },
+  FINISHED: { label: "Finished", color: "#4a4a4e", bg: "rgba(74,74,78,0.12)" },
 };
 
 export function MatchCard({ match, athletes, routines, judges, onAssignAthletes, onStartMatch }: Props) {
@@ -29,104 +26,116 @@ export function MatchCard({ match, athletes, routines, judges, onAssignAthletes,
   const blueAthlete = athletes.find((a) => a.id === match.athleteBlueId);
   const routine = routines.find((r) => r.id === match.routineId);
   const judge = judges.find((j) => j.id === match.judgeId);
+  const s = matchStatusStyles[match.status];
 
   return (
-    <Card className="overflow-hidden">
-      <CardContent className="p-0">
-        <div className="flex items-center justify-between px-4 py-3">
-          <div className="flex items-center gap-3">
-            <Badge variant={statusVariant[match.status]} className="capitalize text-xs">
-              {match.status.toLowerCase()}
-            </Badge>
-            <span className="text-sm font-medium">Match #{match.id}</span>
-            {routine && (
-              <span className="text-xs text-muted-foreground">{routine.name}</span>
-            )}
-          </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setExpanded((v) => !v)}
-          >
-            {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-          </Button>
-        </div>
+    <div
+      className="rounded-lg overflow-hidden"
+      style={{ background: "#17171a", border: "1px solid #252528" }}
+    >
+      <div className="flex items-center gap-4 px-4 py-3">
+        <span
+          className="text-[11px] px-2 py-0.5 rounded-full shrink-0"
+          style={{ background: s.bg, color: s.color }}
+        >
+          {s.label}
+        </span>
 
-        <div className="grid grid-cols-3 items-center px-4 pb-3 gap-2">
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-red-500 shrink-0" />
-            {redAthlete ? (
-              <span className="text-sm font-medium">{redAthlete.name}</span>
-            ) : (
-              <span className="text-sm text-muted-foreground italic">
-                {match.redFromMatchId ? `Winner of #${match.redFromMatchId}` : "Not assigned"}
-              </span>
-            )}
+        <div className="flex items-center flex-1 min-w-0 gap-3">
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: "#e05555" }} />
+            <span className="text-sm truncate" style={{ color: redAthlete ? "#f0ede8" : "#3a3a3d" }}>
+              {redAthlete?.name ?? "Not assigned"}
+            </span>
           </div>
 
-          <div className="flex justify-center">
-            <Swords className="w-4 h-4 text-muted-foreground" />
-          </div>
+          <span className="text-xs shrink-0" style={{ color: "#3a3a3d" }}>vs</span>
 
-          <div className="flex items-center gap-2 justify-end">
-            {blueAthlete ? (
-              <span className="text-sm font-medium">{blueAthlete.name}</span>
-            ) : (
-              <span className="text-sm text-muted-foreground italic">
-                {match.blueFromMatchId ? `Winner of #${match.blueFromMatchId}` : "Not assigned"}
-              </span>
-            )}
-            <div className="w-2 h-2 rounded-full bg-blue-500 shrink-0" />
+          <div className="flex items-center gap-2 flex-1 min-w-0 justify-end">
+            <span className="text-sm truncate" style={{ color: blueAthlete ? "#f0ede8" : "#3a3a3d" }}>
+              {blueAthlete?.name ?? "Not assigned"}
+            </span>
+            <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: "#5588e0" }} />
           </div>
         </div>
 
-        {expanded && (
-          <div className="border-t px-4 py-3 space-y-3">
-            <div className="grid grid-cols-2 gap-3 text-sm">
-              <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Judge</p>
-                <div className="flex items-center gap-1.5">
-                  <UserRound className="w-3.5 h-3.5 text-muted-foreground" />
-                  <span>{judge?.username ?? `#${match.judgeId}`}</span>
-                </div>
-              </div>
-              {match.winnerAthleteId && (
-                <div>
-                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Winner</p>
-                  <span className="font-medium text-green-600">
-                    {athletes.find((a) => a.id === match.winnerAthleteId)?.name ?? `#${match.winnerAthleteId}`}
-                  </span>
-                </div>
-              )}
-              {match.startedAt && (
-                <div>
-                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Started at</p>
-                  <span>{new Date(match.startedAt).toLocaleTimeString()}</span>
-                </div>
-              )}
-              {match.finishedAt && (
-                <div>
-                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Finished at</p>
-                  <span>{new Date(match.finishedAt).toLocaleTimeString()}</span>
-                </div>
-              )}
-            </div>
-
-            <div className="flex gap-2">
-              {match.status === "PENDING" && !match.athleteRedId && !match.athleteBlueId && !match.redFromMatchId && !match.blueFromMatchId && (
-                <Button size="sm" variant="outline" onClick={() => onAssignAthletes(match)}>
-                  Assign athletes
-                </Button>
-              )}
-              {match.status === "READY" && (
-                <Button size="sm" onClick={() => onStartMatch(match)}>
-                  Start match
-                </Button>
-              )}
-            </div>
-          </div>
+        {routine && (
+          <span className="text-xs shrink-0 hidden sm:block" style={{ color: "#6b6560" }}>
+            {routine.name}
+          </span>
         )}
-      </CardContent>
-    </Card>
+
+        <button
+          onClick={() => setExpanded((v) => !v)}
+          className="p-1 rounded transition-colors shrink-0"
+          style={{ color: "#3a3a3d" }}
+          onMouseEnter={(e) => (e.currentTarget.style.color = "#6b6560")}
+          onMouseLeave={(e) => (e.currentTarget.style.color = "#3a3a3d")}
+        >
+          {expanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+        </button>
+      </div>
+
+      {expanded && (
+        <div style={{ borderTop: "1px solid #252528" }} className="px-4 py-3 space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <p className="text-[10px] uppercase tracking-widest mb-1" style={{ color: "#3a3a3d" }}>Judge</p>
+              <div className="flex items-center gap-1.5">
+                <UserRound className="w-3 h-3" style={{ color: "#6b6560" }} />
+                <span className="text-xs" style={{ color: "#a09a92" }}>
+                  {judge?.username ?? `#${match.judgeId}`}
+                </span>
+              </div>
+            </div>
+            {match.winnerAthleteId && (
+              <div>
+                <p className="text-[10px] uppercase tracking-widest mb-1" style={{ color: "#3a3a3d" }}>Winner</p>
+                <span className="text-xs font-medium" style={{ color: "#e8a020" }}>
+                  {athletes.find((a) => a.id === match.winnerAthleteId)?.name ?? `#${match.winnerAthleteId}`}
+                </span>
+              </div>
+            )}
+            {match.startedAt && (
+              <div>
+                <p className="text-[10px] uppercase tracking-widest mb-1" style={{ color: "#3a3a3d" }}>Started</p>
+                <span className="text-xs" style={{ color: "#a09a92" }}>
+                  {new Date(match.startedAt).toLocaleTimeString()}
+                </span>
+              </div>
+            )}
+            {match.finishedAt && (
+              <div>
+                <p className="text-[10px] uppercase tracking-widest mb-1" style={{ color: "#3a3a3d" }}>Finished</p>
+                <span className="text-xs" style={{ color: "#a09a92" }}>
+                  {new Date(match.finishedAt).toLocaleTimeString()}
+                </span>
+              </div>
+            )}
+          </div>
+
+          <div className="flex gap-2 pt-1">
+            {match.status === "PENDING" && !match.athleteRedId && !match.athleteBlueId && (
+              <button
+                onClick={() => onAssignAthletes(match)}
+                className="px-3 py-1.5 rounded text-xs transition-colors"
+                style={{ background: "rgba(232,160,32,0.1)", color: "#e8a020", border: "1px solid rgba(232,160,32,0.2)" }}
+              >
+                Assign athletes
+              </button>
+            )}
+            {match.status === "READY" && (
+              <button
+                onClick={() => onStartMatch(match)}
+                className="px-3 py-1.5 rounded text-xs font-medium transition-opacity"
+                style={{ background: "#e8a020", color: "#0f0f11" }}
+              >
+                Start match
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

@@ -1,23 +1,18 @@
 import { useReducer, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import type { CreateTournamentInput, Tournament, TournamentStatus } from "@/types";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Separator } from "@/components/ui/separator";
-import { Trophy, RefreshCw, ArrowRight } from "lucide-react";
+import { MapPin, CalendarDays, ArrowRight, Plus, RefreshCw } from "lucide-react";
 import { api, ApiError } from "@/api";
 
-const statusVariant: Record<TournamentStatus, "default" | "secondary" | "outline" | "destructive"> = {
-  DRAFT: "outline",
-  READY: "secondary",
-  LIVE: "default",
-  FINISHED: "destructive",
+const statusStyles: Record<TournamentStatus, { label: string; color: string; bg: string }> = {
+  DRAFT:    { label: "Draft",    color: "#6b6560", bg: "rgba(107,101,96,0.12)" },
+  READY:    { label: "Ready",    color: "#7eb8f7", bg: "rgba(126,184,247,0.12)" },
+  LIVE:     { label: "Live",     color: "#e8a020", bg: "rgba(232,160,32,0.12)" },
+  FINISHED: { label: "Finished", color: "#4a4a4e", bg: "rgba(74,74,78,0.12)" },
 };
 
 interface State {
@@ -29,6 +24,7 @@ interface State {
   tournamentsLoading: boolean;
   tournamentsError: string | null;
   statusFilter: TournamentStatus | "ALL";
+  formOpen: boolean;
 }
 
 type Action =
@@ -39,14 +35,10 @@ type Action =
   | { type: "setTournaments"; tournaments: Tournament[] }
   | { type: "setTournamentsLoading" }
   | { type: "setTournamentsError"; message: string }
-  | { type: "setStatusFilter"; value: TournamentStatus | "ALL" };
+  | { type: "setStatusFilter"; value: TournamentStatus | "ALL" }
+  | { type: "toggleForm" };
 
-const initialForm: CreateTournamentInput = {
-  name: "",
-  location: null,
-  startDate: null,
-  endDate: null,
-};
+const initialForm: CreateTournamentInput = { name: "", location: null, startDate: null, endDate: null };
 
 const initialState: State = {
   form: initialForm,
@@ -57,6 +49,7 @@ const initialState: State = {
   tournamentsLoading: false,
   tournamentsError: null,
   statusFilter: "ALL",
+  formOpen: false,
 };
 
 function reducer(state: State, action: Action): State {
@@ -66,7 +59,7 @@ function reducer(state: State, action: Action): State {
     case "submit":
       return { ...state, loading: true, error: null, success: false };
     case "success":
-      return { ...state, loading: false, success: true, form: initialForm };
+      return { ...state, loading: false, success: true, form: initialForm, formOpen: false };
     case "error":
       return { ...state, loading: false, error: action.message };
     case "setTournaments":
@@ -77,6 +70,8 @@ function reducer(state: State, action: Action): State {
       return { ...state, tournamentsLoading: false, tournamentsError: action.message };
     case "setStatusFilter":
       return { ...state, statusFilter: action.value };
+    case "toggleForm":
+      return { ...state, formOpen: !state.formOpen, error: null };
     default:
       throw new Error("Unknown action");
   }
@@ -92,17 +87,11 @@ export function TournamentsPage() {
       const tournaments = await api.getTournaments();
       dispatch({ type: "setTournaments", tournaments });
     } catch (err) {
-      if (err instanceof ApiError) {
-        dispatch({ type: "setTournamentsError", message: err.message });
-      } else {
-        dispatch({ type: "setTournamentsError", message: "Failed to load tournaments" });
-      }
+      dispatch({ type: "setTournamentsError", message: err instanceof ApiError ? err.message : "Failed to load" });
     }
   }
 
-  useEffect(() => {
-    loadTournaments();
-  }, []);
+  useEffect(() => { loadTournaments(); }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -112,198 +101,249 @@ export function TournamentsPage() {
       dispatch({ type: "success" });
       loadTournaments();
     } catch (err) {
-      if (err instanceof ApiError) {
-        dispatch({ type: "error", message: err.message });
-      } else {
-        dispatch({ type: "error", message: "An error occurred while creating tournament" });
-      }
+      dispatch({ type: "error", message: err instanceof ApiError ? err.message : "Failed to create" });
     }
   }
 
-  const filteredTournaments = state.tournaments.filter(
+  const filtered = state.tournaments.filter(
     (t) => state.statusFilter === "ALL" || t.status === state.statusFilter
   );
 
   return (
-    <div className="max-w-4xl space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Tournaments</h1>
-        <p className="text-sm text-muted-foreground mt-1">Create and manage tournaments</p>
+    <div className="max-w-5xl mx-auto space-y-10">
+
+      <div className="flex items-end justify-between">
+        <div>
+          <p className="text-xs tracking-widest uppercase mb-1.5" style={{ color: "#6b6560" }}>
+            Management
+          </p>
+          <h1
+            className="text-4xl leading-tight"
+            style={{ fontFamily: "DM Serif Display, Georgia, serif", color: "#f0ede8" }}
+          >
+            Tournaments
+          </h1>
+        </div>
+
+        <button
+          onClick={() => dispatch({ type: "toggleForm" })}
+          className="flex items-center gap-2 px-4 py-2 rounded text-sm font-medium transition-colors"
+          style={{
+            background: state.formOpen ? "rgba(232,160,32,0.1)" : "#e8a020",
+            color: state.formOpen ? "#e8a020" : "#0f0f11",
+            border: state.formOpen ? "1px solid rgba(232,160,32,0.3)" : "none",
+          }}
+        >
+          <Plus className="w-3.5 h-3.5" />
+          New tournament
+        </button>
       </div>
 
-      {/* Create form */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Trophy className="w-4 h-4" />
+      {state.formOpen && (
+        <div
+          className="rounded-lg p-6 space-y-5"
+          style={{ background: "#17171a", border: "1px solid #252528" }}
+        >
+          <p
+            className="text-xs tracking-widest uppercase"
+            style={{ color: "#6b6560" }}
+          >
             New tournament
-          </CardTitle>
-          <CardDescription>
-            Location and dates are optional and can be added later.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          </p>
+          <form onSubmit={handleSubmit} className="space-y-5">
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5 col-span-2">
-                <Label>Name</Label>
+              <div className="col-span-2 space-y-1.5">
+                <Label className="text-xs uppercase tracking-wider" style={{ color: "#6b6560" }}>Name</Label>
                 <Input
                   value={state.form.name}
                   onChange={(e) => dispatch({ type: "setField", field: "name", value: e.target.value })}
-                  placeholder="Tournament name"
+                  placeholder="e.g. Open Lisboa 2026"
                   required
+                  className="border-[#252528] text-[#f0ede8] placeholder:text-[#3a3a3d] focus-visible:ring-[#e8a020]/40 focus-visible:border-[#e8a020]/60"
+                  style={{ background: "#0f0f11" }}
                 />
               </div>
-              <div className="space-y-1.5 col-span-2">
-                <Label>Location <span className="text-muted-foreground text-xs">(optional)</span></Label>
+              <div className="col-span-2 space-y-1.5">
+                <Label className="text-xs uppercase tracking-wider" style={{ color: "#6b6560" }}>
+                  Location <span style={{ color: "#3a3a3d" }}>(optional)</span>
+                </Label>
                 <Input
                   value={state.form.location ?? ""}
                   onChange={(e) => dispatch({ type: "setField", field: "location", value: e.target.value || null })}
                   placeholder="e.g. Lisboa, Portugal"
+                  className="border-[#252528] text-[#f0ede8] placeholder:text-[#3a3a3d] focus-visible:ring-[#e8a020]/40 focus-visible:border-[#e8a020]/60"
+                  style={{ background: "#0f0f11" }}
                 />
               </div>
               <div className="space-y-1.5">
-                <Label>Start date <span className="text-muted-foreground text-xs">(optional)</span></Label>
+                <Label className="text-xs uppercase tracking-wider" style={{ color: "#6b6560" }}>
+                  Start date <span style={{ color: "#3a3a3d" }}>(optional)</span>
+                </Label>
                 <Input
                   type="date"
                   value={state.form.startDate ?? ""}
                   onChange={(e) => dispatch({ type: "setField", field: "startDate", value: e.target.value || null })}
+                  className="border-[#252528] text-[#f0ede8] focus-visible:ring-[#e8a020]/40 focus-visible:border-[#e8a020]/60"
+                  style={{ background: "#0f0f11", colorScheme: "dark" }}
                 />
               </div>
               <div className="space-y-1.5">
-                <Label>End date <span className="text-muted-foreground text-xs">(optional)</span></Label>
+                <Label className="text-xs uppercase tracking-wider" style={{ color: "#6b6560" }}>
+                  End date <span style={{ color: "#3a3a3d" }}>(optional)</span>
+                </Label>
                 <Input
                   type="date"
                   value={state.form.endDate ?? ""}
                   onChange={(e) => dispatch({ type: "setField", field: "endDate", value: e.target.value || null })}
+                  className="border-[#252528] text-[#f0ede8] focus-visible:ring-[#e8a020]/40 focus-visible:border-[#e8a020]/60"
+                  style={{ background: "#0f0f11", colorScheme: "dark" }}
                 />
               </div>
             </div>
 
             {state.error && (
-              <p className="text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md px-3 py-2">
+              <p className="text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded px-3 py-2">
                 {state.error}
               </p>
             )}
-            {state.success && (
-              <p className="text-sm text-green-600 bg-green-500/10 border border-green-500/20 rounded-md px-3 py-2">
-                Tournament created successfully.
-              </p>
-            )}
 
-            <Button type="submit" disabled={state.loading}>
-              {state.loading ? "Creating…" : "Create tournament"}
-            </Button>
+            <div className="flex items-center gap-3 pt-1">
+              <button
+                type="submit"
+                disabled={state.loading}
+                className="px-5 py-2 rounded text-sm font-medium transition-opacity disabled:opacity-50"
+                style={{ background: "#e8a020", color: "#0f0f11" }}
+              >
+                {state.loading ? "Creating…" : "Create"}
+              </button>
+              <button
+                type="button"
+                onClick={() => dispatch({ type: "toggleForm" })}
+                className="px-4 py-2 rounded text-sm transition-colors"
+                style={{ color: "#6b6560" }}
+              >
+                Cancel
+              </button>
+            </div>
           </form>
-        </CardContent>
-      </Card>
+        </div>
+      )}
 
-      <Separator />
-
-      {/* Tournaments table */}
-      <div className="space-y-3">
+      <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-base font-medium">
-            All tournaments
-            {!state.tournamentsLoading && (
-              <span className="text-muted-foreground font-normal ml-2 text-sm">
-                ({filteredTournaments.length})
-              </span>
-            )}
-          </h2>
           <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="icon"
+            <span className="text-sm" style={{ color: "#6b6560" }}>
+              {filtered.length} tournament{filtered.length !== 1 ? "s" : ""}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
               onClick={loadTournaments}
               disabled={state.tournamentsLoading}
+              className="p-1.5 rounded transition-colors"
+              style={{ color: "#6b6560" }}
             >
-              <RefreshCw className={`w-4 h-4 ${state.tournamentsLoading ? "animate-spin" : ""}`} />
-            </Button>
+              <RefreshCw className={`w-3.5 h-3.5 ${state.tournamentsLoading ? "animate-spin" : ""}`} />
+            </button>
             <Select
               value={state.statusFilter}
-              onValueChange={(value) => dispatch({ type: "setStatusFilter", value: value as TournamentStatus | "ALL" })}
+              onValueChange={(v) => dispatch({ type: "setStatusFilter", value: v as TournamentStatus | "ALL" })}
             >
-              <SelectTrigger className="w-36">
+              <SelectTrigger
+                className="h-8 text-xs w-32 border-[#252528] focus:ring-[#e8a020]/40"
+                style={{ background: "#17171a", color: "#a09a92" }}
+              >
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">All statuses</SelectItem>
-                <SelectItem value="DRAFT">Draft</SelectItem>
-                <SelectItem value="READY">Ready</SelectItem>
-                <SelectItem value="LIVE">Live</SelectItem>
-                <SelectItem value="FINISHED">Finished</SelectItem>
+              <SelectContent style={{ background: "#17171a", border: "1px solid #252528" }}>
+                {["ALL", "DRAFT", "READY", "LIVE", "FINISHED"].map((s) => (
+                  <SelectItem key={s} value={s} className="text-xs" style={{ color: "#a09a92" }}>
+                    {s === "ALL" ? "All statuses" : s.charAt(0) + s.slice(1).toLowerCase()}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
         </div>
 
-        <Card>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Location</TableHead>
-                <TableHead>Start date</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {state.tournamentsLoading ? (
-                Array.from({ length: 4 }).map((_, i) => (
-                  <TableRow key={i}>
-                    <TableCell><Skeleton className="h-4 w-40" /></TableCell>
-                    <TableCell><Skeleton className="h-4 w-28" /></TableCell>
-                    <TableCell><Skeleton className="h-4 w-24" /></TableCell>
-                    <TableCell><Skeleton className="h-4 w-16" /></TableCell>
-                    <TableCell />
-                  </TableRow>
-                ))
-              ) : state.tournamentsError ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center text-destructive text-sm py-6">
-                    {state.tournamentsError}
-                  </TableCell>
-                </TableRow>
-              ) : filteredTournaments.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center text-muted-foreground text-sm py-6">
-                    No tournaments found.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredTournaments.map((tournament) => (
-                  <TableRow key={tournament.id} className="cursor-pointer hover:bg-muted/50">
-                    <TableCell className="font-medium">{tournament.name}</TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {tournament.location ?? "—"}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
-                      {tournament.startDate
-                        ? new Date(tournament.startDate).toLocaleDateString()
-                        : "—"}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={statusVariant[tournament.status]} className="capitalize">
-                        {tournament.status.toLowerCase()}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => navigate(`/dashboard/tournaments/${tournament.id}`)}
-                      >
-                        <ArrowRight className="w-4 h-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </Card>
+        {state.tournamentsLoading ? (
+          <div className="space-y-2">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="h-16 rounded-lg" style={{ background: "#17171a" }}>
+                <Skeleton className="h-full w-full rounded-lg opacity-40" />
+              </div>
+            ))}
+          </div>
+        ) : state.tournamentsError ? (
+          <p className="text-sm text-destructive py-8 text-center">{state.tournamentsError}</p>
+        ) : filtered.length === 0 ? (
+          <div className="py-20 text-center">
+            <p className="text-xs tracking-widest uppercase" style={{ color: "#3a3a3d" }}>
+              No tournaments found
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {filtered.map((t, i) => {
+              const s = statusStyles[t.status];
+              return (
+                <div
+                  key={t.id}
+                  onClick={() => navigate(`/dashboard/tournaments/${t.id}`)}
+                  className="group flex items-center gap-5 px-5 py-4 rounded-lg cursor-pointer transition-colors animate-fade-up"
+                  style={{
+                    background: "#17171a",
+                    border: "1px solid #252528",
+                    animationDelay: `${i * 0.04}s`,
+                    opacity: 0,
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.borderColor = "#363639")}
+                  onMouseLeave={(e) => (e.currentTarget.style.borderColor = "#252528")}
+                >
+                  <div
+                    className="w-1 self-stretch rounded-full shrink-0"
+                    style={{ background: s.color, opacity: 0.5 }}
+                  />
+
+                  <div className="flex-1 min-w-0">
+                    <p
+                      className="text-sm font-medium truncate"
+                      style={{ color: "#f0ede8" }}
+                    >
+                      {t.name}
+                    </p>
+                    <div className="flex items-center gap-3 mt-0.5">
+                      {t.location && (
+                        <span className="flex items-center gap-1 text-xs" style={{ color: "#6b6560" }}>
+                          <MapPin className="w-3 h-3" />
+                          {t.location}
+                        </span>
+                      )}
+                      {t.startDate && (
+                        <span className="flex items-center gap-1 text-xs" style={{ color: "#6b6560" }}>
+                          <CalendarDays className="w-3 h-3" />
+                          {new Date(t.startDate).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <span
+                    className="text-xs px-2.5 py-1 rounded-full shrink-0"
+                    style={{ background: s.bg, color: s.color }}
+                  >
+                    {s.label}
+                  </span>
+
+                  <ArrowRight
+                    className="w-4 h-4 shrink-0 transition-transform group-hover:translate-x-0.5"
+                    style={{ color: "#3a3a3d" }}
+                  />
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );

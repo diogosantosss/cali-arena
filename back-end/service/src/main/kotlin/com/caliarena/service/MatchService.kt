@@ -5,6 +5,8 @@ import com.caliarena.domain.match.Match
 import com.caliarena.domain.match.MatchProgress
 import com.caliarena.domain.match.MatchStatus
 import com.caliarena.domain.routine.Exercise
+import com.caliarena.service.sse.MatchUpdatedEvent
+import com.caliarena.service.sse.SpectatorPublisher
 import org.springframework.stereotype.Service
 import java.time.Clock
 
@@ -42,6 +44,7 @@ sealed class MatchError {
 class MatchService(
     private val trxManager: TransactionManager,
     private val clock: Clock,
+    private val publisher: SpectatorPublisher,
 ) {
     fun createMatch(
         bracketId: Int,
@@ -117,6 +120,15 @@ class MatchService(
                     now = now,
                 ) ?: return@run failure(MatchError.ErrorCreatingMatchProg)
 
+            val tournamentId =
+                repoTournament.findByBracketId(match.bracketId)?.id
+                    ?: return@run failure(MatchError.BracketNotFound)
+
+            MatchUpdatedEvent(
+                tournamentId = tournamentId,
+                matchProgress = progress,
+            ).let { publisher.publish(it) }
+
             success(progress)
         }
 
@@ -150,7 +162,7 @@ class MatchService(
             val now = clock.instant()
             val newProg = prog.advance(redReps, blueReps, exercises, now)
 
-            val updated =
+            val updated: MatchProgress =
                 repoMatch.updateMatchProgress(
                     progress = newProg,
                     redCurrentExerciseId = newProg.redCurrentExerciseId,
@@ -170,6 +182,15 @@ class MatchService(
                     ),
                 ) ?: return@run failure(MatchError.MatchNotFound)
             }
+
+            val tournamentId =
+                repoTournament.findByBracketId(match.bracketId)?.id
+                    ?: return@run failure(MatchError.BracketNotFound)
+
+            MatchUpdatedEvent(
+                tournamentId = tournamentId,
+                matchProgress = updated,
+            ).let { publisher.publish(it) }
 
             success(updated)
         }

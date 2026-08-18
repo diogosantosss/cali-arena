@@ -277,119 +277,182 @@ function BattleScreen({ state, match, progress, athletes }: {
   const elapsed = useElapsedMs(progress?.timerStartedAt ?? null);
 
   const routine = state.routines.find((r) => r.id === match.routineId);
-  const exercises = routine ? (state.overviews[routine.name]?.exercises.sort((a, b) => a.exerciseOrder - b.exerciseOrder) ?? []) : [];
+  const exercises = routine
+    ? (state.overviews[routine.name]?.exercises.sort((a, b) => a.exerciseOrder - b.exerciseOrder) ?? [])
+    : [];
+
+  const redAthlete = athletes.find((a) => a.id === match.athleteRedId);
+  const blueAthlete = athletes.find((a) => a.id === match.athleteBlueId);
 
   const redExercise = exercises.find((e) => e.id === progress?.redCurrentExerciseId) ?? exercises[0];
   const blueExercise = exercises.find((e) => e.id === progress?.blueCurrentExerciseId) ?? exercises[0];
   const redNext = exercises.find((e) => e.exerciseOrder === (redExercise?.exerciseOrder ?? -1) + 1);
   const blueNext = exercises.find((e) => e.exerciseOrder === (blueExercise?.exerciseOrder ?? -1) + 1);
 
-  const redAthlete = athletes.find((a) => a.id === match.athleteRedId);
-  const blueAthlete = athletes.find((a) => a.id === match.athleteBlueId);
-
   const redFinished = !!progress?.redFinishedAt;
   const blueFinished = !!progress?.blueFinishedAt;
 
-  function finishTime(finishedAt: string) {
-    if (!progress?.timerStartedAt) return "00:00.000";
-    const ms = new Date(finishedAt).getTime() - new Date(progress.timerStartedAt).getTime();
-    return formatTime(Math.max(0, ms));
+  function finishMs(finishedAt: string) {
+    if (!progress?.timerStartedAt) return 0;
+    return new Date(finishedAt).getTime() - new Date(progress.timerStartedAt).getTime();
   }
+
+  function finishTime(finishedAt: string) {
+    return formatTime(Math.max(0, finishMs(finishedAt)));
+  }
+
+  const redWon = redFinished && blueFinished
+    ? finishMs(progress!.redFinishedAt!) < finishMs(progress!.blueFinishedAt!)
+    : redFinished && !blueFinished;
+
+  const blueWon = redFinished && blueFinished
+    ? finishMs(progress!.blueFinishedAt!) < finishMs(progress!.redFinishedAt!)
+    : blueFinished && !redFinished;
+
+  const timerColor = redWon || blueWon ? "#4ade80" : "#ffffff";
 
   return (
     <div
-      className="min-h-screen flex flex-col"
-      style={{ background: "radial-gradient(ellipse at top, #1a1a2e 0%, #0a0a0f 100%)", color: "white" }}
+      className="min-h-screen flex flex-col overflow-hidden"
+      style={{ background: "#0a0a0c" }}
     >
-      <div className="text-center pt-10 pb-6">
-        <p className="text-lg font-semibold uppercase tracking-[0.3em]" style={{ color: "#6fa3ef" }}>
-          {state.tournament?.name ?? "Cali Arena"}
-        </p>
-      </div>
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background: "radial-gradient(ellipse 70% 40% at 50% 0%, rgba(255,255,255,0.04) 0%, transparent 70%)",
+        }}
+      />
 
-      <div className="text-center mb-4">
-        <p className="text-8xl font-black tabular-nums tracking-tight">
-          {formatTime(elapsed)}
-        </p>
-      </div>
-
-      <div className="text-center mb-8 space-y-1">
-        <p className="text-xl font-bold text-white/80">{routine?.name}</p>
-        <div className="space-y-1 mt-2">
-          {exercises.map((e) => (
-            <p key={e.id} className="text-sm text-white/40">
-              {e.targetReps} {e.name}
-              {e.addedWeight ? ` (+${e.addedWeight}KG)` : ""}
-            </p>
-          ))}
+      <div className="relative z-10 flex flex-col min-h-screen">
+        <div className="text-center pt-20 pb-8 px-16">
+          <p className="font-cairo text-6xl font-semibold leading-tight uppercase bg-gradient-to-r from-[#6C7FFF] to-white bg-clip-text text-transparent">
+            {state.tournament?.name ?? "Cali Arena"}
+          </p>
         </div>
-        {routine?.timeCapSeconds && (
-          <div className="inline-block mt-3 px-5 py-2 rounded-xl" style={{ background: "rgba(255,255,255,0.07)" }}>
-            <p className="text-sm font-semibold uppercase tracking-widest text-white/50">
-              Time Cap: {Math.floor(routine.timeCapSeconds / 60)}m
-              {routine.timeCapSeconds % 60 > 0 ? ` ${routine.timeCapSeconds % 60}s` : ""}
+
+        <div className="flex-1 grid grid-cols-3 px-24">
+          <AthletePanel
+            finishState={{
+              finished: redFinished,
+              won: redWon,
+              lost: blueWon,
+              str: redFinished ? finishTime(progress!.redFinishedAt!) : null,
+            }}
+            name={redAthlete?.name ?? "Red"}
+            color="#e05555"
+            currentExercise={redExercise}
+            currentReps={progress?.redCurrentReps ?? 0}
+            nextExercise={redNext}
+          />
+
+          <div className="flex flex-col items-center">
+            <p
+              className="pt-16 font-cairo text-[6rem] font-bold leading-none tabular-nums transition-colors duration-700"
+              style={{ color: timerColor }}
+            >
+              {formatTime(elapsed)}
             </p>
+
+            <p className="mt-16 font-cairo text-[2.5rem] font-bold leading-none text-white">
+              {routine?.name ?? "—"}
+            </p>
+
+            <div className="flex flex-col items-center gap-1 mt-6 font-cairo text-[2rem] font-semibold text-white">
+              {exercises.map((e) => (
+                <p key={e.id}>
+                  {e.targetReps} {e.name}
+                  {e.addedWeight ? ` (+${e.addedWeight}KG)` : ""}
+                </p>
+              ))}
+            </div>
+
+            {routine && (
+              <div className="mt-10 rounded-[20px] bg-[#2D2D2D] px-8 py-3">
+                <p className="font-cairo text-[2.25rem] font-bold text-white whitespace-nowrap">
+                  Time Cap: {routine.timeCapSeconds ? `${Math.floor(routine.timeCapSeconds / 60)}’${routine.timeCapSeconds % 60 > 0 ? ` ${routine.timeCapSeconds % 60}”` : ""}` : "—"}
+                </p>
+              </div>
+            )}
           </div>
+
+          <AthletePanel
+            finishState={{
+              finished: blueFinished,
+              won: blueWon,
+              lost: redWon,
+              str: blueFinished ? finishTime(progress!.blueFinishedAt!) : null,
+            }}
+            name={blueAthlete?.name ?? "Blue"}
+            color="#5588e0"
+            currentExercise={blueExercise}
+            currentReps={progress?.blueCurrentReps ?? 0}
+            nextExercise={blueNext}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AthletePanel({
+  finishState,
+  name,
+  color,
+  currentExercise,
+  currentReps,
+  nextExercise,
+}: {
+  finishState: { finished: boolean; won: boolean; lost: boolean; str: string | null };
+  name: string;
+  color: string;
+  currentExercise: { name: string; targetReps: number; addedWeight?: number | null } | undefined;
+  currentReps: number;
+  nextExercise: { name: string; targetReps: number } | undefined;
+}) {
+  const finishColor = finishState.won ? "#4ade80" : finishState.lost ? "#e05555" : "#ffffff";
+  const isFinished = finishState.finished && finishState.str !== null;
+
+  return (
+    <div className="mt-25 flex flex-col items-center pt-16">
+      <div className="flex items-center gap-3">
+        <span className="w-5 h-5 rounded-full" style={{ background: color }} />
+        <p className="font-cairo text-[3rem] font-bold text-white leading-none">
+          {name}
+        </p>
+      </div>
+
+      <div className="flex flex-col items-center mt-28 gap-2">
+        {isFinished ? (
+          <>
+            <p className="font-cairo text-[2.25rem] font-bold" style={{ color: finishColor }}>
+              {finishState.won ? "Winner" : "Finished"}
+            </p>
+            <p className="font-cairo text-[3.75rem] font-bold tabular-nums leading-none" style={{ color: finishColor }}>
+              {finishState.str}
+            </p>
+          </>
+        ) : (
+          <>
+            <p className="font-cairo text-[3.75rem] font-bold leading-none text-white">
+              {currentExercise?.name ?? "—"}
+            </p>
+            {currentExercise?.addedWeight ? (
+              <p className="font-cairo text-[2.25rem] font-bold leading-none text-white/80">
+                with {currentExercise.addedWeight} kg
+              </p>
+            ) : null}
+            <p className="font-cairo text-[3.75rem] font-bold leading-none mt-2 tabular-nums text-white">
+              {currentReps}/{currentExercise?.targetReps ?? "—"}
+            </p>
+          </>
         )}
       </div>
 
-      <div className="flex-1 grid grid-cols-2 px-16 gap-8 pb-12">
-        <div className="flex flex-col items-center text-center space-y-4">
-          <p className="text-3xl font-black text-white">{redAthlete?.name ?? "Red"}</p>
-
-          {redFinished ? (
-            <div className="space-y-1">
-              <p className="text-2xl font-bold text-green-400 uppercase tracking-widest">Finished</p>
-              <p className="text-4xl font-black tabular-nums">{finishTime(progress.redFinishedAt!)}</p>
-            </div>
-          ) : (
-            <>
-              <div className="space-y-1">
-                <p className="text-3xl font-bold text-white">{redExercise?.name ?? "—"}</p>
-                {redExercise?.addedWeight && (
-                  <p className="text-base text-white/40">with {redExercise.addedWeight} kg</p>
-                )}
-              </div>
-              <p className="text-6xl font-black tabular-nums">
-                {(progress?.redCurrentReps ?? 0)}/{redExercise?.targetReps ?? "—"}
-              </p>
-              {redNext && (
-                <p className="text-base text-white/50">
-                  Next: <span className="text-white font-semibold">{redNext.targetReps} {redNext.name}</span>
-                </p>
-              )}
-            </>
-          )}
-        </div>
-
-        <div className="flex flex-col items-center text-center space-y-4">
-          <p className="text-3xl font-black text-white">{blueAthlete?.name ?? "Blue"}</p>
-
-          {blueFinished ? (
-            <div className="space-y-1">
-              <p className="text-2xl font-bold text-green-400 uppercase tracking-widest">Finished</p>
-              <p className="text-4xl font-black tabular-nums">{finishTime(progress.blueFinishedAt!)}</p>
-            </div>
-          ) : (
-            <>
-              <div className="space-y-1">
-                <p className="text-3xl font-bold text-white">{blueExercise?.name ?? "—"}</p>
-                {blueExercise?.addedWeight && (
-                  <p className="text-base text-white/40">with {blueExercise.addedWeight} kg</p>
-                )}
-              </div>
-              <p className="text-6xl font-black tabular-nums">
-                {(progress?.blueCurrentReps ?? 0)}/{blueExercise?.targetReps ?? "—"}
-              </p>
-              {blueNext && (
-                <p className="text-base text-white/50">
-                  Next: <span className="text-white font-semibold">{blueNext.targetReps} {blueNext.name}</span>
-                </p>
-              )}
-            </>
-          )}
-        </div>
-      </div>
+      {nextExercise && !isFinished && (
+        <p className="mt-42 font-cairo text-[2.5rem] font-bold leading-none bg-gradient-to-r from-white to-[#999999] bg-clip-text text-transparent">
+          Next Exercise: {nextExercise.targetReps} {nextExercise.name}
+        </p>
+      )}
     </div>
   );
 }

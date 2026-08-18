@@ -1,4 +1,4 @@
-DROP TABLE IF EXISTS bracket_stage_routines;
+DROP TABLE IF EXISTS screen_routines;
 DROP TABLE IF EXISTS match_progress;
 DROP TABLE IF EXISTS tournament_state;
 DROP TABLE IF EXISTS matches;
