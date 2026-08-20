@@ -35,7 +35,7 @@ class TournamentServiceTest : ServiceTest() {
             }.whenever(trxManager)
             .run<Any>(any())
 
-        service = TournamentService(trxManager, clock)
+        service = TournamentService(trxManager, clock, mock())
     }
 
     private val now = clock.instant()

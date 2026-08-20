@@ -22,6 +22,9 @@ dependencies {
 
     implementation("org.jetbrains.kotlin:kotlin-reflect")
 
+    // to serve Swagger UI and the OpenAPI spec
+    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.17")
+
     // for Postgres
     implementation("org.postgresql:postgresql:42.7.2")
 
@@ -43,6 +46,12 @@ tasks.bootRun {
                 val (key, value) = line.split("=", limit = 2)
                 environment(key.trim(), value.trim())
             }
+    }
+}
+
+tasks.processResources {
+    from("$rootDir/docs") {
+        include("openapi.yaml")
     }
 }
 

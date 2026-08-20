@@ -1,9 +1,11 @@
-import { useEffect, useReducer, useCallback } from "react";
+import { useEffect, useReducer, useCallback, useRef, type CSSProperties } from "react";
 import { useParams } from "react-router-dom";
 import { api, ApiError } from "@/api";
 import { useSpectatorSSE } from "@/hooks/useSpectatorSSE";
+import { routineGroups, nextLabel, exerciseProgress, type ExerciseProgress } from "@/lib/exerciseLabels";
 import type {
   Athlete,
+  Exercise,
   Match,
   MatchProgress,
   Routine,
@@ -88,6 +90,14 @@ function formatTime(ms: number): string {
   return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}.${String(millis).padStart(3, "0")}`;
 }
 
+const screenBackground: CSSProperties = {
+  background: "#0f0f11",
+  backgroundImage: `
+    radial-gradient(ellipse 80% 50% at 50% 0%, rgba(232,160,32,0.06) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 100% 100%, rgba(232,160,32,0.04) 0%, transparent 50%)
+  `,
+};
+
 function useElapsedMs(timerStartedAt: string | null): number {
   const [elapsed, setElapsed] = useReducer((_: number, v: number) => v, 0);
 
@@ -106,6 +116,11 @@ export function ScreenPage() {
   const { tournamentId } = useParams<{ tournamentId: string }>();
   const id = Number(tournamentId);
   const [state, dispatch] = useReducer(reducer, initialState);
+  const currentMatchIdRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    currentMatchIdRef.current = state.currentMatch?.id ?? null;
+  }, [state.currentMatch]);
 
   useEffect(() => {
     async function loadBase() {
@@ -154,7 +169,7 @@ export function ScreenPage() {
     switch (event.action) {
       case "TOURNAMENT_STATE_UPDATED": {
         dispatch({ type: "setTournamentState", state: event.state });
-        if (event.state.currentMatchId) {
+        if (event.state.currentMatchId && event.state.currentMatchId !== currentMatchIdRef.current) {
           const [match, progress] = await Promise.all([
             api.getMatchById(event.state.currentMatchId),
             api.getProgressByMatchId(event.state.currentMatchId).catch(() => null),
@@ -173,6 +188,11 @@ export function ScreenPage() {
         dispatch({ type: "removeScreenRoutine", id: event.screenRoutineId });
         break;
       }
+      case "MATCH_UPDATED": {
+        if (event.matchProgress.matchId !== currentMatchIdRef.current) break;
+        dispatch({ type: "setMatchProgress", progress: event.matchProgress });
+        break;
+      }
     }
   }, []);
 
@@ -182,9 +202,9 @@ export function ScreenPage() {
 
   if (!screen || screen === "WAITING") {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: "radial-gradient(ellipse at top, #1a1a2e 0%, #0a0a0f 100%)" }}>
+      <div className="min-h-screen flex items-center justify-center" style={screenBackground}>
         <div className="text-center space-y-4">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#6339db] to-[#a855f7] flex items-center justify-center font-bold text-3xl text-white mx-auto">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#e8a020] to-[#f0ede8] flex items-center justify-center font-bold text-3xl text-[#0f0f11] mx-auto">
             C
           </div>
           <p className="text-white/30 text-sm tracking-widest uppercase">Waiting</p>
@@ -199,43 +219,38 @@ export function ScreenPage() {
       .sort((a, b) => a.displayOrder - b.displayOrder);
 
     return (
-      <div className="min-h-screen flex flex-col" style={{ background: "radial-gradient(ellipse at top, #1a1a2e 0%, #0a0a0f 100%)", color: "white" }}>
-        <div className="text-center pt-14 pb-10">
-          <h1 className="text-7xl font-black uppercase tracking-tight mb-3">
+      <div className="min-h-screen flex flex-col" style={{ ...screenBackground, color: "white" }}>
+        <div className="text-center pt-20 px-16">
+          <p className="font-cairo text-6xl font-semibold leading-tight uppercase bg-gradient-to-r from-[#e8a020] to-[#f0ede8] bg-clip-text text-transparent">
             {state.tournament?.name ?? "Cali Arena"}
-          </h1>
-          <p className="text-xl font-semibold uppercase tracking-[0.3em]" style={{ color: "#6fa3ef" }}>
-            Endurance Battles
           </p>
         </div>
 
         {visible.length === 0 ? (
           <div className="flex-1 flex items-center justify-center">
-            <p className="text-white/20 uppercase tracking-widest text-sm">No routines configured</p>
+            <p className="font-cairo text-white/20 uppercase tracking-widest text-sm">No routines configured</p>
           </div>
         ) : (
-          <div className="flex-1 grid px-16" style={{ gridTemplateColumns: `repeat(${visible.length}, 1fr)` }}>
+          <div className="flex-1 flex items-center px-16">
+            <div className="w-full grid" style={{ gridTemplateColumns: `repeat(${visible.length}, 1fr)` }}>
             {visible.map((sr) => {
               const routine = state.routines.find((r) => r.id === sr.routineId);
               const overview = routine ? state.overviews[routine.name] : null;
               return (
                 <div key={sr.id} className="flex flex-col text-center px-8">
-                  <h2 className="text-2xl font-black uppercase tracking-widest mb-10 text-white">
+                  <h2 className="font-cairo text-[2.5rem] font-bold uppercase tracking-widest mb-10 text-white">
                     {sr.label ?? routine?.name ?? `Routine #${sr.routineId}`}
                   </h2>
                   <div className="space-y-5">
-                    {overview?.exercises
-                      .sort((a, b) => a.exerciseOrder - b.exerciseOrder)
-                      .map((exercise) => (
-                        <p key={exercise.id} className="text-2xl text-white font-medium">
-                          {exercise.targetReps} {exercise.name}
-                          {exercise.addedWeight ? ` (+${exercise.addedWeight}KG)` : ""}
-                        </p>
-                      ))}
+                    {routineGroups(overview?.exercises ?? []).map((group) => (
+                      <p key={group.order} className="font-cairo text-[2rem] font-semibold text-white">
+                        {group.label}
+                      </p>
+                    ))}
                   </div>
                   {routine?.timeCapSeconds && (
-                    <div className="mt-10 mx-auto px-6 py-3 rounded-xl" style={{ background: "rgba(255,255,255,0.07)" }}>
-                      <p className="text-sm font-semibold uppercase tracking-[0.2em] text-white/60">
+                    <div className="mt-10 mx-auto px-6 py-3 rounded-[20px]" style={{ background: "#2D2D2D" }}>
+                      <p className="font-cairo text-sm font-semibold uppercase tracking-[0.2em]" style={{ color: "rgba(232,160,32,0.75)" }}>
                         Time Cap — {Math.floor(routine.timeCapSeconds / 60)}M
                         {routine.timeCapSeconds % 60 > 0 ? ` ${routine.timeCapSeconds % 60}S` : ""}
                       </p>
@@ -245,6 +260,7 @@ export function ScreenPage() {
               );
             })}
           </div>
+        </div>
         )}
       </div>
     );
@@ -253,16 +269,16 @@ export function ScreenPage() {
   if (screen === "BATTLE") {
     if (!state.currentMatch) {
       return (
-        <div className="min-h-screen flex items-center justify-center" style={{ background: "radial-gradient(ellipse at top, #1a1a2e 0%, #0a0a0f 100%)" }}>
-          <p className="text-white/30 uppercase tracking-widest">Loading match...</p>
-        </div>
+<div className="min-h-screen flex items-center justify-center" style={screenBackground}>
+        <p className="text-white/30 uppercase tracking-widest">Loading match...</p>
+      </div>
       );
     }
     return <BattleScreen state={state} match={state.currentMatch} progress={state.matchProgress} athletes={state.athletes} />;
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center" style={{ background: "radial-gradient(ellipse at top, #1a1a2e 0%, #0a0a0f 100%)" }}>
+    <div className="min-h-screen flex items-center justify-center" style={screenBackground}>
       <p className="text-white/20 text-lg uppercase tracking-widest">{screen}</p>
     </div>
   );
@@ -280,14 +296,17 @@ function BattleScreen({ state, match, progress, athletes }: {
   const exercises = routine
     ? (state.overviews[routine.name]?.exercises.sort((a, b) => a.exerciseOrder - b.exerciseOrder) ?? [])
     : [];
+  const groups = routineGroups(exercises);
 
   const redAthlete = athletes.find((a) => a.id === match.athleteRedId);
   const blueAthlete = athletes.find((a) => a.id === match.athleteBlueId);
 
   const redExercise = exercises.find((e) => e.id === progress?.redCurrentExerciseId) ?? exercises[0];
   const blueExercise = exercises.find((e) => e.id === progress?.blueCurrentExerciseId) ?? exercises[0];
-  const redNext = exercises.find((e) => e.exerciseOrder === (redExercise?.exerciseOrder ?? -1) + 1);
-  const blueNext = exercises.find((e) => e.exerciseOrder === (blueExercise?.exerciseOrder ?? -1) + 1);
+  const redNextLabel = nextLabel(exercises, progress?.redCurrentExerciseId);
+  const blueNextLabel = nextLabel(exercises, progress?.blueCurrentExerciseId);
+  const redProgress = exerciseProgress(exercises, progress?.redCurrentExerciseId, progress?.redCurrentReps ?? 0);
+  const blueProgress = exerciseProgress(exercises, progress?.blueCurrentExerciseId, progress?.blueCurrentReps ?? 0);
 
   const redFinished = !!progress?.redFinishedAt;
   const blueFinished = !!progress?.blueFinishedAt;
@@ -309,23 +328,32 @@ function BattleScreen({ state, match, progress, athletes }: {
     ? finishMs(progress!.blueFinishedAt!) < finishMs(progress!.redFinishedAt!)
     : blueFinished && !redFinished;
 
+  const matchFinished = redFinished && blueFinished;
+  const finalElapsedMs =
+    matchFinished && progress
+      ? Math.max(
+          progress.redFinishedAt ? finishMs(progress.redFinishedAt) : 0,
+          progress.blueFinishedAt ? finishMs(progress.blueFinishedAt) : 0
+        )
+      : elapsed;
+
   const timerColor = redWon || blueWon ? "#4ade80" : "#ffffff";
 
   return (
     <div
       className="min-h-screen flex flex-col overflow-hidden"
-      style={{ background: "#0a0a0c" }}
+      style={screenBackground}
     >
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
-          background: "radial-gradient(ellipse 70% 40% at 50% 0%, rgba(255,255,255,0.04) 0%, transparent 70%)",
+          background: "radial-gradient(ellipse 70% 40% at 50% 0%, rgba(232,160,32,0.06) 0%, transparent 70%)",
         }}
       />
 
       <div className="relative z-10 flex flex-col min-h-screen">
         <div className="text-center pt-20 pb-8 px-16">
-          <p className="font-cairo text-6xl font-semibold leading-tight uppercase bg-gradient-to-r from-[#6C7FFF] to-white bg-clip-text text-transparent">
+          <p className="font-cairo text-6xl font-semibold leading-tight uppercase bg-gradient-to-r from-[#e8a020] to-[#f0ede8] bg-clip-text text-transparent">
             {state.tournament?.name ?? "Cali Arena"}
           </p>
         </div>
@@ -342,7 +370,8 @@ function BattleScreen({ state, match, progress, athletes }: {
             color="#e05555"
             currentExercise={redExercise}
             currentReps={progress?.redCurrentReps ?? 0}
-            nextExercise={redNext}
+            progress={redProgress}
+            nextExercise={redNextLabel}
           />
 
           <div className="flex flex-col items-center">
@@ -350,7 +379,7 @@ function BattleScreen({ state, match, progress, athletes }: {
               className="pt-16 font-cairo text-[6rem] font-bold leading-none tabular-nums transition-colors duration-700"
               style={{ color: timerColor }}
             >
-              {formatTime(elapsed)}
+              {formatTime(finalElapsedMs)}
             </p>
 
             <p className="mt-16 font-cairo text-[2.5rem] font-bold leading-none text-white">
@@ -358,12 +387,17 @@ function BattleScreen({ state, match, progress, athletes }: {
             </p>
 
             <div className="flex flex-col items-center gap-1 mt-6 font-cairo text-[2rem] font-semibold text-white">
-              {exercises.map((e) => (
-                <p key={e.id}>
-                  {e.targetReps} {e.name}
-                  {e.addedWeight ? ` (+${e.addedWeight}KG)` : ""}
-                </p>
-              ))}
+              {groups.map((group) => {
+                const hasRed = group.items.some((e) => e.id === progress?.redCurrentExerciseId);
+                const hasBlue = group.items.some((e) => e.id === progress?.blueCurrentExerciseId);
+                return (
+                  <p key={group.order} className="flex items-center gap-3">
+                    <span className="w-4 h-4 rounded-full" style={{ background: "#e05555", visibility: hasRed ? "visible" : "hidden" }} />
+                    <span>{group.label}</span>
+                    <span className="w-4 h-4 rounded-full" style={{ background: "#5588e0", visibility: hasBlue ? "visible" : "hidden" }} />
+                  </p>
+                );
+              })}
             </div>
 
             {routine && (
@@ -386,7 +420,8 @@ function BattleScreen({ state, match, progress, athletes }: {
             color="#5588e0"
             currentExercise={blueExercise}
             currentReps={progress?.blueCurrentReps ?? 0}
-            nextExercise={blueNext}
+            progress={blueProgress}
+            nextExercise={blueNextLabel}
           />
         </div>
       </div>
@@ -400,17 +435,20 @@ function AthletePanel({
   color,
   currentExercise,
   currentReps,
+  progress,
   nextExercise,
 }: {
   finishState: { finished: boolean; won: boolean; lost: boolean; str: string | null };
   name: string;
   color: string;
-  currentExercise: { name: string; targetReps: number; addedWeight?: number | null } | undefined;
+  currentExercise: Exercise | undefined;
   currentReps: number;
-  nextExercise: { name: string; targetReps: number } | undefined;
+  progress: ExerciseProgress;
+  nextExercise: string | null | undefined;
 }) {
   const finishColor = finishState.won ? "#4ade80" : finishState.lost ? "#e05555" : "#ffffff";
   const isFinished = finishState.finished && finishState.str !== null;
+  const pct = isFinished ? 100 : progress.pct;
 
   return (
     <div className="mt-25 flex flex-col items-center pt-16">
@@ -437,20 +475,35 @@ function AthletePanel({
               {currentExercise?.name ?? "—"}
             </p>
             {currentExercise?.addedWeight ? (
-              <p className="font-cairo text-[2.25rem] font-bold leading-none text-white/80">
+              <p className="font-cairo text-[2.25rem] font-bold leading-none bg-gradient-to-r from-[#e8a020] to-[#f0ede8] bg-clip-text text-transparent">
                 with {currentExercise.addedWeight} kg
               </p>
             ) : null}
             <p className="font-cairo text-[3.75rem] font-bold leading-none mt-2 tabular-nums text-white">
-              {currentReps}/{currentExercise?.targetReps ?? "—"}
+              <span key={currentReps} className="inline-block animate-rep-pop">
+                {currentReps}
+              </span>
+              /{currentExercise?.targetReps ?? "—"}
             </p>
           </>
         )}
       </div>
 
+      <div className="mt-6 flex w-96 items-center gap-3">
+        <div className="flex-1 h-3 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.12)" }}>
+          <div
+            className="h-full rounded-full transition-all duration-300"
+            style={{ width: `${pct}%`, background: color }}
+          />
+        </div>
+        <span className="font-cairo text-[1.75rem] font-bold tabular-nums text-white">
+          {pct}%
+        </span>
+      </div>
+
       {nextExercise && !isFinished && (
-        <p className="mt-42 font-cairo text-[2.5rem] font-bold leading-none bg-gradient-to-r from-white to-[#999999] bg-clip-text text-transparent">
-          Next Exercise: {nextExercise.targetReps} {nextExercise.name}
+        <p className="mt-42 font-cairo text-[2.5rem] font-bold leading-none bg-gradient-to-r from-[#e8a020] to-[#f0ede8] bg-clip-text text-transparent">
+          Next: {nextExercise}
         </p>
       )}
     </div>

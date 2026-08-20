@@ -1,0 +1,1678 @@
+openapi: 3.0.3
+info:
+  title: Cali Arena API
+  description: |
+    REST API for the Cali Arena tournament platform.
+
+    Base URL: `http://localhost:8080`
+
+    Everything under `/api` is served by the Spring Boot application (`app` module).
+
+    All JSON responses are serialized from Kotlin data classes: dates use ISO-8601
+    (e.g. `2026-08-20T10:00:00Z`), enums are serialized as strings, and `BigDecimal`
+    fields are serialized as numbers.
+
+    Error responses use [RFC 7807](https://tools.ietf.org/html/rfc7807) Problem
+    Details with content type `application/problem+json`. Every error response has
+    the shape:
+    ```json
+    {
+      "type": "/problem/athlete-not-found",
+      "title": "athlete-not-found",
+      "status": 404
+    }
+    ```
+  version: 1.0.0
+  contact:
+    name: Cali Arena
+tags:
+  - name: Users
+    description: User management and authentication (Bearer tokens on protected endpoints).
+  - name: Athletes
+    description: Athletes and athlete queries.
+  - name: Clubs
+    description: Clubs.
+  - name: Routines
+    description: Endurance routines and their exercises.
+  - name: Matches
+    description: Matches and live progress tracking.
+  - name: Tournaments
+    description: Tournaments, brackets and screen state.
+  - name: Screen Routines
+    description: Routines displayed on the spectator screen of a tournament (with Server-Sent Events).
+  - name: Spectator
+    description: Server-Sent Events stream for the spectator screen.
+
+paths:
+  # ------------------------------------------------------------------ Users
+  /api/users:
+    get:
+      tags: [Users]
+      summary: List all users
+      operationId: listUsers
+      responses:
+        "200":
+          description: List of users (without passwords).
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/UserInformation"
+    post:
+      tags: [Users]
+      summary: Create a new user
+      operationId: createUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateUserInput"
+      responses:
+        "201":
+          description: User created.
+          headers:
+            Location:
+              description: URL of the created user.
+              schema:
+                type: string
+                example: /api/users/5
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserInformation"
+        "400":
+          $ref: "#/components/responses/BadRequestProblem"
+        "409":
+          $ref: "#/components/responses/ConflictProblem"
+
+  /api/users/token:
+    post:
+      tags: [Users]
+      summary: Log in and obtain a Bearer token
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserLoginInput"
+      responses:
+        "200":
+          description: Login succeeded, returns the token.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TokenResponse"
+        "401":
+          $ref: "#/components/responses/UnauthorizedProblem"
+
+  /api/users/logout:
+    post:
+      tags: [Users]
+      summary: Revoke the current token
+      description: Requires a valid Bearer token in the `Authorization` header.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Token revoked.
+        "401":
+          $ref: "#/components/responses/UnauthorizedProblem"
+
+  /api/users/me:
+    get:
+      tags: [Users]
+      summary: Get the authenticated user
+      description: Requires a valid Bearer token in the `Authorization` header.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: The authenticated user.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserInformation"
+        "401":
+          $ref: "#/components/responses/UnauthorizedProblem"
+
+  /api/users/update/role:
+    put:
+      tags: [Users]
+      summary: Update the role of another user (admin only)
+      description: Requires a valid Bearer token in the `Authorization` header.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateRoleInput"
+      responses:
+        "200":
+          description: Role updated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RoleUpdateResponse"
+        "400":
+          $ref: "#/components/responses/BadRequestProblem"
+        "401":
+          $ref: "#/components/responses/UnauthorizedProblem"
+        "403":
+          $ref: "#/components/responses/ForbiddenProblem"
+        "404":
+          $ref: "#/components/responses/NotFoundProblem"
+
+  # ---------------------------------------------------------------- Athletes
+  /api/athletes:
+    get:
+      tags: [Athletes]
+      summary: List all athletes
+      operationId: listAthletes
+      responses:
+        "200":
+          description: List of athletes.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Athlete"
+    post:
+      tags: [Athletes]
+      summary: Create an athlete
+      operationId: createAthlete
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAthleteInput"
+      responses:
+        "201":
+          description: Athlete created.
+          headers:
+            Location:
+              description: URL of the created athlete.
+              schema:
+                type: string
+                example: /api/athletes/12
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Athlete"
+        "400":
+          $ref: "#/components/responses/BadRequestProblem"
+        "404":
+          $ref: "#/components/responses/NotFoundProblem"
+
+  /api/athletes/{id}:
+    get:
+      tags: [Athletes]
+      summary: Get an athlete by id
+      operationId: getAthleteById
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: The athlete.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Athlete"
+        "404":
+          $ref: "#/components/responses/NotFoundProblem"
+    put:
+      tags: [Athletes]
+      summary: Update an athlete
+      operationId: updateAthlete
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateAthleteInput"
+      responses:
+        "200":
+          description: The updated athlete.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Athlete"
+        "400":
+          $ref: "#/components/responses/BadRequestProblem"
+        "404":
+          $ref: "#/components/responses/NotFoundProblem"
+
+  /api/athletes/club/{clubId}:
+    get:
+      tags: [Athletes]
+      summary: List athletes by club
+      operationId: listAthletesByClub
+      parameters:
+        - name: clubId
+          in: path
+          required: true
+          description: Club id.
+          schema:
+            type: integer
+            format: int32
+      responses:
+        "200":
+          description: List of athletes in the club.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Athlete"
+        "404":
+          $ref: "#/components/responses/NotFoundProblem"
+
+  /api/athletes/gender/{gender}:
+    get:
+      tags: [Athletes]
+      summary: List athletes by gender
+      operationId: listAthletesByGender
+      parameters:
+        - name: gender
+          in: path
+          required: true
+          description: Gender filter.
+          schema:
+            type: string
+            enum: [MALE, FEMALE]
+      responses:
+        "200":
+          description: List of athletes of that gender.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Athlete"
+        "400":
+          $ref: "#/components/responses/BadRequestProblem"
+
+  # ------------------------------------------------------------------ Clubs
+  /api/clubs:
+    get:
+      tags: [Clubs]
+      summary: List all clubs
+      operationId: listClubs
+      responses:
+        "200":
+          description: List of clubs.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Club"
+    post:
+      tags: [Clubs]
+      summary: Create a club
+      operationId: createClub
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateClubInput"
+      responses:
+        "201":
+          description: Club created.
+          headers:
+            Location:
+              description: URL of the created club.
+              schema:
+                type: string
+                example: /api/clubs/3
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Club"
+        "400":
+          $ref: "#/components/responses/BadRequestProblem"
+        "409":
+          $ref: "#/components/responses/ConflictProblem"
+
+  /api/clubs/{id}:
+    get:
+      tags: [Clubs]
+      summary: Get a club by id
+      operationId: getClubById
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: The club.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Club"
+        "404":
+          $ref: "#/components/responses/NotFoundProblem"
+    put:
+      tags: [Clubs]
+      summary: Update a club
+      operationId: updateClub
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateClubInput"
+      responses:
+        "200":
+          description: The updated club.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Club"
+        "400":
+          $ref: "#/components/responses/BadRequestProblem"
+        "404":
+          $ref: "#/components/responses/NotFoundProblem"
+        "409":
+          $ref: "#/components/responses/ConflictProblem"
+
+  # ---------------------------------------------------------------- Routines
+  /api/routines:
+    get:
+      tags: [Routines]
+      summary: List all endurance routines
+      operationId: listRoutines
+      responses:
+        "200":
+          description: List of routines.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/EnduranceRoutine"
+    post:
+      tags: [Routines]
+      summary: Create an endurance routine
+      operationId: createRoutine
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateRoutineInput"
+      responses:
+        "201":
+          description: Routine created.
+          headers:
+            Location:
+              description: URL of the created routine.
+              schema:
+                type: string
+                example: /api/routines/7
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnduranceRoutine"
+        "409":
+          $ref: "#/components/responses/ConflictProblem"
+
+  /api/routines/exercises:
+    post:
+      tags: [Routines]
+      summary: Create an exercise for a routine
+      description: >
+        `type` is one of `NORMAL`, `UNBROKEN` or `SUPERSET`. Exercises sharing the
+        same `exerciseOrder` and using `type = SUPERSET` are part of a superset and
+        are distinguished by their `supersetOrder` (0-based).
+      operationId: createExercise
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateExerciseInput"
+      responses:
+        "201":
+          description: Exercise created.
+          headers:
+            Location:
+              description: URL of the created exercise.
+              schema:
+                type: string
+                example: /api/routines/7/exercises/22
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Exercise"
+        "404":
+          $ref: "#/components/responses/NotFoundProblem"
+
+  /api/routines/{routineName}/overview:
+    get:
+      tags: [Routines]
+      summary: Get a routine overview by name
+      description: Returns the routine and its exercises ordered by `exerciseOrder`.
+      operationId: getRoutineOverview
+      parameters:
+        - name: routineName
+          in: path
+          required: true
+          description: Routine name.
+          schema:
+            type: string
+            example: The Games
+      responses:
+        "200":
+          description: The routine overview.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RoutineOverview"
+        "404":
+          $ref: "#/components/responses/NotFoundProblem"
+
+  # ----------------------------------------------------------------- Matches
+  /api/matches:
+    post:
+      tags: [Matches]
+      summary: Create a match
+      operationId: createMatch
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateMatchInput"
+      responses:
+        "201":
+          description: Match created.
+          headers:
+            Location:
+              description: URL of the created match.
+              schema:
+                type: string
+                example: /api/matches/9
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Match"
+        "404":
+          $ref: "#/components/responses/NotFoundProblem"
+
+  /api/matches/{id}:
+    get:
+      tags: [Matches]
+      summary: Get a match by id
+      operationId: getMatchById
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: The match.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Match"
+        "404":
+          $ref: "#/components/responses/NotFoundProblem"
+
+  /api/matches/{id}/start:
+    put:
+      tags: [Matches]
+      summary: Start a match
+      description: Creates the match progress and sets the match to running.
+      operationId: startMatch
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: The initial match progress.
+          headers:
+            Location:
+              description: URL of the match.
+              schema:
+                type: string
+                example: /api/matches/9
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MatchProgress"
+        "404":
+          $ref: "#/components/responses/NotFoundProblem"
+        "409":
+          $ref: "#/components/responses/ConflictProblem"
+
+  /api/matches/{matchId}/reps:
+    put:
+      tags: [Matches]
+      summary: Update the reps of both athletes
+      description: >
+        Advances the exercise for a side once the submitted reps reach the current
+        exercise target. Either side may be omitted (`null`) to keep its current
+        value; a finished side is left untouched. Responds with `202 Accepted`.
+      operationId: updateMatchReps
+      parameters:
+        - $ref: "#/components/parameters/MatchIdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateRepsInput"
+      responses:
+        "202":
+          description: Updated match progress.
+          headers:
+            Location:
+              description: URL of the match.
+              schema:
+                type: string
+                example: /api/matches/9
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MatchProgress"
+        "400":
+          $ref: "#/components/responses/BadRequestProblem"
+        "404":
+          $ref: "#/components/responses/NotFoundProblem"
+        "409":
+          $ref: "#/components/responses/ConflictProblem"
+
+  /api/matches/{id}/progress:
+    get:
+      tags: [Matches]
+      summary: Get the match progress
+      operationId: getMatchProgress
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: The current match progress.
+          headers:
+            Location:
+              description: URL of the match progress.
+              schema:
+                type: string
+                example: /api/matches/9/progress
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MatchProgress"
+        "404":
+          $ref: "#/components/responses/NotFoundProblem"
+
+  /api/matches/bracket/{id}:
+    get:
+      tags: [Matches]
+      summary: List matches by bracket
+      operationId: listMatchesByBracket
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: List of matches in the bracket.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Match"
+        "404":
+          $ref: "#/components/responses/NotFoundProblem"
+
+  # -------------------------------------------------------------- Tournaments
+  /api/tournaments:
+    get:
+      tags: [Tournaments]
+      summary: List all tournaments
+      operationId: listTournaments
+      responses:
+        "200":
+          description: List of tournaments.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Tournament"
+    post:
+      tags: [Tournaments]
+      summary: Create a tournament
+      description: "`startDate` and `endDate` are optional ISO dates (`YYYY-MM-DD`)."
+      operationId: createTournament
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTournamentInput"
+      responses:
+        "201":
+          description: Tournament created.
+          headers:
+            Location:
+              description: URL of the created tournament.
+              schema:
+                type: string
+                example: /api/tournaments/1
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Tournament"
+        "409":
+          $ref: "#/components/responses/ConflictProblem"
+
+  /api/tournaments/{id}:
+    get:
+      tags: [Tournaments]
+      summary: Get a tournament by id
+      operationId: getTournamentById
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: The tournament.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Tournament"
+        "404":
+          $ref: "#/components/responses/NotFoundProblem"
+
+  /api/tournaments/bracket:
+    post:
+      tags: [Tournaments]
+      summary: Create a bracket for a tournament
+      operationId: createBracket
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateBracketInput"
+      responses:
+        "201":
+          description: Bracket created.
+          headers:
+            Location:
+              description: URL of the created bracket.
+              schema:
+                type: string
+                example: /api/tournaments/bracket/4
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Bracket"
+        "400":
+          $ref: "#/components/responses/BadRequestProblem"
+        "404":
+          $ref: "#/components/responses/NotFoundProblem"
+        "409":
+          $ref: "#/components/responses/ConflictProblem"
+
+  /api/tournaments/{id}/brackets:
+    get:
+      tags: [Tournaments]
+      summary: List brackets of a tournament
+      operationId: listBracketsByTournament
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: List of brackets.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Bracket"
+        "404":
+          $ref: "#/components/responses/NotFoundProblem"
+
+  /api/tournaments/{id}/brackets/gender/{gender}:
+    get:
+      tags: [Tournaments]
+      summary: List brackets of a tournament by gender
+      operationId: listBracketsByTournamentAndGender
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+        - name: gender
+          in: path
+          required: true
+          description: Gender filter.
+          schema:
+            type: string
+            enum: [MALE, FEMALE]
+      responses:
+        "200":
+          description: List of brackets of that gender.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Bracket"
+        "400":
+          $ref: "#/components/responses/BadRequestProblem"
+        "404":
+          $ref: "#/components/responses/NotFoundProblem"
+
+  /api/tournaments/{tournamentId}/bracket/{gender}/overview:
+    get:
+      tags: [Tournaments]
+      summary: Get a bracket overview
+      description: Returns the bracket and all of its matches.
+      operationId: getBracketOverview
+      parameters:
+        - $ref: "#/components/parameters/TournamentIdPath"
+        - name: gender
+          in: path
+          required: true
+          description: Gender of the bracket.
+          schema:
+            type: string
+            enum: [MALE, FEMALE]
+      responses:
+        "200":
+          description: The bracket overview.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BracketOverview"
+        "404":
+          $ref: "#/components/responses/NotFoundProblem"
+
+  /api/tournaments/{tournamentId}/state:
+    get:
+      tags: [Tournaments]
+      summary: Get the current screen state of a tournament
+      operationId: getTournamentState
+      parameters:
+        - $ref: "#/components/parameters/TournamentIdPath"
+      responses:
+        "200":
+          description: The tournament state.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TournamentState"
+        "404":
+          $ref: "#/components/responses/NotFoundProblem"
+
+  /api/tournaments/{tournamentId}/state/screen:
+    put:
+      tags: [Tournaments]
+      summary: Update the spectator screen
+      description: >
+        Switches the public spectator screen and optionally selects the match being
+        displayed. `screen` is one of `WAITING`, `ROUTINES`, `BATTLE`, `WINNER` or
+        `LEADERBOARD`.
+      operationId: updateScreen
+      parameters:
+        - $ref: "#/components/parameters/TournamentIdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateScreenInput"
+      responses:
+        "200":
+          description: The updated tournament state.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TournamentState"
+        "400":
+          $ref: "#/components/responses/BadRequestProblem"
+        "404":
+          $ref: "#/components/responses/NotFoundProblem"
+
+  # ----------------------------------------------------------- Screen Routines
+  /api/tournaments/{tournamentId}/screen-routines:
+    get:
+      tags: [Screen Routines]
+      summary: List the screen routines of a tournament
+      operationId: listScreenRoutines
+      parameters:
+        - $ref: "#/components/parameters/TournamentIdPath"
+      responses:
+        "200":
+          description: List of screen routines.
+          headers:
+            Location:
+              description: Collection URL.
+              schema:
+                type: string
+                example: /api/tournaments/1/screen-routines
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ScreenRoutine"
+        "404":
+          $ref: "#/components/responses/NotFoundProblem"
+    post:
+      tags: [Screen Routines]
+      summary: Add a routine to the spectator screen
+      operationId: createScreenRoutine
+      parameters:
+        - $ref: "#/components/parameters/TournamentIdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateScreenRoutineInput"
+      responses:
+        "201":
+          description: Screen routine created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScreenRoutine"
+        "404":
+          $ref: "#/components/responses/NotFoundProblem"
+
+  /api/tournaments/{tournamentId}/screen-routines/{id}/visibility:
+    patch:
+      tags: [Screen Routines]
+      summary: Show or hide a screen routine
+      operationId: updateScreenRoutineVisibility
+      parameters:
+        - $ref: "#/components/parameters/TournamentIdPath"
+        - $ref: "#/components/parameters/IdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateVisibilityInput"
+      responses:
+        "200":
+          description: The updated screen routine.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScreenRoutine"
+        "404":
+          $ref: "#/components/responses/NotFoundProblem"
+        "409":
+          $ref: "#/components/responses/ConflictProblem"
+        "500":
+          $ref: "#/components/responses/InternalErrorProblem"
+
+  /api/tournaments/{tournamentId}/screen-routines/{id}/order:
+    patch:
+      tags: [Screen Routines]
+      summary: Change the display order of a screen routine
+      operationId: updateScreenRoutineDisplayOrder
+      parameters:
+        - $ref: "#/components/parameters/TournamentIdPath"
+        - $ref: "#/components/parameters/IdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateDisplayOrderInput"
+      responses:
+        "200":
+          description: The updated screen routine.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScreenRoutine"
+        "404":
+          $ref: "#/components/responses/NotFoundProblem"
+        "409":
+          $ref: "#/components/responses/ConflictProblem"
+        "500":
+          $ref: "#/components/responses/InternalErrorProblem"
+
+  /api/tournaments/{tournamentId}/screen-routines/{id}:
+    delete:
+      tags: [Screen Routines]
+      summary: Remove a screen routine
+      operationId: deleteScreenRoutine
+      parameters:
+        - $ref: "#/components/parameters/TournamentIdPath"
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "204":
+          description: Screen routine removed (no body).
+        "404":
+          $ref: "#/components/responses/NotFoundProblem"
+        "409":
+          $ref: "#/components/responses/ConflictProblem"
+
+  # ---------------------------------------------------------------- Spectator
+  /api/tournaments/{tournamentId}/screen-routines/listen:
+    get:
+      tags: [Spectator]
+      summary: Open a Server-Sent Events stream for the spectator screen
+      description: >
+        Keeps the connection open (timeout of 1 hour) and emits events as JSON
+        objects. Each event has an `id`, a named event (the `action`) and a `data`
+        payload:
+      operationId: listenScreen
+      parameters:
+        - $ref: "#/components/parameters/TournamentIdPath"
+      responses:
+        "200":
+          description: Event stream.
+          content:
+            text/event-stream:
+              schema:
+                $ref: "#/components/schemas/SpectatorEvent"
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpectatorEvent"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: Token obtained from `POST /api/users/token`.
+
+  parameters:
+    IdPath:
+      name: id
+      in: path
+      required: true
+      description: Entity id.
+      schema:
+        type: integer
+        format: int32
+    MatchIdPath:
+      name: matchId
+      in: path
+      required: true
+      description: Match id.
+      schema:
+        type: integer
+        format: int32
+    TournamentIdPath:
+      name: tournamentId
+      in: path
+      required: true
+      description: Tournament id.
+      schema:
+        type: integer
+        format: int32
+
+  responses:
+    BadRequestProblem:
+      description: Invalid request (e.g. invalid gender, insecure password, invalid role).
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    UnauthorizedProblem:
+      description: Missing or invalid Bearer token.
+      headers:
+        WWW-Authenticate:
+          description: Authentication scheme expected by the server.
+          schema:
+            type: string
+            example: bearer
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    ForbiddenProblem:
+      description: Authenticated but not allowed to perform the operation.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    NotFoundProblem:
+      description: Referenced entity does not exist.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    ConflictProblem:
+      description: State conflict (e.g. duplicate name, invalid transition, mismatch).
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    InternalErrorProblem:
+      description: Unexpected server error.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+
+  schemas:
+    Problem:
+      type: object
+      description: RFC 7807 problem detail.
+      required: [type, title, status]
+      properties:
+        type:
+          type: string
+          description: Stable identifier for the problem, e.g. `/problem/athlete-not-found`.
+          example: /problem/athlete-not-found
+        title:
+          type: string
+          description: Human-friendly title derived from the type.
+          example: athlete-not-found
+        status:
+          type: integer
+          format: int32
+          description: HTTP status code.
+          example: 404
+
+    # ------------------------------------------------------------------ Inputs
+    CreateUserInput:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+          example: judge1
+        password:
+          type: string
+          example: secret
+    UserLoginInput:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+          example: judge1
+        password:
+          type: string
+          example: secret
+    UpdateRoleInput:
+      type: object
+      required: [userToUpdateId, role]
+      properties:
+        userToUpdateId:
+          type: integer
+          format: int32
+        role:
+          type: string
+          enum: [ADMIN, JUDGE]
+    CreateAthleteInput:
+      type: object
+      required: [name, gender, clubId]
+      properties:
+        name:
+          type: string
+          example: John Doe
+        gender:
+          type: string
+          enum: [MALE, FEMALE]
+        clubId:
+          type: integer
+          format: int32
+    UpdateAthleteInput:
+      type: object
+      required: [name, gender, clubId]
+      properties:
+        name:
+          type: string
+          example: John Doe
+        gender:
+          type: string
+          enum: [MALE, FEMALE]
+        clubId:
+          type: integer
+          format: int32
+    CreateClubInput:
+      type: object
+      required: [name, shortName]
+      properties:
+        name:
+          type: string
+          example: Lisbon CrossFit
+        shortName:
+          type: string
+          example: LXF
+    UpdateClubInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          example: Lisbon CrossFit
+        shortName:
+          type: string
+          nullable: true
+    CreateMatchInput:
+      type: object
+      required: [bracketId, routineId, judgeId, athleteRedId, athleteBlueId]
+      properties:
+        bracketId:
+          type: integer
+          format: int32
+        routineId:
+          type: integer
+          format: int32
+        judgeId:
+          type: integer
+          format: int32
+        athleteRedId:
+          type: integer
+          format: int32
+        athleteBlueId:
+          type: integer
+          format: int32
+    UpdateRepsInput:
+      type: object
+      description: Omit a side to keep its current value; `null` also keeps it.
+      properties:
+        redReps:
+          type: integer
+          format: int32
+          nullable: true
+          example: 15
+        blueReps:
+          type: integer
+          format: int32
+          nullable: true
+          example: 12
+    CreateRoutineInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          example: The Games
+        timeCapSeconds:
+          type: integer
+          format: int32
+          nullable: true
+          example: 600
+    CreateExerciseInput:
+      type: object
+      required: [routineId, name, targetReps, exerciseOrder, type]
+      properties:
+        routineId:
+          type: integer
+          format: int32
+        name:
+          type: string
+          example: Push-Ups
+        targetReps:
+          type: integer
+          format: int32
+          example: 20
+        addedWeight:
+          type: number
+          format: double
+          nullable: true
+          description: Weight added to the movement, e.g. kg or plates.
+          example: 10.0
+        exerciseOrder:
+          type: integer
+          format: int32
+          description: Position of the exercise (or superset group) in the routine.
+          example: 1
+        supersetOrder:
+          type: integer
+          format: int32
+          nullable: true
+          description: 0-based position inside a superset group. Required when `type` is `SUPERSET`.
+          example: 0
+        type:
+          type: string
+          enum: [NORMAL, UNBROKEN, SUPERSET]
+          description: Exercise type (`SUPERSET` marks a member of a superset group).
+    CreateTournamentInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          example: Cali Arena 2026
+        location:
+          type: string
+          nullable: true
+          example: Porto
+        startDate:
+          type: string
+          format: date
+          nullable: true
+          description: ISO date `YYYY-MM-DD`.
+          example: "2026-09-01"
+        endDate:
+          type: string
+          format: date
+          nullable: true
+          description: ISO date `YYYY-MM-DD`.
+          example: "2026-09-03"
+    CreateBracketInput:
+      type: object
+      required: [tournamentId, gender, stage]
+      properties:
+        tournamentId:
+          type: integer
+          format: int32
+        gender:
+          type: string
+          enum: [MALE, FEMALE]
+        stage:
+          type: string
+          enum: [QUALIFIERS, QUARTERFINALS, SEMIFINALS, FINALS]
+    UpdateScreenInput:
+      type: object
+      required: [screen]
+      properties:
+        screen:
+          type: string
+          enum: [WAITING, ROUTINES, BATTLE, WINNER, LEADERBOARD]
+        currentMatchId:
+          type: integer
+          format: int32
+          nullable: true
+          description: Match to display when `screen` is `BATTLE`.
+    CreateScreenRoutineInput:
+      type: object
+      required: [routineId, displayOrder]
+      properties:
+        routineId:
+          type: integer
+          format: int32
+        displayOrder:
+          type: integer
+          format: int32
+          description: Position on the spectator screen (`ROUTINES`).
+        label:
+          type: string
+          nullable: true
+          description: Optional label shown instead of the routine name.
+    UpdateVisibilityInput:
+      type: object
+      required: [isVisible]
+      properties:
+        isVisible:
+          type: boolean
+          description: Whether the routine is shown on the spectator screen.
+    UpdateDisplayOrderInput:
+      type: object
+      required: [displayOrder]
+      properties:
+        displayOrder:
+          type: integer
+          format: int32
+
+    # ------------------------------------------------------------------ Models
+    UserInformation:
+      type: object
+      description: User without the password.
+      required: [id, username, role, createdAt]
+      properties:
+        id:
+          type: integer
+          format: int32
+        username:
+          type: string
+        role:
+          type: string
+          enum: [ADMIN, JUDGE]
+        createdAt:
+          type: string
+          format: date-time
+    TokenResponse:
+      type: object
+      required: [token]
+      properties:
+        token:
+          type: string
+          description: Bearer token to use in the `Authorization` header.
+    RoleUpdateResponse:
+      type: object
+      required: [userId, role]
+      properties:
+        userId:
+          type: integer
+          format: int32
+        role:
+          type: string
+          enum: [ADMIN, JUDGE]
+    Athlete:
+      type: object
+      required: [id, name, gender, clubId, createdAt]
+      properties:
+        id:
+          type: integer
+          format: int32
+        name:
+          type: string
+        gender:
+          type: string
+          enum: [MALE, FEMALE]
+        clubId:
+          type: integer
+          format: int32
+        createdAt:
+          type: string
+          format: date-time
+    Club:
+      type: object
+      required: [id, name, shortName, createdAt]
+      properties:
+        id:
+          type: integer
+          format: int32
+        name:
+          type: string
+        shortName:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+    EnduranceRoutine:
+      type: object
+      required: [id, name, timeCapSeconds, createdAt]
+      properties:
+        id:
+          type: integer
+          format: int32
+        name:
+          type: string
+        timeCapSeconds:
+          type: integer
+          format: int32
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+    Exercise:
+      type: object
+      required: [id, routineId, name, targetReps, exerciseOrder, type]
+      properties:
+        id:
+          type: integer
+          format: int32
+        routineId:
+          type: integer
+          format: int32
+        name:
+          type: string
+        targetReps:
+          type: integer
+          format: int32
+        addedWeight:
+          type: number
+          format: double
+          nullable: true
+        exerciseOrder:
+          type: integer
+          format: int32
+        supersetOrder:
+          type: integer
+          format: int32
+          nullable: true
+        type:
+          type: string
+          enum: [NORMAL, UNBROKEN, SUPERSET]
+    RoutineOverview:
+      type: object
+      required: [name, timeCapSeconds, createdAt, exercises]
+      properties:
+        name:
+          type: string
+        timeCapSeconds:
+          type: integer
+          format: int32
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        exercises:
+          type: array
+          items:
+            $ref: "#/components/schemas/Exercise"
+    ScreenRoutine:
+      type: object
+      required: [id, tournamentId, routineId, displayOrder, isVisible, createdAt, updatedAt]
+      properties:
+        id:
+          type: integer
+          format: int32
+        tournamentId:
+          type: integer
+          format: int32
+        routineId:
+          type: integer
+          format: int32
+        displayOrder:
+          type: integer
+          format: int32
+        isVisible:
+          type: boolean
+        label:
+          type: string
+          nullable: true
+        createdAt:
+          type: integer
+          format: int64
+          description: Epoch millis.
+        updatedAt:
+          type: integer
+          format: int64
+          description: Epoch millis.
+    Match:
+      type: object
+      required: [id, bracketId, routineId, judgeId, status, createdAt]
+      properties:
+        id:
+          type: integer
+          format: int32
+        bracketId:
+          type: integer
+          format: int32
+        routineId:
+          type: integer
+          format: int32
+        judgeId:
+          type: integer
+          format: int32
+        athleteRedId:
+          type: integer
+          format: int32
+          nullable: true
+        athleteBlueId:
+          type: integer
+          format: int32
+          nullable: true
+        winnerAthleteId:
+          type: integer
+          format: int32
+          nullable: true
+        status:
+          type: string
+          enum: [PENDING, RUNNING, FINISHED]
+        startedAt:
+          type: string
+          format: date-time
+          nullable: true
+        finishedAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+    MatchProgress:
+      type: object
+      required: [id, matchId, redCurrentReps, blueCurrentReps, updatedAt]
+      properties:
+        id:
+          type: integer
+          format: int32
+        matchId:
+          type: integer
+          format: int32
+        redCurrentExerciseId:
+          type: integer
+          format: int32
+          nullable: true
+          description: "`null` once the red side has finished the routine."
+        blueCurrentExerciseId:
+          type: integer
+          format: int32
+          nullable: true
+          description: "`null` once the blue side has finished the routine."
+        redCurrentReps:
+          type: integer
+          format: int32
+        blueCurrentReps:
+          type: integer
+          format: int32
+        redFinishedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Time the red side finished the routine (also the match end).
+        blueFinishedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Time the blue side finished the routine (also the match end).
+        timerStartedAt:
+          type: string
+          format: date-time
+          nullable: true
+        timerRemainingSeconds:
+          type: integer
+          format: int32
+          nullable: true
+        updatedAt:
+          type: string
+          format: date-time
+    Tournament:
+      type: object
+      required: [id, name, status, createdAt]
+      properties:
+        id:
+          type: integer
+          format: int32
+        name:
+          type: string
+        location:
+          type: string
+          nullable: true
+        startDate:
+          type: string
+          format: date-time
+          nullable: true
+        endDate:
+          type: string
+          format: date-time
+          nullable: true
+        status:
+          type: string
+          enum: [DRAFT, READY, LIVE, FINISHED]
+        createdAt:
+          type: string
+          format: date-time
+    Bracket:
+      type: object
+      required: [id, tournamentId, gender, stage, createdAt]
+      properties:
+        id:
+          type: integer
+          format: int32
+        tournamentId:
+          type: integer
+          format: int32
+        gender:
+          type: string
+          enum: [MALE, FEMALE]
+        stage:
+          type: string
+          enum: [QUALIFIERS, QUARTERFINALS, SEMIFINALS, FINALS]
+        createdAt:
+          type: string
+          format: date-time
+    BracketOverview:
+      type: object
+      required: [bracket, matches]
+      properties:
+        bracket:
+          $ref: "#/components/schemas/Bracket"
+        matches:
+          type: array
+          items:
+            $ref: "#/components/schemas/Match"
+    TournamentState:
+      type: object
+      required: [id, tournamentId, currentScreen, updatedAt]
+      properties:
+        id:
+          type: integer
+          format: int32
+        tournamentId:
+          type: integer
+          format: int32
+        currentScreen:
+          type: string
+          enum: [WAITING, ROUTINES, BATTLE, WINNER, LEADERBOARD]
+        currentMatchId:
+          type: integer
+          format: int32
+          nullable: true
+        updatedAt:
+          type: string
+          format: date-time
+    SpectatorEvent:
+      type: object
+      description: >
+        An event pushed over the SSE stream. The JSON `data` is the concrete event.
+        Fields vary with `action`:
+        - `TOURNAMENT_STATE_UPDATED`: `state` (`TournamentState`), `currentMatchId`
+        - `SCREEN_ROUTINES_CREATED` / `SCREEN_ROUTINES_UPDATED`: `screenRoutine` (`ScreenRoutine`), `routineOverview` (`RoutineOverview`)
+        - `SCREEN_ROUTINES_DELETED`: `screenRoutineId`
+        - `MATCH_UPDATED`: `matchProgress` (`MatchProgress`)
+        Keep-alive events use the event name `KEEP_ALIVE` and carry only `timestamp`.
+      required: [tournamentId, action]
+      properties:
+        tournamentId:
+          type: integer
+          format: int32
+        action:
+          type: string
+          enum:
+            - TOURNAMENT_STATE_UPDATED
+            - SCREEN_ROUTINES_CREATED
+            - SCREEN_ROUTINES_UPDATED
+            - SCREEN_ROUTINES_DELETED
+            - MATCH_UPDATED
+        state:
+          $ref: "#/components/schemas/TournamentState"
+        currentMatchId:
+          type: integer
+          format: int32
+          nullable: true
+        screenRoutine:
+          $ref: "#/components/schemas/ScreenRoutine"
+        routineOverview:
+          $ref: "#/components/schemas/RoutineOverview"
+        screenRoutineId:
+          type: integer
+          format: int32
+        matchProgress:
+          $ref: "#/components/schemas/MatchProgress"
+        timestamp:
+          type: string
+          format: date-time

@@ -101,7 +101,9 @@ class MatchService(
             }
 
             val firstExercise: Exercise =
-                repoEnduranceRoutine.findExercisesByRoutineId(match.routineId).firstOrNull()
+                repoEnduranceRoutine
+                    .findExercisesByRoutineId(match.routineId)
+                    .minWithOrNull(compareBy(Exercise::exerciseOrder).thenBy { it.supersetOrder ?: 0 })
                     ?: return@run failure(MatchError.RoutineNotFound)
 
             val now = clock.instant()
@@ -152,10 +154,10 @@ class MatchService(
 
             val exercises = repoEnduranceRoutine.findExercisesByRoutineId(match.routineId)
 
-            if (redReps != null && exercises.none { it.id == prog.redCurrentExerciseId }) {
+            if (redReps != null && prog.redFinishedAt == null && exercises.none { it.id == prog.redCurrentExerciseId }) {
                 return@run failure(MatchError.ExerciseNotFound)
             }
-            if (blueReps != null && exercises.none { it.id == prog.blueCurrentExerciseId }) {
+            if (blueReps != null && prog.blueFinishedAt == null && exercises.none { it.id == prog.blueCurrentExerciseId }) {
                 return@run failure(MatchError.ExerciseNotFound)
             }
 
@@ -169,16 +171,32 @@ class MatchService(
                     blueCurrentExerciseId = newProg.blueCurrentExerciseId,
                 ) ?: return@run failure(MatchError.ProgressNotFound)
 
-            val (redFinishedAt, blueFinishedAt) = updated.redFinishedAt to updated.blueFinishedAt
+            val redFinishedAt = updated.redFinishedAt
+            val blueFinishedAt = updated.blueFinishedAt
 
-            if (redFinishedAt != null || blueFinishedAt != null) {
-                val redWon = redFinishedAt != null
+            val newFinish =
+                (redFinishedAt != null && prog.redFinishedAt == null) ||
+                    (blueFinishedAt != null && prog.blueFinishedAt == null)
+
+            if (newFinish) {
+                val matchFinished = redFinishedAt != null && blueFinishedAt != null
+                val redWon =
+                    if (matchFinished) {
+                        !redFinishedAt.isAfter(blueFinishedAt)
+                    } else {
+                        redFinishedAt != null
+                    }
 
                 repoMatch.save(
                     match.copy(
-                        status = if (redFinishedAt != null && blueFinishedAt != null) MatchStatus.FINISHED else MatchStatus.RUNNING,
+                        status = if (matchFinished) MatchStatus.FINISHED else MatchStatus.RUNNING,
                         winnerAthleteId = if (redWon) match.athleteRedId else match.athleteBlueId,
-                        finishedAt = if (redWon) redFinishedAt else blueFinishedAt,
+                        finishedAt =
+                            if (matchFinished) {
+                                if (redWon) blueFinishedAt else redFinishedAt
+                            } else {
+                                null
+                            },
                     ),
                 ) ?: return@run failure(MatchError.MatchNotFound)
             }

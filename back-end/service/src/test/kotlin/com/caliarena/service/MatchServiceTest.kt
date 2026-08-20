@@ -21,7 +21,9 @@ import org.junit.jupiter.api.Test
 import org.mockito.Mockito.lenient
 import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
+import org.mockito.kotlin.doAnswer
 import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
@@ -45,7 +47,7 @@ class MatchServiceTest : ServiceTest() {
             }.whenever(trxManager)
             .run<Any>(any())
 
-        service = MatchService(trxManager, clock)
+        service = MatchService(trxManager, clock, mock())
     }
 
     private val now = clock.instant()
@@ -247,6 +249,7 @@ class MatchServiceTest : ServiceTest() {
             whenever(repoMatch.findById(1)).thenReturn(match)
             whenever(repoMatch.findProgressByMatchId(1)).thenReturn(null)
             whenever(repoEnduranceRoutine.findExercisesByRoutineId(2)).thenReturn(exercises(1))
+            whenever(repoTournament.findByBracketId(1)).thenReturn(mockBracket())
             whenever(repoMatch.save(any())).thenReturn(updated)
             whenever(repoMatch.createMatchProgress(1, 1, now)).thenReturn(progress)
             val result = service.startMatch(1)
@@ -328,12 +331,12 @@ class MatchServiceTest : ServiceTest() {
                 match.copy(
                     status = MatchStatus.RUNNING,
                     winnerAthleteId = match.athleteRedId,
-                    finishedAt = now,
                 )
 
             whenever(repoMatch.findById(1)).thenReturn(match)
             whenever(repoMatch.findProgressByMatchId(1)).thenReturn(progLast)
             whenever(repoEnduranceRoutine.findExercisesByRoutineId(2)).thenReturn(exs)
+            whenever(repoTournament.findByBracketId(1)).thenReturn(mockBracket())
 
             // Stubbing genérico com doReturn e any() – sem argumentos concretos
             doReturn(updatedProg)
@@ -364,12 +367,12 @@ class MatchServiceTest : ServiceTest() {
                 match.copy(
                     status = MatchStatus.RUNNING,
                     winnerAthleteId = match.athleteBlueId,
-                    finishedAt = now,
                 )
 
             whenever(repoMatch.findById(1)).thenReturn(match)
             whenever(repoMatch.findProgressByMatchId(1)).thenReturn(progLast)
             whenever(repoEnduranceRoutine.findExercisesByRoutineId(2)).thenReturn(exs)
+            whenever(repoTournament.findByBracketId(1)).thenReturn(mockBracket())
 
             doReturn(updatedProg)
                 .whenever(repoMatch)
@@ -382,16 +385,128 @@ class MatchServiceTest : ServiceTest() {
         }
 
         @Test
+        fun `should set FINISHED only when both athletes finish`() {
+            val progLast =
+                prog.copy(
+                    redCurrentExerciseId = 3,
+                    blueCurrentExerciseId = 3,
+                    redCurrentReps = 8,
+                    blueCurrentReps = 8,
+                )
+            val updatedProg =
+                progLast.copy(
+                    redCurrentExerciseId = null,
+                    blueCurrentExerciseId = null,
+                    redCurrentReps = 10,
+                    blueCurrentReps = 10,
+                    redFinishedAt = now,
+                    blueFinishedAt = now,
+                    updatedAt = now,
+                )
+            val finishedMatch =
+                match.copy(
+                    status = MatchStatus.FINISHED,
+                    winnerAthleteId = match.athleteRedId,
+                    finishedAt = now,
+                )
+
+            whenever(repoMatch.findById(1)).thenReturn(match)
+            whenever(repoMatch.findProgressByMatchId(1)).thenReturn(progLast)
+            whenever(repoEnduranceRoutine.findExercisesByRoutineId(2)).thenReturn(exs)
+            whenever(repoTournament.findByBracketId(1)).thenReturn(mockBracket())
+
+            doAnswer { invocation -> invocation.getArgument<MatchProgress>(0) }
+                .whenever(repoMatch)
+                .updateMatchProgress(any<MatchProgress>(), anyOrNull<Int>(), anyOrNull<Int>())
+            doReturn(finishedMatch).whenever(repoMatch).save(any<Match>())
+
+            val result = service.updateAthletesReps(1, 10, 10)
+
+            assertEquals(success(updatedProg), result)
+            verify(repoMatch).save(finishedMatch)
+        }
+
+        @Test
         fun `should update without finishing`() {
             val updatedProg = prog.copy(redCurrentReps = 5, blueCurrentReps = 3, updatedAt = now)
             whenever(repoMatch.findById(1)).thenReturn(match)
             whenever(repoMatch.findProgressByMatchId(1)).thenReturn(prog)
             whenever(repoEnduranceRoutine.findExercisesByRoutineId(2)).thenReturn(exs)
+            whenever(repoTournament.findByBracketId(1)).thenReturn(mockBracket())
             lenient().whenever(repoMatch.updateMatchProgress(any(), any(), any())).thenReturn(updatedProg)
 
             val result = service.updateAthletesReps(1, 5, 3)
             assertEquals(success(updatedProg), result)
             verify(repoMatch, never()).save(any())
+        }
+
+        @Test
+        fun `should still advance the other athlete after the first one finishes`() {
+            val progRedDone =
+                prog.copy(
+                    redCurrentExerciseId = null,
+                    redCurrentReps = 10,
+                    redFinishedAt = now,
+                )
+            val updatedProg =
+                progRedDone.copy(
+                    blueCurrentReps = 5,
+                    updatedAt = now,
+                )
+
+            whenever(repoMatch.findById(1)).thenReturn(match)
+            whenever(repoMatch.findProgressByMatchId(1)).thenReturn(progRedDone)
+            whenever(repoEnduranceRoutine.findExercisesByRoutineId(2)).thenReturn(exs)
+            whenever(repoTournament.findByBracketId(1)).thenReturn(mockBracket())
+            doAnswer { invocation -> invocation.getArgument<MatchProgress>(0) }
+                .whenever(repoMatch)
+                .updateMatchProgress(any<MatchProgress>(), anyOrNull<Int>(), anyOrNull<Int>())
+
+            // Frontend sends both sides; red is already finished (current exercise null)
+            val result = service.updateAthletesReps(1, 10, 5)
+
+            assertEquals(success(updatedProg), result)
+            verify(repoMatch, never()).save(any())
+        }
+
+        @Test
+        fun `should save match finishedAt only when both finished and use the last finisher's time`() {
+            val redFinishedAt = now.minusSeconds(5)
+            val progRedDone =
+                prog.copy(
+                    redCurrentExerciseId = null,
+                    redCurrentReps = 10,
+                    redFinishedAt = redFinishedAt,
+                    blueCurrentExerciseId = 3,
+                    blueCurrentReps = 9,
+                )
+            val updatedProg =
+                progRedDone.copy(
+                    blueCurrentExerciseId = null,
+                    blueCurrentReps = 10,
+                    blueFinishedAt = now,
+                    updatedAt = now,
+                )
+            val finishedMatch =
+                match.copy(
+                    status = MatchStatus.FINISHED,
+                    winnerAthleteId = match.athleteRedId,
+                    finishedAt = now,
+                )
+
+            whenever(repoMatch.findById(1)).thenReturn(match)
+            whenever(repoMatch.findProgressByMatchId(1)).thenReturn(progRedDone)
+            whenever(repoEnduranceRoutine.findExercisesByRoutineId(2)).thenReturn(exs)
+            whenever(repoTournament.findByBracketId(1)).thenReturn(mockBracket())
+            doAnswer { invocation -> invocation.getArgument<MatchProgress>(0) }
+                .whenever(repoMatch)
+                .updateMatchProgress(any<MatchProgress>(), anyOrNull<Int>(), anyOrNull<Int>())
+            doReturn(finishedMatch).whenever(repoMatch).save(any<Match>())
+
+            val result = service.updateAthletesReps(1, null, 10)
+
+            assertEquals(success(updatedProg), result)
+            verify(repoMatch).save(finishedMatch)
         }
 
         @Test
@@ -481,6 +596,87 @@ class MatchServiceTest : ServiceTest() {
             whenever(repoMatch.findProgressByMatchId(1)).thenReturn(progress)
             val result = service.getMatchProgress(1)
             assertEquals(success(progress), result)
+        }
+    }
+
+    @Nested
+    inner class SupersetAdvance {
+        private val match = mockMatch(status = MatchStatus.RUNNING)
+        private val supersetExs =
+            listOf(
+                Exercise(1, 2, "Push Up", 20, null, 1, null, ExerciseType.NORMAL),
+                Exercise(2, 2, "Pull ups", 10, null, 2, null, ExerciseType.NORMAL),
+                Exercise(3, 2, "Squats", 30, null, 3, null, ExerciseType.NORMAL),
+                Exercise(4, 2, "Muscle Up", 2, null, 4, 1, ExerciseType.SUPERSET),
+                Exercise(5, 2, "Straight Bar Dip", 10, null, 4, 2, ExerciseType.SUPERSET),
+                Exercise(6, 2, "Pull up", 10, null, 4, 3, ExerciseType.SUPERSET),
+            )
+
+        private fun progressOn(
+            exerciseId: Int,
+            reps: Int,
+        ) = mockProgress().copy(redCurrentExerciseId = exerciseId, redCurrentReps = reps)
+
+        private fun realAdvance() {
+            whenever(repoEnduranceRoutine.findExercisesByRoutineId(2)).thenReturn(supersetExs)
+            whenever(repoTournament.findByBracketId(1)).thenReturn(mockBracket())
+            doAnswer { invocation -> invocation.getArgument<MatchProgress>(0) }
+                .whenever(repoMatch)
+                .updateMatchProgress(any<MatchProgress>(), anyOrNull<Int>(), anyOrNull<Int>())
+        }
+
+        private fun expectSuccess(result: Either<MatchError, MatchProgress>): MatchProgress =
+            when (result) {
+                is Either.Right -> result.value
+                is Either.Left -> throw AssertionError("Expected success but got ${result.value}")
+            }
+
+        @Test
+        fun `should advance to second superset exercise after first completes`() {
+            whenever(repoMatch.findById(1)).thenReturn(match)
+            whenever(repoMatch.findProgressByMatchId(1)).thenReturn(progressOn(4, 1))
+            realAdvance()
+
+            val progress = expectSuccess(service.updateAthletesReps(1, 2, null))
+
+            assertEquals(5, progress.redCurrentExerciseId)
+            assertEquals(0, progress.redCurrentReps)
+            assertEquals(null, progress.redFinishedAt)
+            verify(repoMatch, never()).save(any())
+        }
+
+        @Test
+        fun `should advance to third superset exercise after second completes`() {
+            whenever(repoMatch.findById(1)).thenReturn(match)
+            whenever(repoMatch.findProgressByMatchId(1)).thenReturn(progressOn(5, 9))
+            realAdvance()
+
+            val progress = expectSuccess(service.updateAthletesReps(1, 10, null))
+
+            assertEquals(6, progress.redCurrentExerciseId)
+            assertEquals(0, progress.redCurrentReps)
+            assertEquals(null, progress.redFinishedAt)
+            verify(repoMatch, never()).save(any())
+        }
+
+        @Test
+        fun `should finish only after last superset exercise completes`() {
+            whenever(repoMatch.findById(1)).thenReturn(match)
+            whenever(repoMatch.findProgressByMatchId(1)).thenReturn(progressOn(6, 9))
+            realAdvance()
+            val finishedMatch =
+                match.copy(
+                    status = MatchStatus.RUNNING,
+                    winnerAthleteId = match.athleteRedId,
+                )
+            doReturn(finishedMatch).whenever(repoMatch).save(any<Match>())
+
+            val progress = expectSuccess(service.updateAthletesReps(1, 10, null))
+
+            assertEquals(null, progress.redCurrentExerciseId)
+            assertEquals(10, progress.redCurrentReps)
+            assertEquals(now, progress.redFinishedAt)
+            verify(repoMatch).save(finishedMatch)
         }
     }
 }

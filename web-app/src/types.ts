@@ -197,7 +197,7 @@ export interface AssignAthletesInput {
 }
 
 export interface UpdateRepsInput {
-  repReps: number | null;
+  redReps: number | null;
   blueReps: number | null;
 }
 
@@ -245,6 +245,7 @@ export const SPECTATOR_ACTIONS = [
   "SCREEN_ROUTINES_CREATED",
   "SCREEN_ROUTINES_UPDATED",
   "SCREEN_ROUTINES_DELETED",
+  "MATCH_UPDATED",
   "KEEP_ALIVE",
 ] as const;
 
@@ -271,7 +272,13 @@ export interface ScreenRoutineDeletedEvent extends SpectatorEventBase {
   screenRoutineId: number;
 }
 
+export interface MatchUpdatedEvent extends SpectatorEventBase {
+  action: "MATCH_UPDATED";
+  matchProgress: MatchProgress;
+}
+
 export type SpectatorEvent =
   | TournamentStateUpdatedEvent
   | ScreenRoutinesEvent
-  | ScreenRoutineDeletedEvent;
+  | ScreenRoutineDeletedEvent
+  | MatchUpdatedEvent;

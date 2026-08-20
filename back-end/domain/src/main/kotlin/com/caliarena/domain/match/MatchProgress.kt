@@ -61,7 +61,17 @@ data class MatchProgress(
             return SideState(current.id, newReps, null)
         }
 
-        val next = exercises.filter { it.exerciseOrder > current.exerciseOrder }.minByOrNull { it.exerciseOrder }
+        val sameOrderNext =
+            exercises
+                .filter { it.exerciseOrder == current.exerciseOrder && it.id != current.id }
+                .filter { (it.supersetOrder ?: 0) > (current.supersetOrder ?: 0) }
+                .minByOrNull { it.supersetOrder ?: 0 }
+
+        val next =
+            sameOrderNext
+                ?: exercises
+                    .filter { it.exerciseOrder > current.exerciseOrder }
+                    .minByOrNull { it.exerciseOrder }
 
         return if (next != null) {
             SideState(next.id, 0, null)

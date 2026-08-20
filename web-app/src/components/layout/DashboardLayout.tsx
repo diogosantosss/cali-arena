@@ -7,8 +7,8 @@ import {
   Building2,
   LogOut,
   Dumbbell,
-  Monitor,
 } from "lucide-react";
+import { useAuth } from "@/AuthContext";
 
 const navItems = [
   { to: "/dashboard", label: "Tournaments", icon: Trophy, end: true },
@@ -16,7 +16,6 @@ const navItems = [
   { to: "/dashboard/clubs", label: "Clubs", icon: Building2 },
   { to: "/dashboard/users", label: "Users", icon: Users },
   { to: "/dashboard/routines", label: "Routines", icon: Dumbbell },
-  { to: "/dashboard/screen", label: "Screen", icon: Monitor },
 ];
 
 const pageTitles: Record<string, string> = {
@@ -25,17 +24,17 @@ const pageTitles: Record<string, string> = {
   "/dashboard/clubs": "Clubs",
   "/dashboard/users": "Users",
   "/dashboard/routines": "Routines",
-  "/dashboard/screen": "Screen Manager",
 };
 
 export function DashboardLayout() {
+  const { logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
   const title = pageTitles[location.pathname] ?? "Dashboard";
 
   function handleLogout() {
-    localStorage.removeItem("token");
+    logout();
     navigate("/");
   }
 
@@ -43,19 +42,22 @@ export function DashboardLayout() {
     <TooltipProvider>
       <div className="flex min-h-screen w-full" style={{ background: "#0f0f11" }}>
         <aside
-          className="flex flex-col items-center w-14 shrink-0 py-5 gap-1"
+          className="flex flex-col items-center w-14 lg:w-48 shrink-0 py-5 gap-1"
           style={{ background: "#0f0f11", borderRight: "1px solid #252528" }}
         >
-          <div className="mb-5">
+          <div className="mb-5 flex items-center justify-center gap-2">
             <div
-              className="w-7 h-7 rounded flex items-center justify-center text-[11px] font-bold"
+              className="w-7 h-7 shrink-0 rounded flex items-center justify-center text-[11px] font-bold"
               style={{ background: "#e8a020", color: "#0f0f11" }}
             >
               C
             </div>
+            <span className="hidden lg:inline text-xs tracking-widest uppercase" style={{ color: "#f0ede8" }}>
+              Cali Arena
+            </span>
           </div>
 
-          <div className="flex-1 flex flex-col items-center gap-0.5 w-full px-2">
+          <div className="flex-1 flex flex-col items-center lg:items-stretch gap-0.5 w-full lg:px-10">
             {navItems.map((item) => (
               <Tooltip key={item.to}>
                 <TooltipTrigger asChild>
@@ -63,7 +65,7 @@ export function DashboardLayout() {
                     to={item.to}
                     end={item.end}
                     className={({ isActive }) =>
-                      `w-full flex items-center justify-center h-9 rounded transition-colors ${
+                      `w-full flex items-center justify-center lg:justify-start gap-3 h-9 rounded transition-colors ${
                         isActive
                           ? "text-[#e8a020]"
                           : "text-[#3a3a3d] hover:text-[#6b6560]"
@@ -73,12 +75,18 @@ export function DashboardLayout() {
                       isActive ? { background: "rgba(232,160,32,0.08)" } : {}
                     }
                   >
-                    <item.icon className="w-[15px] h-[15px]" />
+                    <item.icon className="w-[15px] h-[15px] shrink-0" />
+                    <span
+                      className="hidden lg:inline text-xs font-medium"
+                      style={{ color: "inherit" }}
+                    >
+                      {item.label}
+                    </span>
                   </NavLink>
                 </TooltipTrigger>
                 <TooltipContent
                   side="right"
-                  className="text-xs"
+                  className="text-xs lg:hidden"
                   style={{ background: "#17171a", color: "#f0ede8", border: "1px solid #252528" }}
                 >
                   {item.label}
@@ -91,14 +99,15 @@ export function DashboardLayout() {
             <TooltipTrigger asChild>
               <button
                 onClick={handleLogout}
-                className="w-10 h-9 flex items-center justify-center rounded transition-colors text-[#3a3a3d] hover:text-[#e8a020]"
+                className="w-full flex items-center justify-center gap-3 h-9 rounded transition-colors text-[#3a3a3d] hover:text-[#e8a020]"
               >
-                <LogOut className="w-[15px] h-[15px]" />
+                <LogOut className="w-[15px] h-[15px] shrink-0" />
+                <span className="hidden lg:inline text-xs font-medium">Logout</span>
               </button>
             </TooltipTrigger>
             <TooltipContent
               side="right"
-              className="text-xs"
+              className="text-xs lg:hidden"
               style={{ background: "#17171a", color: "#f0ede8", border: "1px solid #252528" }}
             >
               Logout

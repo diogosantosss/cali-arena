@@ -90,3 +90,13 @@
 .animate-fade-up {
   animation: fade-up 0.5s ease forwards;
 }
+
+@keyframes rep-pop {
+  0%   { transform: scale(1.18); color: #fff036; }
+  100% { transform: scale(1); }
+}
+
+.animate-rep-pop {
+  animation: rep-pop 0.25s ease-out;
+  transform-origin: center;
+}

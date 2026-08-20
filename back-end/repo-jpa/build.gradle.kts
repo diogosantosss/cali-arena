@@ -41,7 +41,7 @@ kotlin {
 
 tasks.test {
     useJUnitPlatform()
-    environment("DB_URL", "jdbc:postgresql://localhost:5432/postgres?user=postgres&password=postgres")
+    environment("DB_URL", "jdbc:postgresql://localhost:5433/postgres?user=postgres&password=postgres")
     dependsOn(":repo-jpa:dbTestsWait")
     finalizedBy(":repo-jpa:dbTestsDown")
 }
