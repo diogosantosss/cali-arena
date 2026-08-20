@@ -16,8 +16,9 @@ class StaticOpenApiCustomizer {
     @Bean
     fun staticOpenApi(): OpenApiCustomizer =
         OpenApiCustomizer { openApi ->
-            val resource = javaClass.getResourceAsStream("/openapi.yaml")
-                ?: return@OpenApiCustomizer
+            val resource =
+                javaClass.getResourceAsStream("/openapi.yaml")
+                    ?: return@OpenApiCustomizer
             val spec = Yaml.mapper().readValue(resource, OpenAPI::class.java)
             openApi
                 .info(spec.info)
