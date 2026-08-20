@@ -4,6 +4,6 @@ data class CreateMatchInput(
     val bracketId: Int,
     val routineId: Int,
     val judgeId: Int,
-    val redFromMatchId: Int?,
-    val blueFromMatchId: Int?,
+    val athleteRedId: Int,
+    val athleteBlueId: Int,
 )

@@ -1,5 +1,6 @@
 package com.caliarena.http
 
+import com.caliarena.domain.routine.RoutineOverview
 import com.caliarena.http.model.Problem
 import com.caliarena.http.model.routine.CreateExerciseInput
 import com.caliarena.http.model.routine.CreateRoutineInput
@@ -69,13 +70,16 @@ class RoutineController(
         routineService
             .getRoutineOverview(routineName)
             .toResponse(
-                onSuccess = { overview ->
+                onSuccess = { overview: RoutineOverview ->
                     ResponseEntity
                         .status(HttpStatus.OK)
                         .body(overview)
                 },
                 onError = { it.toResponseEntity() },
             )
+
+    @GetMapping
+    fun getRoutines(): ResponseEntity<Any> = ResponseEntity.ok(routineService.getRoutines())
 
     private fun RoutineError.toResponseEntity(): ResponseEntity<Any> =
         when (this) {

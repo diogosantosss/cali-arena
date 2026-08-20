@@ -71,6 +71,12 @@ class RoutineService(
                 ExerciseType.entries.find { it.name == type }
                     ?: return@run failure(RoutineError.ExerciseTypeNotFound)
 
+            val exists = repoEnduranceRoutine.existsByRoutineIdAndExerciseOrder(routineId, exerciseOrder)
+
+            if (exists && exerciseType != ExerciseType.SUPERSET) {
+                repoEnduranceRoutine.shiftExerciseOrders(routineId, exerciseOrder)
+            }
+
             val exercise =
                 repoEnduranceRoutine.createExercise(
                     routineId,
@@ -102,4 +108,6 @@ class RoutineService(
                 ),
             )
         }
+
+    fun getRoutines(): List<EnduranceRoutine> = trx.run { repoEnduranceRoutine.findAll() }
 }

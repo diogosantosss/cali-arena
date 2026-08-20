@@ -11,6 +11,6 @@ interface Transaction {
     val repoMatch: RepositoryMatch
     val repoTournament: RepositoryTournament
     val repoUser: RepositoryUser
-
+    val repoScreenRoutine: RepoScreenRoutine
     fun rollback()
 }

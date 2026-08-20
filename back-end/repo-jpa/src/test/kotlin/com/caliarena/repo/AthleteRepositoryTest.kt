@@ -1,7 +1,7 @@
 package com.caliarena.repo
 
-import com.caliarena.RepositoryAthlete
-import com.caliarena.RepositoryClub
+import com.caliarena.Transaction
+import com.caliarena.domain.athlete.Athlete
 import com.caliarena.domain.athlete.GenderType
 import com.caliarena.repo.jpa.TransactionManagerJpa
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -17,7 +17,7 @@ import org.springframework.boot.test.context.SpringBootTest
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 
-@SpringBootTest(classes = [TestConfiguration::class])
+@SpringBootTest(classes = [TestConfig::class])
 class AthleteRepositoryTest {
     @Autowired
     lateinit var trx: TransactionManagerJpa
@@ -35,14 +35,14 @@ class AthleteRepositoryTest {
         @Test
         fun `should create an athlete for an existing club`() =
             trx.run {
-                val club = newClub(repoClub, "crossfit")
+                val club = newClub("crossfit")
 
                 val athlete =
                     repoAthlete.createAthlete(
                         name = "alice",
                         gender = GenderType.FEMALE,
                         clubId = club.id,
-                        createdAt = Instant.now().truncatedTo(ChronoUnit.SECONDS),
+                        createdAt = now(),
                     )
 
                 assertNotNull(athlete)
@@ -60,7 +60,7 @@ class AthleteRepositoryTest {
                         name = "ghost",
                         gender = GenderType.MALE,
                         clubId = -1,
-                        createdAt = Instant.now().truncatedTo(ChronoUnit.SECONDS),
+                        createdAt = now(),
                     )
 
                 assertNull(athlete)
@@ -72,9 +72,9 @@ class AthleteRepositoryTest {
         @Test
         fun `should return athletes for a club`() =
             trx.run {
-                val club = newClub(repoClub, "club-a")
-                newAthlete(repoAthlete, club.id, "a1", GenderType.MALE)
-                newAthlete(repoAthlete, club.id, "a2", GenderType.FEMALE)
+                val club = newClub("club-a")
+                newAthlete(club.id, "a1", GenderType.MALE)
+                newAthlete(club.id, "a2", GenderType.FEMALE)
 
                 val athletes = repoAthlete.findByClubId(club.id)
 
@@ -84,7 +84,7 @@ class AthleteRepositoryTest {
         @Test
         fun `should return empty list when club has no athletes`() =
             trx.run {
-                val club = newClub(repoClub, "club-b")
+                val club = newClub("club-b")
 
                 val athletes = repoAthlete.findByClubId(club.id)
 
@@ -97,9 +97,9 @@ class AthleteRepositoryTest {
         @Test
         fun `should return athletes with the given gender`() =
             trx.run {
-                val club = newClub(repoClub, "club-c")
-                newAthlete(repoAthlete, club.id, "m1", GenderType.MALE)
-                newAthlete(repoAthlete, club.id, "f1", GenderType.FEMALE)
+                val club = newClub("club-c")
+                newAthlete(club.id, "m1", GenderType.MALE)
+                newAthlete(club.id, "f1", GenderType.FEMALE)
 
                 val athletes = repoAthlete.findByGender(GenderType.FEMALE)
 
@@ -113,8 +113,8 @@ class AthleteRepositoryTest {
         @Test
         fun `should find an existing athlete by id`() =
             trx.run {
-                val club = newClub(repoClub)
-                val created = newAthlete(repoAthlete, club.id)
+                val club = newClub()
+                val created = newAthlete(club.id)
 
                 val found = repoAthlete.findById(created.id)
 
@@ -134,9 +134,9 @@ class AthleteRepositoryTest {
         @Test
         fun `should return all created athletes`() =
             trx.run {
-                val club = newClub(repoClub)
-                newAthlete(repoAthlete, club.id, "a1")
-                newAthlete(repoAthlete, club.id, "a2")
+                val club = newClub()
+                newAthlete(club.id, "a1")
+                newAthlete(club.id, "a2")
 
                 val athletes = repoAthlete.findAll()
 
@@ -155,8 +155,8 @@ class AthleteRepositoryTest {
         @Test
         fun `should update an existing athlete`() =
             trx.run {
-                val club = newClub(repoClub, "club-save")
-                val created = newAthlete(repoAthlete, club.id, "john")
+                val club = newClub("club-save")
+                val created = newAthlete(club.id, "john")
                 val updated = created.copy(name = "john-updated")
 
                 val saved = repoAthlete.save(updated)
@@ -172,8 +172,8 @@ class AthleteRepositoryTest {
         @Test
         fun `should remove the athlete`() =
             trx.run {
-                val club = newClub(repoClub)
-                val created = newAthlete(repoAthlete, club.id)
+                val club = newClub()
+                val created = newAthlete(club.id)
 
                 repoAthlete.deleteById(created.id)
 
@@ -186,9 +186,9 @@ class AthleteRepositoryTest {
         @Test
         fun `should remove all athletes`() =
             trx.run {
-                val club = newClub(repoClub)
-                newAthlete(repoAthlete, club.id, "a1")
-                newAthlete(repoAthlete, club.id, "a2")
+                val club = newClub()
+                newAthlete(club.id, "a1")
+                newAthlete(club.id, "a2")
 
                 repoAthlete.clear()
 
@@ -196,24 +196,24 @@ class AthleteRepositoryTest {
             }
     }
 
-    private fun newClub(
-        repoClub: RepositoryClub,
-        name: String = "club-${System.nanoTime()}",
-    ) = repoClub.createClub(
-        name = name,
-        shortName = "c",
-        createdAt = Instant.now().truncatedTo(ChronoUnit.SECONDS),
-    )
+    private fun now() = Instant.now().truncatedTo(ChronoUnit.SECONDS)
 
-    private fun newAthlete(
-        repoAthlete: RepositoryAthlete,
+    private fun Transaction.newClub(name: String = "club-${System.nanoTime()}") =
+        repoClub.createClub(
+            name = name,
+            shortName = "c",
+            createdAt = now(),
+        )
+
+    private fun Transaction.newAthlete(
         clubId: Int,
         name: String = "athlete-${System.nanoTime()}",
         gender: GenderType = GenderType.MALE,
-    ) = repoAthlete.createAthlete(
-        name = name,
-        gender = gender,
-        clubId = clubId,
-        createdAt = Instant.now().truncatedTo(ChronoUnit.SECONDS),
-    )!!
+    ): Athlete =
+        repoAthlete.createAthlete(
+            name = name,
+            gender = gender,
+            clubId = clubId,
+            createdAt = now(),
+        )!!
 }

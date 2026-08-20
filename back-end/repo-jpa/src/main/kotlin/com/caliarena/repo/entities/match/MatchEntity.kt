@@ -38,10 +38,6 @@ class MatchEntity(
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "athlete_blue_id")
     var athleteBlue: AthleteEntity? = null,
-    @Column(name = "red_from_match_id")
-    var redFromMatchId: Int? = null,
-    @Column(name = "blue_from_match_id")
-    var blueFromMatchId: Int? = null,
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "winner_athlete_id")
     var winnerAthlete: AthleteEntity? = null,
@@ -63,8 +59,6 @@ class MatchEntity(
             judgeId = judge.id,
             athleteRedId = athleteRed?.id,
             athleteBlueId = athleteBlue?.id,
-            redFromMatchId = redFromMatchId,
-            blueFromMatchId = blueFromMatchId,
             winnerAthleteId = winnerAthlete?.id,
             status = status,
             startedAt = startedAt?.let { Instant.ofEpochSecond(it) },
@@ -86,8 +80,6 @@ class MatchEntity(
             judge = judge,
             athleteRed = athleteRed,
             athleteBlue = athleteBlue,
-            redFromMatchId = this.redFromMatchId,
-            blueFromMatchId = this.blueFromMatchId,
             winnerAthlete = winnerAthlete,
             status = this.status,
             startedAt = this.startedAt?.epochSecond,

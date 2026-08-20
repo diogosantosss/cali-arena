@@ -59,6 +59,18 @@ class EnduranceRoutineRepository(
             ).toDomain()
     }
 
+    override fun shiftExerciseOrders(
+        routineId: Int,
+        fromOrder: Int,
+    ) {
+        exerciseJpa.shiftExerciseOrders(routineId, fromOrder)
+    }
+
+    override fun existsByRoutineIdAndExerciseOrder(
+        routineId: Int,
+        exerciseOrder: Int,
+    ): Boolean = exerciseJpa.existsByRoutineIdAndExerciseOrder(routineId, exerciseOrder)
+
     override fun findExercisesByRoutineId(routineId: Int): List<Exercise> =
         exerciseJpa.findExercisesByRoutineId(routineId).map(ExerciseEntity::toDomain)
 

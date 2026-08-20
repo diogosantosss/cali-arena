@@ -127,8 +127,7 @@ export interface Tournament {
   createdAt: string;
 }
 
-export type ScreenState = "WAITING" | "BRACKET" | "BATTLE" | "WINNER" | "LEADERBOARD";
-
+export type ScreenState = "WAITING" | "ROUTINES" | "BATTLE" | "WINNER" | "LEADERBOARD";
 export interface TournamentState {
   id: number;
   tournamentId: number;
@@ -173,11 +172,8 @@ export interface Match {
   routineId: number;
   judgeId: number;  
 
-  athleteRedId: number | null;
-  athleteBlueId: number | null;
-
-  redFromMatchId: number | null;
-  blueFromMatchId: number | null;
+  athleteRedId: number;
+  athleteBlueId: number;
 
   winnerAthleteId: number | null;
 
@@ -191,8 +187,8 @@ export interface CreateMatchInput {
   routineId: number;
   judgeId: number;
 
-  redFromMatchId: number | null;
-  blueFromMatchId: number | null;
+  athleteRedId: number;
+  athleteBlueId: number;
 }
 
 export interface AssignAthletesInput {
@@ -201,7 +197,7 @@ export interface AssignAthletesInput {
 }
 
 export interface UpdateRepsInput {
-  repReps: number | null;
+  redReps: number | null;
   blueReps: number | null;
 }
 
@@ -224,3 +220,65 @@ export interface MatchProgress {
   updatedAt: string;
 }
 
+// ========== Screen Routine ==========
+export interface ScreenRoutine {
+  id: number;
+  tournamentId: number;
+  routineId: number;
+  displayOrder: number;
+  isVisible: boolean;
+  label: string | null;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface CreateScreenRoutineInput {
+  routineId: number;
+  displayOrder: number;
+  label?: string;
+}
+
+// ========== SSE ==========
+
+export const SPECTATOR_ACTIONS = [
+  "TOURNAMENT_STATE_UPDATED",
+  "SCREEN_ROUTINES_CREATED",
+  "SCREEN_ROUTINES_UPDATED",
+  "SCREEN_ROUTINES_DELETED",
+  "MATCH_UPDATED",
+  "KEEP_ALIVE",
+] as const;
+
+export type SpectatorAction = typeof SPECTATOR_ACTIONS[number];
+
+interface SpectatorEventBase {
+  tournamentId: number;
+  action: SpectatorAction;
+}
+
+export interface TournamentStateUpdatedEvent extends SpectatorEventBase {
+  action: "TOURNAMENT_STATE_UPDATED";
+  state: TournamentState;
+}
+
+export interface ScreenRoutinesEvent extends SpectatorEventBase {
+  action: "SCREEN_ROUTINES_CREATED" | "SCREEN_ROUTINES_UPDATED";
+  screenRoutine: ScreenRoutine;
+  routineOverview: RoutineOverview | null;
+}
+
+export interface ScreenRoutineDeletedEvent extends SpectatorEventBase {
+  action: "SCREEN_ROUTINES_DELETED";
+  screenRoutineId: number;
+}
+
+export interface MatchUpdatedEvent extends SpectatorEventBase {
+  action: "MATCH_UPDATED";
+  matchProgress: MatchProgress;
+}
+
+export type SpectatorEvent =
+  | TournamentStateUpdatedEvent
+  | ScreenRoutinesEvent
+  | ScreenRoutineDeletedEvent
+  | MatchUpdatedEvent;

@@ -4,6 +4,9 @@ import com.caliarena.TransactionManager
 import com.caliarena.domain.match.Match
 import com.caliarena.domain.match.MatchProgress
 import com.caliarena.domain.match.MatchStatus
+import com.caliarena.domain.routine.Exercise
+import com.caliarena.service.sse.MatchUpdatedEvent
+import com.caliarena.service.sse.SpectatorPublisher
 import org.springframework.stereotype.Service
 import java.time.Clock
 
@@ -33,19 +36,22 @@ sealed class MatchError {
     data object ErrorCreatingMatchProg : MatchError()
 
     data object ExerciseNotFound : MatchError()
+
+    data object MatchAlreadyStarted : MatchError()
 }
 
 @Service
 class MatchService(
     private val trxManager: TransactionManager,
     private val clock: Clock,
+    private val publisher: SpectatorPublisher,
 ) {
     fun createMatch(
         bracketId: Int,
         routineId: Int,
         judgeId: Int,
-        redFromMatchId: Int?,
-        blueFromMatchId: Int?,
+        athleteRedId: Int,
+        athleteBlueId: Int,
     ): Either<MatchError, Match> =
         trxManager.run {
             repoTournament.findByBracketId(bracketId)
@@ -57,47 +63,23 @@ class MatchService(
             repoUser.findById(judgeId)
                 ?: return@run failure(MatchError.JudgeNotFound)
 
+            repoAthlete.findById(athleteRedId)
+                ?: return@run failure(MatchError.AthleteNotFound)
+
+            repoAthlete.findById(athleteBlueId)
+                ?: return@run failure(MatchError.AthleteNotFound)
+
             val match =
                 repoMatch.createMatch(
                     bracketId = bracketId,
                     routineId = routineId,
                     judgeId = judgeId,
-                    redFromMatchId = redFromMatchId,
-                    blueFromMatchId = blueFromMatchId,
+                    athleteRed = athleteRedId,
+                    athleteBlue = athleteBlueId,
                     createdAt = clock.instant(),
                 ) ?: return@run failure(MatchError.BracketNotFound)
 
             success(match)
-        }
-
-    fun assignAthletesToMatch(
-        matchId: Int,
-        athleteRedId: Int,
-        athleteBlueId: Int,
-    ): Either<MatchError, Match> =
-        trxManager.run {
-            val match =
-                repoMatch.findById(matchId)
-                    ?: return@run failure(MatchError.MatchNotFound)
-
-            if (athleteRedId == athleteBlueId) {
-                return@run failure(MatchError.SameAthleteOnBothSides)
-            }
-
-            repoAthlete.findById(athleteBlueId)
-                ?: return@run failure(MatchError.AthleteNotFound)
-            repoAthlete.findById(athleteRedId)
-                ?: return@run failure(MatchError.AthleteNotFound)
-
-            val result =
-                repoMatch.save(
-                    match.copy(
-                        athleteBlueId = athleteBlueId,
-                        athleteRedId = athleteRedId,
-                    ),
-                ) ?: return@run failure(MatchError.MatchNotFound)
-
-            success(result)
         }
 
     fun startMatch(matchId: Int): Either<MatchError, MatchProgress> =
@@ -114,6 +96,16 @@ class MatchService(
                 return@run failure(MatchError.AthletesNotAssigned)
             }
 
+            if (match.status == MatchStatus.RUNNING || match.status == MatchStatus.FINISHED) {
+                return@run failure(MatchError.MatchAlreadyStarted)
+            }
+
+            val firstExercise: Exercise =
+                repoEnduranceRoutine
+                    .findExercisesByRoutineId(match.routineId)
+                    .minWithOrNull(compareBy(Exercise::exerciseOrder).thenBy { it.supersetOrder ?: 0 })
+                    ?: return@run failure(MatchError.RoutineNotFound)
+
             val now = clock.instant()
 
             repoMatch.save(
@@ -126,8 +118,18 @@ class MatchService(
             val progress =
                 repoMatch.createMatchProgress(
                     matchId = matchId,
-                    updatedAt = now,
+                    firstExerciseId = firstExercise.id,
+                    now = now,
                 ) ?: return@run failure(MatchError.ErrorCreatingMatchProg)
+
+            val tournamentId =
+                repoTournament.findByBracketId(match.bracketId)?.id
+                    ?: return@run failure(MatchError.BracketNotFound)
+
+            MatchUpdatedEvent(
+                tournamentId = tournamentId,
+                matchProgress = progress,
+            ).let { publisher.publish(it) }
 
             success(progress)
         }
@@ -152,36 +154,61 @@ class MatchService(
 
             val exercises = repoEnduranceRoutine.findExercisesByRoutineId(match.routineId)
 
-            if (redReps != null && exercises.none { it.id == prog.redCurrentExerciseId }) {
+            if (redReps != null && prog.redFinishedAt == null && exercises.none { it.id == prog.redCurrentExerciseId }) {
                 return@run failure(MatchError.ExerciseNotFound)
             }
-            if (blueReps != null && exercises.none { it.id == prog.blueCurrentExerciseId }) {
+            if (blueReps != null && prog.blueFinishedAt == null && exercises.none { it.id == prog.blueCurrentExerciseId }) {
                 return@run failure(MatchError.ExerciseNotFound)
             }
 
             val now = clock.instant()
             val newProg = prog.advance(redReps, blueReps, exercises, now)
 
-            val updated =
+            val updated: MatchProgress =
                 repoMatch.updateMatchProgress(
                     progress = newProg,
                     redCurrentExerciseId = newProg.redCurrentExerciseId,
                     blueCurrentExerciseId = newProg.blueCurrentExerciseId,
                 ) ?: return@run failure(MatchError.ProgressNotFound)
 
-            val (redFinishedAt, blueFinishedAt) = updated.redFinishedAt to updated.blueFinishedAt
+            val redFinishedAt = updated.redFinishedAt
+            val blueFinishedAt = updated.blueFinishedAt
 
-            if (redFinishedAt != null || blueFinishedAt != null) {
-                val redWon = redFinishedAt != null
+            val newFinish =
+                (redFinishedAt != null && prog.redFinishedAt == null) ||
+                    (blueFinishedAt != null && prog.blueFinishedAt == null)
+
+            if (newFinish) {
+                val matchFinished = redFinishedAt != null && blueFinishedAt != null
+                val redWon =
+                    if (matchFinished) {
+                        !redFinishedAt.isAfter(blueFinishedAt)
+                    } else {
+                        redFinishedAt != null
+                    }
 
                 repoMatch.save(
                     match.copy(
-                        status = MatchStatus.FINISHED,
+                        status = if (matchFinished) MatchStatus.FINISHED else MatchStatus.RUNNING,
                         winnerAthleteId = if (redWon) match.athleteRedId else match.athleteBlueId,
-                        finishedAt = if (redWon) redFinishedAt else blueFinishedAt,
+                        finishedAt =
+                            if (matchFinished) {
+                                if (redWon) blueFinishedAt else redFinishedAt
+                            } else {
+                                null
+                            },
                     ),
                 ) ?: return@run failure(MatchError.MatchNotFound)
             }
+
+            val tournamentId =
+                repoTournament.findByBracketId(match.bracketId)?.id
+                    ?: return@run failure(MatchError.BracketNotFound)
+
+            MatchUpdatedEvent(
+                tournamentId = tournamentId,
+                matchProgress = updated,
+            ).let { publisher.publish(it) }
 
             success(updated)
         }

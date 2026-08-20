@@ -6,6 +6,8 @@ import { TournamentDetailPage } from "./pages/TournamentDetailPage.tsx";
 import { AthletesPage } from "./pages/AthletesPage.tsx";
 import { ClubsPage } from "./pages/ClubsPage.tsx";
 import { UsersPage } from "./pages/UsersPage.tsx";
+import { RoutinesPage } from "./pages/RoutinesPage.tsx";
+import { ScreenPage } from "./pages/ScreenPage.tsx";
 
 export const router = createBrowserRouter([
   { 
@@ -26,6 +28,8 @@ export const router = createBrowserRouter([
       { path: "athletes", element: <AthletesPage /> },
       { path: "clubs", element: <ClubsPage /> },
       { path: "users", element: <UsersPage /> },
+      { path: "routines", element: <RoutinesPage /> },
     ],
   },
+  { path: "/screen/:tournamentId", element: <ScreenPage /> },
 ]);

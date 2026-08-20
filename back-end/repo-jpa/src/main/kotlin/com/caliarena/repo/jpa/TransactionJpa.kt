@@ -1,5 +1,6 @@
 package com.caliarena.repo.jpa
 
+import com.caliarena.RepoScreenRoutine
 import com.caliarena.RepositoryAthlete
 import com.caliarena.RepositoryClub
 import com.caliarena.RepositoryEnduranceRoutine
@@ -18,6 +19,7 @@ class TransactionJpa(
     override val repoEnduranceRoutine: RepositoryEnduranceRoutine,
     override val repoTournament: RepositoryTournament,
     override val repoUser: RepositoryUser,
+    override val repoScreenRoutine: RepoScreenRoutine,
 ) : Transaction {
     override fun rollback() {
         TransactionAspectSupport

@@ -12,6 +12,7 @@ import com.caliarena.repo.entities.tournament.BracketEntity
 import com.caliarena.repo.entities.tournament.TournamentEntity
 import com.caliarena.repo.entities.tournament.TournamentEntity.Companion.fromDomain
 import com.caliarena.repo.entities.tournament.TournamentStateEntity
+import com.caliarena.repo.jpa.match.MatchRepositoryJpa
 import com.caliarena.repo.jpa.tournament.BracketRepositoryJpa
 import com.caliarena.repo.jpa.tournament.TournamentRepositoryJpa
 import com.caliarena.repo.jpa.tournament.TournamentStateRepositoryJpa
@@ -24,6 +25,7 @@ class TournamentRepository(
     private val bracketJpa: BracketRepositoryJpa,
     private val tournamentJpa: TournamentRepositoryJpa,
     private val tournamentStateJpa: TournamentStateRepositoryJpa,
+    private val matchJpa: MatchRepositoryJpa,
 ) : RepositoryTournament {
     override fun createTournament(
         name: String,
@@ -86,6 +88,10 @@ class TournamentRepository(
         val entity = tournamentStateJpa.findByTournamentId(tournamentId) ?: return null
         entity.currentScreen = screen
         entity.updatedAt = updatedAt.epochSecond
+        entity.currentMatch =
+            currentMatchId?.let { matchId ->
+                matchJpa.findByIdOrNull(matchId)
+            }
         return tournamentStateJpa.save(entity).toDomain()
     }
 

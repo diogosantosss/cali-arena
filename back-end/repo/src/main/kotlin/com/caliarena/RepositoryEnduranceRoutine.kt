@@ -28,4 +28,8 @@ interface RepositoryEnduranceRoutine : Repository<EnduranceRoutine> {
     ): Exercise?
 
     fun findExercisesByRoutineId(routineId: Int) : List<Exercise>
+
+    fun shiftExerciseOrders(routineId: Int, fromOrder: Int)
+
+    fun existsByRoutineIdAndExerciseOrder(routineId: Int, exerciseOrder: Int): Boolean
 }

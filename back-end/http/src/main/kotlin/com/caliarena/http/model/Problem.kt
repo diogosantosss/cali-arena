@@ -99,6 +99,15 @@ sealed class Problem(
 
     data object ExerciseNotFound : Problem(URI("$PROBLEM_URI_PATH/exercise-not-found"))
 
+    data object MatchAlreadyStarted : Problem(URI("$PROBLEM_URI_PATH/match-already-started"))
+
+    // Screen Routine related Errors
+    data object ScreenRoutineNotFound : Problem(URI("$PROBLEM_URI_PATH/screen-routine-not-found"))
+
+    data object TournamentMismatch : Problem(URI("$PROBLEM_URI_PATH/tournament-mismatch"))
+
+    data object ErrorUpdatingScreenRoutine : Problem(URI("$PROBLEM_URI_PATH/error-updating-screen-routine"))
+
     private data class ProblemBody(
         val type: String,
         val title: String,

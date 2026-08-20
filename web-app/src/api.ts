@@ -1,5 +1,5 @@
 import { getErrorDescription } from "./errorDescriptions";
-import type { AssignAthletesInput, Athlete, Bracket, BracketOverview, Club, CreateAthleteInput, CreateBracketInput, CreateClubInput, CreateExerciseInput, CreateMatchInput, CreateRoutineInput, CreateTournamentInput, CreateUserInput, Exercise, LoginInput, LoginOutput, Match, MatchProgress, Routine, RoutineOverview, Tournament, TournamentState, UpdateRepsInput, UpdateScreenInput, User } from "./types";
+import type { AssignAthletesInput, Athlete, Bracket, BracketOverview, Club, CreateAthleteInput, CreateBracketInput, CreateClubInput, CreateExerciseInput, CreateMatchInput, CreateRoutineInput, CreateScreenRoutineInput, CreateTournamentInput, CreateUserInput, Exercise, LoginInput, LoginOutput, Match, MatchProgress, Routine, RoutineOverview, ScreenRoutine, Tournament, TournamentState, UpdateRepsInput, UpdateScreenInput, User } from "./types";
 
 const API_BASE_URL = "/api";
 
@@ -21,7 +21,7 @@ export async function fetchApi<T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> {
-  await delay(1000) // simulate network latency
+  //await delay(1000) // simulate network latency
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
     ...options,
     headers: {
@@ -146,6 +146,12 @@ export const api = {
   },
 
   // routines-related API calls
+  async getRoutines(): Promise<Routine[]> {
+    return fetchApi<Routine[]>(`/routines`, {
+      method: "GET",
+    });
+  },
+
   async createRoutine(
     input: CreateRoutineInput
   ): Promise<Routine> {
@@ -158,14 +164,14 @@ export const api = {
   async createExercise(
     input: CreateExerciseInput
   ): Promise<Exercise> {
-    return fetchApi<Exercise>("/exercises", {
+    return fetchApi<Exercise>("/routines/exercises", {
       method: "POST",
       body: JSON.stringify(input),
     });
   },
 
   async getRoutineOverview(
-    routineName: number
+    routineName: string
   ): Promise<RoutineOverview> {
     return fetchApi<RoutineOverview>(`/routines/${routineName}/overview`, {
       method: "GET",
@@ -197,7 +203,7 @@ export const api = {
   async getTournamentState(
     tournamentId: number
   ): Promise<TournamentState> {
-    return fetchApi<TournamentState>(`tournaments/${tournamentId}/state`, {
+    return fetchApi<TournamentState>(`/tournaments/${tournamentId}/state`, {
       method: "GET"
     })
   },
@@ -205,7 +211,7 @@ export const api = {
   async createBracket(
     input: CreateBracketInput
   ): Promise<Bracket> {
-    return fetchApi<Bracket>(`/brackets`, {
+    return fetchApi<Bracket>(`/tournaments/bracket`, {
       method: "POST",
       body: JSON.stringify(input),
     });
@@ -230,7 +236,7 @@ export const api = {
     tournamentId: number,
     input: UpdateScreenInput
   ): Promise<TournamentState> {
-    return fetchApi<TournamentState>(`tournaments/${tournamentId}/state/screen`, {
+    return fetchApi<TournamentState>(`/tournaments/${tournamentId}/state/screen`, {
       method: "PUT",
       body: JSON.stringify(input)
     })
@@ -240,7 +246,7 @@ export const api = {
   async createMatch(
     input: CreateMatchInput
   ): Promise<Match> {
-    return fetchApi<Match>(`matches`, {
+    return fetchApi<Match>(`/matches`, {
       method: "POST",
       body: JSON.stringify(input),
     });
@@ -250,7 +256,7 @@ export const api = {
     matchId: number,
     input: AssignAthletesInput
   ): Promise<Match> {
-    return fetchApi<Match>(`matches/${matchId}/athletes`, {
+    return fetchApi<Match>(`/matches/${matchId}/athletes`, {
       method: "PUT",
       body: JSON.stringify(input),
     });
@@ -259,7 +265,7 @@ export const api = {
   async startMatch(
     matchId: number
   ): Promise<MatchProgress> {
-    return fetchApi<MatchProgress>(`matches/${matchId}/start`, {
+    return fetchApi<MatchProgress>(`/matches/${matchId}/start`, {
       method: "PUT",
     });
   },
@@ -268,7 +274,7 @@ export const api = {
     matchId: number,
     input: UpdateRepsInput
   ): Promise<MatchProgress> {
-    return fetchApi<MatchProgress>(`matches/${matchId}/reps`, {
+    return fetchApi<MatchProgress>(`/matches/${matchId}/reps`, {
       method: "PUT",
       body: JSON.stringify(input),
     });
@@ -277,7 +283,7 @@ export const api = {
   async getMatchById(
     matchId: number
   ): Promise<Match> {
-    return fetchApi<Match>(`matches/${matchId}`, {
+    return fetchApi<Match>(`/matches/${matchId}`, {
       method: "GET"
     });
   },
@@ -285,7 +291,7 @@ export const api = {
   async getProgressByMatchId(
     matchId: number
   ): Promise<MatchProgress> {
-    return fetchApi<MatchProgress>(`matches/${matchId}/progress`, {
+    return fetchApi<MatchProgress>(`/matches/${matchId}/progress`, {
       method: "GET"
     });
   },
@@ -293,10 +299,45 @@ export const api = {
   async getMatchesByBracketId(
     bracketId: number
   ): Promise<Match[]> {
-    return fetchApi<Match[]>(`matches/bracket/${bracketId}`, {
+    return fetchApi<Match[]>(`/matches/bracket/${bracketId}`, {
       method: "GET"
     });
   },
+
+
+  // screen routine-related API calls
+  async getScreenRoutines(tournamentId: number): Promise<ScreenRoutine[]> {
+  return fetchApi<ScreenRoutine[]>(`/tournaments/${tournamentId}/screen-routines`, {
+    method: "GET",
+  });
+},
+
+async createScreenRoutine(tournamentId: number, input: CreateScreenRoutineInput): Promise<ScreenRoutine> {
+  return fetchApi<ScreenRoutine>(`/tournaments/${tournamentId}/screen-routines`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+},
+
+async updateScreenRoutineVisibility(tournamentId: number, id: number, isVisible: boolean): Promise<ScreenRoutine> {
+  return fetchApi<ScreenRoutine>(`/tournaments/${tournamentId}/screen-routines/${id}/visibility`, {
+    method: "PATCH",
+    body: JSON.stringify({ isVisible }),
+  });
+},
+
+async updateScreenRoutineDisplayOrder(tournamentId: number, id: number, displayOrder: number): Promise<ScreenRoutine> {
+  return fetchApi<ScreenRoutine>(`/tournaments/${tournamentId}/screen-routines/${id}/order`, {
+    method: "PATCH",
+    body: JSON.stringify({ displayOrder }),
+  });
+},
+
+async deleteScreenRoutine(tournamentId: number, id: number): Promise<void> {
+  return fetchApi<void>(`/tournaments/${tournamentId}/screen-routines/${id}`, {
+    method: "DELETE",
+  });
+},
 };
 
 export { ApiError };
