@@ -35,6 +35,12 @@ class SpectatorPublisher(
     fun publish(event: SpectatorEvent) =
         guard.withLock {
             val eventId = ++currentId
+            logger.debug( // logging at dev environment level, to avoid cluttering production logs
+                "Publishing eventId: {}, tournamentId: {}, action: {}",
+                eventId,
+                event.tournamentId,
+                event.action,
+            )
             listeners[event.tournamentId].orEmpty().forEach { listener ->
                 try {
                     listener.emit(eventId, event)

@@ -123,7 +123,7 @@ class MatchService(
                 ) ?: return@run failure(MatchError.ErrorCreatingMatchProg)
 
             val tournamentId =
-                repoTournament.findByBracketId(match.bracketId)?.id
+                repoTournament.findByBracketId(match.bracketId)?.tournamentId
                     ?: return@run failure(MatchError.BracketNotFound)
 
             MatchUpdatedEvent(
@@ -202,7 +202,7 @@ class MatchService(
             }
 
             val tournamentId =
-                repoTournament.findByBracketId(match.bracketId)?.id
+                repoTournament.findByBracketId(match.bracketId)?.tournamentId
                     ?: return@run failure(MatchError.BracketNotFound)
 
             MatchUpdatedEvent(
