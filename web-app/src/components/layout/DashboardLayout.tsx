@@ -8,7 +8,7 @@ import {
   LogOut,
   Dumbbell,
 } from "lucide-react";
-import { useAuth } from "@/AuthContext";
+import { useAuth } from "@/features/auth/hooks/use-auth";
 
 const navItems = [
   { to: "/dashboard", label: "Tournaments", icon: Trophy, end: true },

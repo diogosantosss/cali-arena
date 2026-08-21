@@ -1,13 +1,13 @@
 import { createBrowserRouter, redirect } from "react-router-dom";
-import { TournamentsPage } from "./pages/TournamentsPage.tsx";
-import { LoginPage } from "./pages/LoginPage";
+import { LoginPage } from "./features/auth/components/login-page";
 import { DashboardLayout } from "./components/layout/DashboardLayout.tsx";
-import { TournamentDetailPage } from "./pages/TournamentDetailPage.tsx";
-import { AthletesPage } from "./pages/AthletesPage.tsx";
-import { ClubsPage } from "./pages/ClubsPage.tsx";
-import { UsersPage } from "./pages/UsersPage.tsx";
-import { RoutinesPage } from "./pages/RoutinesPage.tsx";
-import { ScreenPage } from "./pages/ScreenPage.tsx";
+import { TournamentsPage } from "./features/tournaments/tournaments-page";
+import { TournamentDetailPage } from "./features/tournaments/tournament-detail";
+import { AthletesPage } from "./features/athletes/athletes-page";
+import { ClubsPage } from "./features/clubs/clubs-page";
+import { UsersPage } from "./features/users/users-page";
+import { RoutinesPage } from "./features/routines/routines-page";
+import { ScreenPage } from "./features/live/screen-page";
 
 export const router = createBrowserRouter([
   { 
