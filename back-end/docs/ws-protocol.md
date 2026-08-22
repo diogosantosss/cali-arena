@@ -74,5 +74,5 @@ Subscrição vive no `useMatchControl`: monta → subscreve, desmonta → limpa 
 ## Notas
 
 - Deltas (não valores absolutos) eliminam conflito entre juízes concorrentes.
-- Auth por token no handshake (`HandshakeInterceptor`).
+- Auth: token + role JUDGE validados no handshake HTTP (`HandshakeInterceptor`, query params `token`/`matchId`; rejeição com 401/403 antes do upgrade). O handler não recebe o user — quem liga já é um juiz por construção.
 - Trade-off aceite: o bracket de *outros* juízes não atualiza em tempo real (o próprio atualiza via callback). Se um dia for requisito, adiciona-se `/topic/tournaments/{tid}` sem mexer neste contrato.

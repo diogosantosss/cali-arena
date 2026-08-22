@@ -19,6 +19,9 @@ dependencies {
     implementation("org.springframework:spring-webmvc:7.0.7")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.22.1")
 
+    implementation("org.springframework:spring-messaging:7.0.7")
+    implementation("org.springframework:spring-websocket:7.0.7")
+
     // To use Servlet API
     implementation("jakarta.servlet:jakarta.servlet-api:6.1.0")
 
