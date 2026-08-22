@@ -1,13 +1,20 @@
 import { useEffect, useRef, useState } from "react";
+import type { Client } from "@stomp/stompjs";
 import { ApiError } from "@/lib/api/client";
 import { matchesService } from "../services/matches.service";
+import { createJudgeClient, publishAdjust, type JudgeEvent } from "../services/matches-ws.service";
 import type { Match, MatchProgress } from "../types";
 
 /**
  * Owns everything related to controlling the currently selected match:
- * match + progress loading, rep adjustments, side finishing and starting.
+ * match + progress loading, rep adjustments over the judge WebSocket
+ * channel, side finishing and starting.
  * The parent must key this consumer by matchId so switching matches
  * starts from a clean slate.
+ *
+ * Rep adjustments are optimistic: the local count updates immediately and
+ * the authoritative value arrives via the match topic. An ERROR event (or a
+ * dropped connection) resyncs state from the REST progress endpoint.
  */
 export function useMatchControl(matchId: number) {
   const [currentMatch, setCurrentMatch] = useState<Match | null>(null);
@@ -15,11 +22,14 @@ export function useMatchControl(matchId: number) {
   const [redReps, setRedReps] = useState(0);
   const [blueReps, setBlueReps] = useState(0);
 
+  const clientRef = useRef<Client | null>(null);
+
   const repsRef = useRef({ red: 0, blue: 0 });
   repsRef.current = { red: redReps, blue: blueReps };
 
   useEffect(() => {
     let cancelled = false;
+
     async function loadMatch() {
       try {
         const match = await matchesService.getMatchById(matchId);
@@ -34,9 +44,67 @@ export function useMatchControl(matchId: number) {
         // silently fail
       }
     }
+
+    function applyReps(event: Extract<JudgeEvent, { type: "REPS" }>) {
+      if (event.side === "RED") setRedReps(event.reps);
+      else setBlueReps(event.reps);
+      setProgress((prev) => {
+        if (!prev) return prev;
+        return event.side === "RED"
+          ? {
+              ...prev,
+              redCurrentReps: event.reps,
+              redCurrentExerciseId: event.exerciseId ?? prev.redCurrentExerciseId,
+            }
+          : {
+              ...prev,
+              blueCurrentReps: event.reps,
+              blueCurrentExerciseId: event.exerciseId ?? prev.blueCurrentExerciseId,
+            };
+      });
+    }
+
+    async function refreshMatch() {
+      try {
+        const match = await matchesService.getMatchById(matchId);
+        if (!cancelled) setCurrentMatch(match);
+      } catch {
+        // silently fail — next event will retry
+      }
+    }
+
+    async function resyncProgress() {
+      try {
+        const loaded = await matchesService.getProgressByMatchId(matchId);
+        if (!cancelled) applyProgress(loaded);
+      } catch {
+        // silently fail
+      }
+    }
+
+    function handleEvent(event: JudgeEvent) {
+      if (cancelled) return;
+      switch (event.type) {
+        case "REPS":
+          applyReps(event);
+          break;
+        case "FINISHED":
+          void refreshMatch();
+          break;
+        case "ERROR":
+          void resyncProgress();
+          break;
+      }
+    }
+
     loadMatch();
+    const client = createJudgeClient(matchId, handleEvent);
+    clientRef.current = client;
+
     return () => {
       cancelled = true;
+      client.deactivate();
+      clientRef.current = null;
     };
   }, [matchId]);
 
@@ -44,25 +112,6 @@ export function useMatchControl(matchId: number) {
     setProgress(loaded);
     setRedReps(loaded.redCurrentReps);
     setBlueReps(loaded.blueCurrentReps);
-  }
-
-  /**
-   * A rep update only changes match-level fields (status/finishedAt/winner)
-   * when a side transitions to finished — otherwise the returned
-   * MatchProgress already carries everything worth updating.
-   */
-  function hasNewFinish(before: MatchProgress | null, after: MatchProgress): boolean {
-    if (!before) return !!(after.redFinishedAt || after.blueFinishedAt);
-    return (
-      (!!after.redFinishedAt && !before.redFinishedAt) ||
-      (!!after.blueFinishedAt && !before.blueFinishedAt)
-    );
-  }
-
-  async function syncMatchIfNeeded(before: MatchProgress | null, after: MatchProgress) {
-    if (!hasNewFinish(before, after)) return;
-    const match = await matchesService.getMatchById(matchId);
-    setCurrentMatch(match);
   }
 
   async function startMatch() {
@@ -84,27 +133,17 @@ export function useMatchControl(matchId: number) {
     const next = Math.max(0, base + delta);
     if (next === base) return;
 
+    // optimistic bump; confirmation comes through the topic echo
     repsRef.current[side] = next;
     if (side === "red") setRedReps(next);
     else setBlueReps(next);
 
-    const input =
-      side === "red"
-        ? { redReps: next, blueReps: repsRef.current.blue }
-        : { redReps: repsRef.current.red, blueReps: next };
-
-    try {
-      const prev = progress;
-      const loaded = await matchesService.updateReps(matchId, input);
-      repsRef.current = { red: loaded.redCurrentReps, blue: loaded.blueCurrentReps };
-      applyProgress(loaded);
-      await syncMatchIfNeeded(prev, loaded);
-    } catch (err) {
-      // rollback the optimistic bump
+    const sent = publishAdjust(clientRef.current, matchId, side.toUpperCase() as "RED" | "BLUE", next);
+    if (!sent) {
       repsRef.current[side] = base;
       if (side === "red") setRedReps(base);
       else setBlueReps(base);
-      throw normalize(err, "Failed to update reps");
+      throw new Error("Connection lost");
     }
   }
 
@@ -115,11 +154,10 @@ export function useMatchControl(matchId: number) {
         ? { redReps: null, blueReps: repsRef.current.blue }
         : { redReps: repsRef.current.red, blueReps: null };
     try {
-      const prev = progress;
       const loaded = await matchesService.updateReps(matchId, input);
-      repsRef.current = { red: loaded.redCurrentReps, blue: loaded.blueCurrentReps };
       applyProgress(loaded);
-      await syncMatchIfNeeded(prev, loaded);
+      const match = await matchesService.getMatchById(matchId);
+      setCurrentMatch(match);
     } catch (err) {
       throw normalize(err, "Failed to finish side");
     }
