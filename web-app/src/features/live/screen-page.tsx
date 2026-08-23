@@ -41,7 +41,8 @@ type Action =
   | { type: "setOverview"; routineName: string; overview: RoutineOverview }
   | { type: "setMatches"; matches: Match[] }
   | { type: "setCurrentMatch"; match: Match }
-  | { type: "setMatchProgress"; progress: MatchProgress }
+  | { type: "setMatchProgress"; progress: MatchProgress | null }
+  | { type: "resetMatchData" }
   | { type: "setAthletes"; athletes: Athlete[] }
   | { type: "setError"; message: string };
 
@@ -79,6 +80,7 @@ function reducer(state: State, action: Action): State {
     case "setMatches": return { ...state, matches: action.matches };
     case "setCurrentMatch": return { ...state, currentMatch: action.match };
     case "setMatchProgress": return { ...state, matchProgress: action.progress };
+    case "resetMatchData": return { ...state, currentMatch: null, matchProgress: null };
     case "setAthletes": return { ...state, athletes: action.athletes };
     case "setError": return { ...state, error: action.message };
     default: throw new Error("Unknown action");
@@ -174,12 +176,14 @@ export function ScreenPage() {
       case "TOURNAMENT_STATE_UPDATED": {
         dispatch({ type: "setTournamentState", state: event.state });
         if (event.state.currentMatchId && event.state.currentMatchId !== currentMatchIdRef.current) {
+          // limpa os dados do match anterior enquanto o novo carrega
+          dispatch({ type: "resetMatchData" });
           const [match, progress] = await Promise.all([
             matchesService.getMatchById(event.state.currentMatchId),
             matchesService.getProgressByMatchId(event.state.currentMatchId).catch(() => null),
           ]);
           dispatch({ type: "setCurrentMatch", match });
-          if (progress) dispatch({ type: "setMatchProgress", progress });
+          dispatch({ type: "setMatchProgress", progress });
         }
         break;
       }
