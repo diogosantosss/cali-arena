@@ -11,6 +11,7 @@ import com.caliarena.domain.user.User
 import com.caliarena.domain.user.UserRole
 import com.caliarena.domain.user.UsersDomainConfig
 import jakarta.inject.Named
+import org.slf4j.LoggerFactory
 import org.springframework.security.crypto.password.PasswordEncoder
 import java.time.Clock
 
@@ -38,6 +39,10 @@ class UserAuthService(
     private val trxManager: TransactionManager,
     private val clock: Clock,
 ) {
+    companion object {
+        private val logger = LoggerFactory.getLogger(UserAuthService::class.java)
+    }
+
     fun validatePassword(
         password: String,
         validationInfo: PasswordValidationInfo,
@@ -97,6 +102,8 @@ class UserAuthService(
 
             val tokenValue = generateTokenValue(config)
             val now = clock.instant()
+
+            logger.debug("token value {}, user {}", tokenValue, user.username)
 
             val token =
                 Token(
