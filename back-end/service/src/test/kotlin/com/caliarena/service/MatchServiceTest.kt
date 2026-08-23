@@ -8,6 +8,7 @@ import com.caliarena.domain.bracket.BracketStage
 import com.caliarena.domain.match.Match
 import com.caliarena.domain.match.MatchProgress
 import com.caliarena.domain.match.MatchStatus
+import com.caliarena.domain.match.RepSide
 import com.caliarena.domain.routine.EnduranceRoutine
 import com.caliarena.domain.routine.Exercise
 import com.caliarena.domain.routine.ExerciseType
@@ -530,6 +531,137 @@ class MatchServiceTest : ServiceTest() {
             doReturn(null).whenever(repoMatch).save(any<Match>())
 
             val result = service.updateAthletesReps(1, 10, null)
+            assertEquals(failure(MatchError.MatchNotFound), result)
+        }
+    }
+
+    @Nested
+    inner class ForceFinishSide {
+        private val match = mockMatch(status = MatchStatus.RUNNING)
+        private val progBlueDone =
+            mockProgress().copy(
+                blueCurrentExerciseId = null,
+                blueCurrentReps = 10,
+                blueFinishedAt = now.minusSeconds(10),
+            )
+
+        private fun stubHappyPath() {
+            whenever(repoMatch.findById(1)).thenReturn(match)
+            whenever(repoMatch.findProgressByMatchId(1)).thenReturn(progBlueDone)
+            doAnswer { invocation -> invocation.getArgument<MatchProgress>(0) }
+                .whenever(repoMatch)
+                .updateMatchProgress(any<MatchProgress>(), anyOrNull<Int>(), anyOrNull<Int>())
+        }
+
+        @Test
+        fun `should fail when match not found`() {
+            whenever(repoMatch.findById(1)).thenReturn(null)
+
+            val result = service.forceFinishSide(1, RepSide.RED)
+
+            assertEquals(failure(MatchError.MatchNotFound), result)
+        }
+
+        @Test
+        fun `should fail when match not running`() {
+            whenever(repoMatch.findById(1)).thenReturn(mockMatch(status = MatchStatus.PENDING))
+
+            val result = service.forceFinishSide(1, RepSide.RED)
+
+            assertEquals(failure(MatchError.MatchNotRunning), result)
+            verify(repoMatch, never()).findProgressByMatchId(any())
+            verify(repoMatch, never()).save(any())
+        }
+
+        @Test
+        fun `should fail when progress not found`() {
+            whenever(repoMatch.findById(1)).thenReturn(match)
+            whenever(repoMatch.findProgressByMatchId(1)).thenReturn(null)
+
+            val result = service.forceFinishSide(1, RepSide.RED)
+
+            assertEquals(failure(MatchError.ProgressNotFound), result)
+            verify(repoMatch, never()).save(any())
+        }
+
+        @Test
+        fun `should fail when opponent has not finished`() {
+            whenever(repoMatch.findById(1)).thenReturn(match)
+            whenever(repoMatch.findProgressByMatchId(1)).thenReturn(mockProgress())
+
+            val result = service.forceFinishSide(1, RepSide.RED)
+
+            assertEquals(failure(MatchError.OpponentNotFinished), result)
+            verify(repoMatch, never()).save(any())
+            verify(repoMatch, never()).updateMatchProgress(any(), any(), any())
+        }
+
+        @Test
+        fun `should force finish red and blue wins when blue already finished`() {
+            stubHappyPath()
+            whenever(repoTournament.findByBracketId(1)).thenReturn(mockBracket())
+            val expectedProg =
+                progBlueDone.copy(
+                    redCurrentExerciseId = null,
+                    redFinishedAt = now,
+                    updatedAt = now,
+                )
+            val finishedMatch =
+                match.copy(
+                    status = MatchStatus.FINISHED,
+                    winnerAthleteId = match.athleteBlueId,
+                    finishedAt = now,
+                )
+            whenever(repoMatch.save(any())).thenReturn(finishedMatch)
+
+            val result = service.forceFinishSide(1, RepSide.RED)
+
+            assertEquals(success(expectedProg), result)
+            verify(repoMatch).save(finishedMatch)
+        }
+
+        @Test
+        fun `should force finish blue and red wins when red already finished`() {
+            val progRedDone =
+                mockProgress().copy(
+                    redCurrentExerciseId = null,
+                    redCurrentReps = 10,
+                    redFinishedAt = now.minusSeconds(10),
+                )
+            whenever(repoMatch.findById(1)).thenReturn(match)
+            whenever(repoMatch.findProgressByMatchId(1)).thenReturn(progRedDone)
+            whenever(repoTournament.findByBracketId(1)).thenReturn(mockBracket())
+            doAnswer { invocation -> invocation.getArgument<MatchProgress>(0) }
+                .whenever(repoMatch)
+                .updateMatchProgress(any<MatchProgress>(), anyOrNull<Int>(), anyOrNull<Int>())
+
+            val expectedProg =
+                progRedDone.copy(
+                    blueCurrentExerciseId = null,
+                    blueFinishedAt = now,
+                    updatedAt = now,
+                )
+            val finishedMatch =
+                match.copy(
+                    status = MatchStatus.FINISHED,
+                    winnerAthleteId = match.athleteRedId,
+                    finishedAt = now,
+                )
+            whenever(repoMatch.save(any())).thenReturn(finishedMatch)
+
+            val result = service.forceFinishSide(1, RepSide.BLUE)
+
+            assertEquals(success(expectedProg), result)
+            verify(repoMatch).save(finishedMatch)
+        }
+
+        @Test
+        fun `should fail when saving finished match returns null`() {
+            stubHappyPath()
+            doReturn(null).whenever(repoMatch).save(any<Match>())
+
+            val result = service.forceFinishSide(1, RepSide.RED)
+
             assertEquals(failure(MatchError.MatchNotFound), result)
         }
     }

@@ -1,4 +1,4 @@
-package com.caliarena.http.model.match
+package com.caliarena.domain.match
 
 import java.time.Instant
 
@@ -6,7 +6,10 @@ enum class RepSide { RED, BLUE }
 
 enum class JudgeOutputType { REPS, FINISHED, ERROR }
 
+enum class JudgeActionType { ADJUST, FINISH }
+
 data class JudgeActionInput(
+    val action: JudgeActionType,
     val side: RepSide,
     val reps: Int? = null,
 )

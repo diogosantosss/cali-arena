@@ -1,12 +1,13 @@
 package com.caliarena.http
 
+import com.caliarena.domain.match.JudgeActionInput
+import com.caliarena.domain.match.JudgeActionType
+import com.caliarena.domain.match.JudgeErrorEvent
+import com.caliarena.domain.match.JudgeFinishedEvent
+import com.caliarena.domain.match.JudgeRepsEvent
 import com.caliarena.domain.match.MatchProgress
-import com.caliarena.http.model.match.JudgeActionInput
-import com.caliarena.http.model.match.JudgeErrorEvent
-import com.caliarena.http.model.match.JudgeFinishedEvent
-import com.caliarena.http.model.match.JudgeRepsEvent
-import com.caliarena.http.model.match.RepSide.BLUE
-import com.caliarena.http.model.match.RepSide.RED
+import com.caliarena.domain.match.RepSide.BLUE
+import com.caliarena.domain.match.RepSide.RED
 import com.caliarena.service.Either
 import com.caliarena.service.Failure
 import com.caliarena.service.MatchError
@@ -40,28 +41,33 @@ class JudgeActionsWsController(
         input: JudgeActionInput,
     ) {
         val result: Either<MatchError, MatchProgress> =
-            when (input.side) {
-                // Red Athlete reps update
-                RED ->
-                    matchService.updateAthletesReps(matchId, redReps = input.reps)
+            if (input.action == JudgeActionType.ADJUST) {
+                when (input.side) {
+                    // Red Athlete reps update
+                    RED ->
+                        matchService.updateAthletesReps(matchId, redReps = input.reps)
 
-                // Blue Athlete reps update
-                BLUE ->
-                    matchService.updateAthletesReps(matchId, blueReps = input.reps)
+                    // Blue Athlete reps update
+                    BLUE ->
+                        matchService.updateAthletesReps(matchId, blueReps = input.reps)
+                }
+            } else {
+                matchService.forceFinishSide(matchId, input.side)
             }
 
         val url = "/topic/matches/$matchId"
         when (result) {
             is Success -> {
                 val prog = result.value
-                val (reps, exerciseId) =
-                    if (input.side == RED) {
-                        prog.redCurrentReps to prog.redCurrentExerciseId
-                    } else {
-                        prog.blueCurrentReps to prog.blueCurrentExerciseId
-                    }
-
-                messaging.convertAndSend(url, JudgeRepsEvent(side = input.side, reps = reps, exerciseId = exerciseId))
+                if (input.action == JudgeActionType.ADJUST) {
+                    val (reps, exerciseId) =
+                        if (input.side == RED) {
+                            prog.redCurrentReps to prog.redCurrentExerciseId
+                        } else {
+                            prog.blueCurrentReps to prog.blueCurrentExerciseId
+                        }
+                    messaging.convertAndSend(url, JudgeRepsEvent(side = input.side, reps = reps, exerciseId = exerciseId))
+                }
 
                 // checking if any athlete have finished
                 val finishedAt =

@@ -147,6 +147,8 @@ class MatchController(
                 Problem.ProgressAlreadyExists.response(HttpStatus.CONFLICT)
             MatchError.MatchAlreadyStarted ->
                 Problem.MatchAlreadyStarted.response(HttpStatus.CONFLICT)
+            MatchError.OpponentNotFinished ->
+                Problem.OpponentNotFinished.response(HttpStatus.CONFLICT)
             MatchError.ErrorCreatingMatchProg ->
                 Problem.ErrorCreatingMatchProg.response(HttpStatus.INTERNAL_SERVER_ERROR)
         }

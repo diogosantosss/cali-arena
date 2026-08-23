@@ -4,6 +4,7 @@ import com.caliarena.TransactionManager
 import com.caliarena.domain.match.Match
 import com.caliarena.domain.match.MatchProgress
 import com.caliarena.domain.match.MatchStatus
+import com.caliarena.domain.match.RepSide
 import com.caliarena.domain.routine.Exercise
 import com.caliarena.service.sse.MatchUpdatedEvent
 import com.caliarena.service.sse.SpectatorPublisher
@@ -38,6 +39,8 @@ sealed class MatchError {
     data object ExerciseNotFound : MatchError()
 
     data object MatchAlreadyStarted : MatchError()
+
+    data object OpponentNotFinished : MatchError()
 }
 
 @Service
@@ -200,6 +203,66 @@ class MatchService(
                     ),
                 ) ?: return@run failure(MatchError.MatchNotFound)
             }
+
+            val tournamentId =
+                repoTournament.findByBracketId(match.bracketId)?.tournamentId
+                    ?: return@run failure(MatchError.BracketNotFound)
+
+            MatchUpdatedEvent(
+                tournamentId = tournamentId,
+                matchProgress = updated,
+            ).let { publisher.publish(it) }
+
+            success(updated)
+        }
+
+    fun forceFinishSide(
+        matchId: Int,
+        side: RepSide,
+    ): Either<MatchError, MatchProgress> =
+        trxManager.run {
+            val match =
+                repoMatch.findById(matchId)
+                    ?: return@run failure(MatchError.MatchNotFound)
+
+            if (match.status != MatchStatus.RUNNING) {
+                return@run failure(MatchError.MatchNotRunning)
+            }
+
+            val prog =
+                repoMatch.findProgressByMatchId(matchId)
+                    ?: return@run failure(MatchError.ProgressNotFound)
+
+            val opponentFinishedAt = if (side == RepSide.RED) prog.blueFinishedAt else prog.redFinishedAt
+            if (opponentFinishedAt == null) {
+                return@run failure(MatchError.OpponentNotFinished)
+            }
+
+            val now = clock.instant()
+
+            val newProg: MatchProgress =
+                when (side) {
+                    RepSide.RED ->
+                        prog.copy(redCurrentExerciseId = null, redFinishedAt = now, updatedAt = now)
+                    RepSide.BLUE ->
+                        prog.copy(blueCurrentExerciseId = null, blueFinishedAt = now, updatedAt = now)
+                }
+
+            val updated: MatchProgress =
+                repoMatch
+                    .updateMatchProgress(
+                        progress = newProg,
+                        redCurrentExerciseId = newProg.redCurrentExerciseId,
+                        blueCurrentExerciseId = newProg.blueCurrentExerciseId,
+                    ) ?: return@run failure(MatchError.ProgressNotFound)
+
+            repoMatch.save(
+                match.copy(
+                    status = MatchStatus.FINISHED,
+                    winnerAthleteId = if (side == RepSide.RED) match.athleteBlueId else match.athleteRedId,
+                    finishedAt = now,
+                ),
+            ) ?: return@run failure(MatchError.MatchNotFound)
 
             val tournamentId =
                 repoTournament.findByBracketId(match.bracketId)?.tournamentId

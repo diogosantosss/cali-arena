@@ -101,6 +101,8 @@ sealed class Problem(
 
     data object MatchAlreadyStarted : Problem(URI("$PROBLEM_URI_PATH/match-already-started"))
 
+    data object OpponentNotFinished : Problem(URI("$PROBLEM_URI_PATH/opponent-not-finished"))
+
     // Screen Routine related Errors
     data object ScreenRoutineNotFound : Problem(URI("$PROBLEM_URI_PATH/screen-routine-not-found"))
 
