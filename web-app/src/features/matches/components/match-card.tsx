@@ -2,16 +2,24 @@ import { useState } from "react";
 import type { Athlete } from "@/features/athletes/types";
 import type { Routine } from "@/features/routines/types";
 import type { User } from "@/features/users/types";
-import type { Match } from "../types";
-import { UserRound, ChevronDown, ChevronUp } from "lucide-react";
+import type { Match, MatchProgress } from "../types";
+import { UserRound, ChevronDown, ChevronUp, Timer, Trophy } from "lucide-react";
 
 interface MatchCardProps {
   match: Match;
+  progress?: MatchProgress;
   athletes: Athlete[];
   routines: Routine[];
   judges: User[];
   onAssignAthletes: (match: Match) => void;
   onStartMatch: (match: Match) => void;
+}
+
+function formatDuration(ms: number): string {
+  const minutes = Math.floor(ms / 60000);
+  const seconds = Math.floor((ms % 60000) / 1000);
+  const millis = ms % 1000;
+  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}.${String(millis).padStart(3, "0")}`;
 }
 
 const matchStatusStyles: Record<Match["status"], { label: string; color: string; bg: string }> = {
@@ -22,7 +30,7 @@ const matchStatusStyles: Record<Match["status"], { label: string; color: string;
   FINISHED: { label: "Finished", color: "#4a4a4e", bg: "rgba(74,74,78,0.12)" },
 };
 
-export function MatchCard({ match, athletes, routines, judges, onAssignAthletes, onStartMatch }: MatchCardProps) {
+export function MatchCard({ match, progress, athletes, routines, judges, onAssignAthletes, onStartMatch }: MatchCardProps) {
   const [expanded, setExpanded] = useState(false);
 
   const redAthlete = athletes.find((a) => a.id === match.athleteRedId);
@@ -30,6 +38,15 @@ export function MatchCard({ match, athletes, routines, judges, onAssignAthletes,
   const routine = routines.find((r) => r.id === match.routineId);
   const judge = judges.find((j) => j.id === match.judgeId);
   const s = matchStatusStyles[match.status];
+
+  function sideDuration(finishedAt: string | null): string | null {
+    if (!finishedAt || !match.startedAt) return null;
+    return formatDuration(Math.max(0, new Date(finishedAt).getTime() - new Date(match.startedAt!).getTime()));
+  }
+  const redTime = match.status === "FINISHED" ? sideDuration(progress?.redFinishedAt ?? null) : null;
+  const blueTime = match.status === "FINISHED" ? sideDuration(progress?.blueFinishedAt ?? null) : null;
+  const isRedWinner = match.status === "FINISHED" && match.winnerAthleteId != null && match.winnerAthleteId === match.athleteRedId;
+  const isBlueWinner = match.status === "FINISHED" && match.winnerAthleteId != null && match.winnerAthleteId === match.athleteBlueId;
 
   return (
     <div
@@ -78,6 +95,48 @@ export function MatchCard({ match, athletes, routines, judges, onAssignAthletes,
           {expanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
         </button>
       </div>
+
+      {match.status === "FINISHED" && (
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 pb-3 text-xs" style={{ color: "#6b6560" }}>
+          {match.startedAt && (
+            <span className="flex items-center gap-1.5">
+              Started at {new Date(match.startedAt).toLocaleTimeString()}
+            </span>
+          )}
+          {redTime && (
+            <span
+              className="flex items-center gap-1.5"
+              style={{
+                color: isRedWinner ? "#e8a020" : "#e05555",
+                fontWeight: isRedWinner ? 600 : 400,
+                background: isRedWinner ? "rgba(232,160,32,0.1)" : undefined,
+                border: isRedWinner ? "1px solid rgba(232,160,32,0.25)" : undefined,
+                borderRadius: "9999px",
+                padding: "2px 8px",
+              }}
+            >
+              {isRedWinner ? <Trophy className="w-3 h-3" /> : <Timer className="w-3 h-3" />}
+              {redAthlete?.name ?? "Red"} — {redTime}
+            </span>
+          )}
+          {blueTime && (
+            <span
+              className="flex items-center gap-1.5"
+              style={{
+                color: isBlueWinner ? "#e8a020" : "#5588e0",
+                fontWeight: isBlueWinner ? 600 : 400,
+                background: isBlueWinner ? "rgba(232,160,32,0.1)" : undefined,
+                border: isBlueWinner ? "1px solid rgba(232,160,32,0.25)" : undefined,
+                borderRadius: "9999px",
+                padding: "2px 8px",
+              }}
+            >
+              {isBlueWinner ? <Trophy className="w-3 h-3" /> : <Timer className="w-3 h-3" />}
+              {blueAthlete?.name ?? "Blue"} — {blueTime}
+            </span>
+          )}
+        </div>
+      )}
 
       {expanded && (
         <div style={{ borderTop: "1px solid #252528" }} className="px-4 py-3 space-y-3">

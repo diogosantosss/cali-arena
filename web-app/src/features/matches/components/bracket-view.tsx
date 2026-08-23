@@ -3,12 +3,12 @@ import type { Athlete } from "@/features/athletes/types";
 import type { Routine } from "@/features/routines/types";
 import type { User } from "@/features/users/types";
 import type { Bracket, BracketStage } from "@/features/tournaments/types";
-import type { Match } from "../types";
+import type { Match, MatchProgress } from "../types";
 import type { Gender } from "@/types/gender";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge as ShadcnBadge } from "@/components/ui/badge";
-import { Plus } from "lucide-react";
+import { Plus, RefreshCw } from "lucide-react";
 import { MatchCard } from "./match-card";
 import { CreateMatchDialog } from "./create-match-dialog";
 import { AssignAthletesDialog } from "./assign-athletes-dialog";
@@ -16,9 +16,11 @@ import { AssignAthletesDialog } from "./assign-athletes-dialog";
 interface BracketViewProps {
   brackets: Bracket[];
   matches: Match[];
+  progresses: Record<number, MatchProgress>;
   athletes: Athlete[];
   routines: Routine[];
   judges: User[];
+  onRefresh: () => void;
   onCreateBracket: (gender: Gender, stage: BracketStage) => void;
   onMatchCreated: (match: Match) => void;
   onMatchUpdated: (match: Match) => void;
@@ -37,9 +39,11 @@ const stageLabels: Record<BracketStage, string> = {
 export function BracketView({
   brackets,
   matches,
+  progresses,
   athletes,
   routines,
   judges,
+  onRefresh,
   onCreateBracket,
   onMatchCreated,
   onMatchUpdated,
@@ -104,6 +108,7 @@ export function BracketView({
                   <MatchCard
                     key={match.id}
                     match={match}
+                    progress={progresses[match.id]}
                     athletes={athletes}
                     routines={routines}
                     judges={judges}
@@ -126,10 +131,22 @@ export function BracketView({
   return (
     <>
       <Tabs defaultValue="MALE">
-        <TabsList>
-          <TabsTrigger value="MALE">Male</TabsTrigger>
-          <TabsTrigger value="FEMALE">Female</TabsTrigger>
-        </TabsList>
+        <div className="flex items-center gap-2">
+          <TabsList>
+            <TabsTrigger value="MALE">Male</TabsTrigger>
+            <TabsTrigger value="FEMALE">Female</TabsTrigger>
+          </TabsList>
+          <button
+            onClick={onRefresh}
+            title="Refresh matches"
+            className="p-1.5 rounded transition-colors"
+            style={{ color: "#6b6560", border: "1px solid #252528", background: "#1e1e22" }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = "#e8a020")}
+            onMouseLeave={(e) => (e.currentTarget.style.color = "#6b6560")}
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+          </button>
+        </div>
 
         <TabsContent value="MALE" className="space-y-6 mt-4">
           {renderStages("MALE")}

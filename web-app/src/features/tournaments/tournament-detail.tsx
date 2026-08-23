@@ -11,7 +11,7 @@ import type { Routine, RoutineOverview } from "@/features/routines/types";
 import { usersService } from "@/features/users/services/users.service";
 import type { User } from "@/features/users/types";
 import { matchesService } from "@/features/matches/services/matches.service";
-import type { Match } from "@/features/matches/types";
+import type { Match, MatchProgress } from "@/features/matches/types";
 import { ScreenControl } from "./components/screen-control";
 import { BracketView } from "@/features/matches/components/bracket-view";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -31,6 +31,7 @@ interface DetailState {
   state: TournamentState | null;
   brackets: Bracket[];
   matches: Match[];
+  progresses: Record<number, MatchProgress>;
   athletes: Athlete[];
   routines: Routine[];
   judges: User[];
@@ -45,6 +46,7 @@ type Action =
       state: TournamentState | null;
       brackets: Bracket[];
       matches: Match[];
+      progresses: Record<number, MatchProgress>;
       athletes: Athlete[];
       routines: Routine[];
       judges: User[];
@@ -54,7 +56,8 @@ type Action =
   | { type: "stateUpdated"; state: TournamentState }
   | { type: "bracketCreated"; bracket: Bracket }
   | { type: "matchCreated"; match: Match }
-  | { type: "matchUpdated"; match: Match };
+  | { type: "matchUpdated"; match: Match }
+  | { type: "refreshed"; brackets: Bracket[]; matches: Match[]; progresses: Record<number, MatchProgress> };
 
 const initialDetailState: DetailState = {
   loading: false,
@@ -63,6 +66,7 @@ const initialDetailState: DetailState = {
   state: null,
   brackets: [],
   matches: [],
+  progresses: {},
   athletes: [],
   routines: [],
   judges: [],
@@ -81,6 +85,7 @@ function reducer(state: DetailState, action: Action): DetailState {
         state: action.state,
         brackets: action.brackets,
         matches: action.matches,
+        progresses: action.progresses,
         athletes: action.athletes,
         routines: action.routines,
         judges: action.judges,
@@ -99,6 +104,8 @@ function reducer(state: DetailState, action: Action): DetailState {
         ...state,
         matches: state.matches.map((m) => (m.id === action.match.id ? action.match : m)),
       };
+    case "refreshed":
+      return { ...state, brackets: action.brackets, matches: action.matches, progresses: action.progresses };
   }
 }
 
@@ -115,11 +122,23 @@ export function TournamentDetailPage() {
     state: tournamentState,
     brackets,
     matches,
+    progresses,
     athletes,
     routines,
     judges,
     overviews,
   } = data;
+
+  const loadProgresses = useCallback(async (allMatches: Match[]) => {
+    const finished = allMatches.filter((m) => m.status === "FINISHED");
+    const entries = await Promise.all(
+      finished.map(async (m) => {
+        const progress = await matchesService.getProgressByMatchId(m.id).catch(() => null);
+        return [m.id, progress] as const;
+      }),
+    );
+    return Object.fromEntries(entries.filter(([, p]) => p !== null)) as Record<number, MatchProgress>;
+  }, []);
 
   const loadTournament = useCallback(async () => {
     dispatch({ type: "loadStart" });
@@ -137,6 +156,8 @@ export function TournamentDetailPage() {
       const allMatches = await Promise.all(
         loadedBrackets.map((b) => matchesService.getMatchesByBracketId(b.id))
       );
+      const flatMatches = allMatches.flat();
+      const loadedProgresses = await loadProgresses(flatMatches);
 
       const loadedOverviews = await Promise.all(
         loadedRoutines.map(async (r) => {
@@ -150,7 +171,8 @@ export function TournamentDetailPage() {
         tournament: loadedTournament,
         state: loadedState,
         brackets: loadedBrackets,
-        matches: allMatches.flat(),
+        matches: flatMatches,
+        progresses: loadedProgresses,
         athletes: loadedAthletes,
         routines: loadedRoutines,
         judges: users.filter((u) => u.role === "JUDGE"),
@@ -162,7 +184,21 @@ export function TournamentDetailPage() {
         message: err instanceof ApiError ? err.message : "Failed to load tournament",
       });
     }
-  }, [tournamentId]);
+  }, [tournamentId, loadProgresses]);
+
+  const refreshMatches = useCallback(async () => {
+    try {
+      const loadedBrackets = await tournamentsService.getBracketsByTournamentId(tournamentId);
+      const allMatches = await Promise.all(
+        loadedBrackets.map((b) => matchesService.getMatchesByBracketId(b.id))
+      );
+      const flatMatches = allMatches.flat();
+      const loadedProgresses = await loadProgresses(flatMatches);
+      dispatch({ type: "refreshed", brackets: loadedBrackets, matches: flatMatches, progresses: loadedProgresses });
+    } catch (err) {
+      console.error(err);
+    }
+  }, [tournamentId, loadProgresses]);
 
   useEffect(() => {
     // deferred so the loading state flip doesn't happen synchronously in the effect
@@ -286,9 +322,11 @@ export function TournamentDetailPage() {
       <BracketView
         brackets={brackets}
         matches={matches}
+        progresses={progresses}
         athletes={athletes}
         routines={routines}
         judges={judges}
+        onRefresh={() => void refreshMatches()}
         onCreateBracket={handleCreateBracket}
         onMatchCreated={(match) => dispatch({ type: "matchCreated", match })}
         onMatchUpdated={(match) => dispatch({ type: "matchUpdated", match })}
