@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import type { Athlete } from "@/features/athletes/types";
 import type { Exercise, Routine, RoutineOverview } from "@/features/routines/types";
 import { routineGroups } from "@/features/routines/lib/exercise-labels";
@@ -58,7 +60,9 @@ export function BattlePanel({ matchId, athletes, routines, overviews, onError }:
     startMatch,
     adjustReps,
     finishSide,
-  } = useMatchControl(matchId);
+  } = useMatchControl(matchId, onError);
+
+  const [finishTarget, setFinishTarget] = useState<"red" | "blue" | null>(null);
 
   async function run(action: () => Promise<void>) {
     try {
@@ -150,7 +154,7 @@ export function BattlePanel({ matchId, athletes, routines, overviews, onError }:
             exercise={redExercise}
             reps={redReps}
             onAdjust={(delta) => void run(() => adjustReps("red", delta))}
-            onFinish={() => void run(() => finishSide("red"))}
+            onFinish={() => setFinishTarget("red")}
             repButton={repButton}
             repIncrementStyle={repIncrementStyle}
             repDecrementStyle={repDecrementStyle}
@@ -163,7 +167,7 @@ export function BattlePanel({ matchId, athletes, routines, overviews, onError }:
             exercise={blueExercise}
             reps={blueReps}
             onAdjust={(delta) => void run(() => adjustReps("blue", delta))}
-            onFinish={() => void run(() => finishSide("blue"))}
+            onFinish={() => setFinishTarget("blue")}
             repButton={repButton}
             repIncrementStyle={repIncrementStyle}
             repDecrementStyle={repDecrementStyle}
@@ -222,6 +226,41 @@ export function BattlePanel({ matchId, athletes, routines, overviews, onError }:
           )}
         </div>
       )}
+
+      <Dialog
+        open={finishTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setFinishTarget(null);
+        }}
+      >
+        <DialogContent style={{ background: "#17171a", border: "1px solid #252528" }}>
+          <DialogHeader>
+            <DialogTitle>Force finish athlete</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to finish{" "}
+              <span className="font-semibold">
+                {(finishTarget === "red" ? redAthlete?.name : blueAthlete?.name) ?? "this athlete"}
+              </span>
+              ? The opponent must have already finished — this ends the match and the opponent wins.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setFinishTarget(null)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                const target = finishTarget;
+                setFinishTarget(null);
+                if (target) void run(() => finishSide(target));
+              }}
+              style={{ background: "#e8a020", color: "#0f0f11" }}
+            >
+              Finish
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

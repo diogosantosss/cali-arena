@@ -83,6 +83,8 @@ export const errorDescriptions: Record<string, string> = {
     "There was an error creating the match progress. Please try again later.",
   "exercise-not-found":
     "The exercise could not be found. Please check the provided details and try again.",
+  "opponent-not-finished":
+    "You can only finish an athlete after the opponent has finished their routine.",
 };
 
 export function getErrorDescription(errorType: string): string {

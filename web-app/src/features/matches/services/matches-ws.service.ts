@@ -35,16 +35,21 @@ export function createJudgeClient(
   return client;
 }
 
-export function publishAdjust(
+export type JudgeAction = "ADJUST" | "FINISH";
+
+export type JudgeActionPayload =
+  | { action: "ADJUST"; side: "RED" | "BLUE"; reps: number }
+  | { action: "FINISH"; side: "RED" | "BLUE" };
+
+export function publishJudgeAction(
   client: Client | null,
   matchId: number,
-  side: "RED" | "BLUE",
-  reps: number,
+  payload: JudgeActionPayload,
 ): boolean {
   if (!client?.connected) return false;
   client.publish({
     destination: `/app/matches/${matchId}/actions`,
-    body: JSON.stringify({ side, reps }),
+    body: JSON.stringify(payload),
   });
   return true;
 }

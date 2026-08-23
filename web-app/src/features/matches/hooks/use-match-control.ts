@@ -1,9 +1,19 @@
 import { useEffect, useRef, useState } from "react";
 import type { Client } from "@stomp/stompjs";
 import { ApiError } from "@/lib/api/client";
+import { getErrorDescription } from "@/lib/api/error-messages";
 import { matchesService } from "../services/matches.service";
-import { createJudgeClient, publishAdjust, type JudgeEvent } from "../services/matches-ws.service";
+import { createJudgeClient, publishJudgeAction, type JudgeEvent } from "../services/matches-ws.service";
 import type { Match, MatchProgress } from "../types";
+
+/**
+ * Converts a backend error class name (e.g. "OpponentNotFinished") into the
+ * kebab-case problem title used by errorDescriptions.
+ */
+function wsErrorDescription(raw: string): string {
+  const kebab = raw.replace(/([a-z0-9])([A-Z])/g, "$1-$2").toLowerCase();
+  return getErrorDescription(kebab);
+}
 
 /**
  * Owns everything related to controlling the currently selected match:
@@ -16,13 +26,18 @@ import type { Match, MatchProgress } from "../types";
  * the authoritative value arrives via the match topic. An ERROR event (or a
  * dropped connection) resyncs state from the REST progress endpoint.
  */
-export function useMatchControl(matchId: number) {
+export function useMatchControl(
+  matchId: number,
+  onServerError?: (message: string) => void,
+) {
   const [currentMatch, setCurrentMatch] = useState<Match | null>(null);
   const [progress, setProgress] = useState<MatchProgress | null>(null);
   const [redReps, setRedReps] = useState(0);
   const [blueReps, setBlueReps] = useState(0);
 
   const clientRef = useRef<Client | null>(null);
+  const onServerErrorRef = useRef(onServerError);
+  onServerErrorRef.current = onServerError;
 
   const repsRef = useRef({ red: 0, blue: 0 });
   repsRef.current = { red: redReps, blue: blueReps };
@@ -73,6 +88,16 @@ export function useMatchControl(matchId: number) {
       }
     }
 
+    function stampFinished(side: "RED" | "BLUE", finishedAt: string) {
+      setProgress((prev) =>
+        !prev
+          ? prev
+          : side === "RED"
+            ? { ...prev, redFinishedAt: finishedAt }
+            : { ...prev, blueFinishedAt: finishedAt },
+      );
+    }
+
     async function resyncProgress() {
       try {
         const loaded = await matchesService.getProgressByMatchId(matchId);
@@ -89,10 +114,12 @@ export function useMatchControl(matchId: number) {
           applyReps(event);
           break;
         case "FINISHED":
+          stampFinished(event.side, event.finishedAt);
           void refreshMatch();
           break;
         case "ERROR":
           void resyncProgress();
+          onServerErrorRef.current?.(wsErrorDescription(event.message));
           break;
       }
     }
@@ -128,6 +155,9 @@ export function useMatchControl(matchId: number) {
 
   async function adjustReps(side: "red" | "blue", delta: number) {
     if (!matchId) return;
+    if ((side === "red" && progress?.redFinishedAt) || (side === "blue" && progress?.blueFinishedAt)) {
+      return;
+    }
     const base = repsRef.current[side];
     if (base === 0 && delta < 0) return;
     const next = Math.max(0, base + delta);
@@ -138,7 +168,11 @@ export function useMatchControl(matchId: number) {
     if (side === "red") setRedReps(next);
     else setBlueReps(next);
 
-    const sent = publishAdjust(clientRef.current, matchId, side.toUpperCase() as "RED" | "BLUE", next);
+    const sent = publishJudgeAction(clientRef.current, matchId, {
+      action: "ADJUST",
+      side: side.toUpperCase() as "RED" | "BLUE",
+      reps: next,
+    });
     if (!sent) {
       repsRef.current[side] = base;
       if (side === "red") setRedReps(base);
@@ -147,20 +181,20 @@ export function useMatchControl(matchId: number) {
     }
   }
 
+  /**
+   * Forces the end of the routine for one athlete. Only valid when the
+   * opponent has already finished — otherwise the server answers with an
+   * ERROR event (OpponentNotFinished) and state is resynced.
+   */
   async function finishSide(side: "red" | "blue") {
-    if (!matchId) return;
-    const input =
-      side === "red"
-        ? { redReps: null, blueReps: repsRef.current.blue }
-        : { redReps: repsRef.current.red, blueReps: null };
-    try {
-      const loaded = await matchesService.updateReps(matchId, input);
-      applyProgress(loaded);
-      const match = await matchesService.getMatchById(matchId);
-      setCurrentMatch(match);
-    } catch (err) {
-      throw normalize(err, "Failed to finish side");
+    if (!matchId || !clientRef.current?.connected) {
+      throw new Error("Connection lost");
     }
+    const sent = publishJudgeAction(clientRef.current, matchId, {
+      action: "FINISH",
+      side: side.toUpperCase() as "RED" | "BLUE",
+    });
+    if (!sent) throw new Error("Connection lost");
   }
 
   return { currentMatch, progress, redReps, blueReps, startMatch, adjustReps, finishSide };
