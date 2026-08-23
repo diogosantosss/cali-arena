@@ -107,7 +107,8 @@ class MatchRepository(
         val judge = userJpa.findByIdOrNull(entity.judgeId) ?: return null
         val redAthlete = entity.athleteRedId?.let { athleteJpa.findByIdOrNull(it) }
         val blueAthlete = entity.athleteBlueId?.let { athleteJpa.findByIdOrNull(it) }
-        return matchJpa.save(entity.fromDomain(bracket, redAthlete, blueAthlete, judge, null)).toDomain()
+        val winnerAthlete = entity.winnerAthleteId?.let { athleteJpa.findByIdOrNull(it) }
+        return matchJpa.save(entity.fromDomain(bracket, redAthlete, blueAthlete, judge, winnerAthlete)).toDomain()
     }
 
     override fun deleteById(id: Int) = matchJpa.deleteById(id)
