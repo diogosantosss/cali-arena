@@ -1,6 +1,5 @@
 package com.caliarena.service
 
-import com.caliarena.TransactionManager
 import com.caliarena.domain.token.Token
 import com.caliarena.domain.token.Token.Companion.canBeToken
 import com.caliarena.domain.token.Token.Companion.generateTokenValue
@@ -10,8 +9,13 @@ import com.caliarena.domain.user.PasswordValidationInfo
 import com.caliarena.domain.user.User
 import com.caliarena.domain.user.UserRole
 import com.caliarena.domain.user.UsersDomainConfig
+import com.caliarena.repo.entities.user.TokenEntity
+import com.caliarena.repo.entities.user.TokenEntity.Companion.toDomain
+import com.caliarena.repo.entities.user.UserEntity
+import com.caliarena.repo.trx.TransactionManager
 import jakarta.inject.Named
 import org.slf4j.LoggerFactory
+import org.springframework.data.repository.findByIdOrNull
 import org.springframework.security.crypto.password.PasswordEncoder
 import java.time.Clock
 
@@ -67,19 +71,21 @@ class UserAuthService(
         val passwordValidationInfo = createPasswordValidationInformation(password)
 
         return trxManager.run {
-            if (repoUser.findByUsername(username) != null) {
+            if (users.findByUsername(username) != null) {
                 return@run failure(UserError.AlreadyUsedUsername)
             }
 
-            val user =
-                repoUser.createUser(
-                    username = username,
-                    passwordValidationInfo = passwordValidationInfo,
-                    role = UserRole.JUDGE,
-                    createdAt = clock.instant(),
+            val userEntity =
+                users.save(
+                    UserEntity(
+                        username = username,
+                        password = passwordValidationInfo.validationInfo,
+                        role = UserRole.JUDGE,
+                        createdAt = clock.instant().epochSecond,
+                    ),
                 )
 
-            return@run success(user)
+            return@run success(userEntity.toDomain())
         }
     }
 
@@ -92,9 +98,11 @@ class UserAuthService(
         }
 
         return trxManager.run {
-            val user =
-                repoUser.findByUsername(username)
+            val userEntity =
+                users.findByUsername(username)
                     ?: return@run failure(UserError.UserOrPasswordAreInvalid)
+
+            val user = userEntity.toDomain()
 
             if (!validatePassword(password, user.password)) {
                 return@run failure(UserError.UserOrPasswordAreInvalid)
@@ -113,7 +121,17 @@ class UserAuthService(
                     lastUsedAt = now,
                 )
 
-            repoUser.createToken(token, config.maxTokensPerUser)
+            users.findByIdOrNull(token.userId)?.let { entity ->
+                tokens.deleteOldestTokensExceeding(entity.id, config.maxTokensPerUser - 1)
+                tokens.save(
+                    TokenEntity(
+                        tokenValidation = token.tokenValidationInfo.validationInfo,
+                        user = entity,
+                        createdAt = token.createdAt.epochSecond,
+                        lastUsedAt = token.lastUsedAt.epochSecond,
+                    ),
+                )
+            }
 
             success(
                 TokenExternalInfo(
@@ -127,7 +145,7 @@ class UserAuthService(
     fun revokeToken(token: String): Boolean {
         val tokenValidationInfo = tokenEncoder.createValidationInformation(token)
         return trxManager.run {
-            repoUser.removeTokenByTokenValidation(tokenValidationInfo)
+            tokens.deleteByTokenValidation(tokenValidationInfo.validationInfo)
             true
         }
     }
@@ -138,10 +156,12 @@ class UserAuthService(
         }
         return trxManager.run {
             val tokenValidationInfo = tokenEncoder.createValidationInformation(token)
-            val userAndToken: Pair<User, Token>? = repoUser.getTokenByTokenValidation(tokenValidationInfo)
-            if (userAndToken != null && userAndToken.second.isTimeValid(clock, config)) {
-                repoUser.updateTokenLastUsed(userAndToken.second, clock.instant())
-                userAndToken.first
+            val tokenEntity = tokens.findByIdOrNull(tokenValidationInfo.validationInfo)
+
+            if (tokenEntity != null && tokenEntity.toDomain().isTimeValid(clock, config)) {
+                tokenEntity.lastUsedAt = clock.instant().epochSecond
+                tokens.save(tokenEntity)
+                tokenEntity.user.toDomain()
             } else {
                 null
             }
@@ -154,12 +174,15 @@ class UserAuthService(
         role: String,
     ): Either<UserError, User> =
         trxManager.run {
-            val user: Pair<User, Token> =
-                repoUser.getTokenByTokenValidation(
-                    tokenEncoder.createValidationInformation(token),
-                ) ?: return@run failure(UserError.UserNotFound)
+            val validationInfo =
+                tokenEncoder.createValidationInformation(token).validationInfo
 
-            if (user.first.role != UserRole.ADMIN) {
+            val requester =
+                tokens
+                    .findByIdOrNull(validationInfo)
+                    ?.user ?: return@run failure(UserError.UserNotFound)
+
+            if (requester.role != UserRole.ADMIN) {
                 return@run failure(UserError.NotAuthorized)
             }
 
@@ -167,18 +190,17 @@ class UserAuthService(
                 UserRole.entries.find { it.name.equals(role, true) }
                     ?: return@run failure(UserError.InvalidRole)
 
-            repoUser.findById(userToUpdateId)
-                ?: return@run failure(UserError.UserNotFound)
+            val target =
+                users.findByIdOrNull(userToUpdateId)
+                    ?: return@run failure(UserError.UserNotFound)
 
-            val updatedUser =
-                repoUser.updateUserRole(userToUpdateId, role)
-                    ?: return@run failure(UserError.ErrorUpdatingUserRole)
+            target.role = role
 
-            success(updatedUser)
+            success(users.save(target).toDomain())
         }
 
     fun getUsers(): List<User> =
         trxManager.run {
-            repoUser.findAll()
+            users.findAll().map { it.toDomain() }
         }
 }

@@ -1,9 +1,10 @@
 package com.caliarena.repo
 
-import com.caliarena.Transaction
-import com.caliarena.domain.athlete.Athlete
 import com.caliarena.domain.athlete.GenderType
-import com.caliarena.repo.jpa.TransactionManagerJpa
+import com.caliarena.repo.entities.athlete.AthleteEntity
+import com.caliarena.repo.entities.club.ClubEntity
+import com.caliarena.repo.trx.Transaction
+import com.caliarena.repo.trx.TransactionManagerJpa
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
@@ -14,6 +15,7 @@ import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.data.repository.findByIdOrNull
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 
@@ -25,128 +27,102 @@ class AthleteRepositoryTest {
     @BeforeEach
     fun cleanup() {
         trx.run {
-            repoAthlete.clear()
-            repoClub.clear()
+            matchProgresses.deleteAll()
+            matches.deleteAll()
+            screenRoutines.deleteAll()
+            tournamentStates.deleteAll()
+            brackets.deleteAll()
+            tournaments.deleteAll()
+            tokens.deleteAll()
+            users.deleteAll()
+            athletes.deleteAll()
+            clubs.deleteAll()
         }
     }
 
+    private fun now() = Instant.now().truncatedTo(ChronoUnit.SECONDS)
+
+    private fun Transaction.newClub(name: String = "club-${System.nanoTime()}"): ClubEntity =
+        clubs.save(ClubEntity(name = name, createdAt = now().epochSecond))
+
+    private fun Transaction.newAthlete(
+        name: String = "athlete-${System.nanoTime()}",
+        gender: GenderType = GenderType.MALE,
+        club: ClubEntity = newClub(),
+    ): AthleteEntity = athletes.save(AthleteEntity(name = name, gender = gender, club = club, createdAt = now().epochSecond))
+
     @Nested
-    inner class CreateAthlete {
+    inner class Create {
         @Test
-        fun `should create an athlete for an existing club`() =
+        fun `should create an athlete with the given fields`() =
             trx.run {
-                val club = newClub("crossfit")
+                val club = newClub()
+                val created = newAthlete(name = "Diogo", gender = GenderType.MALE, club = club)
 
-                val athlete =
-                    repoAthlete.createAthlete(
-                        name = "alice",
-                        gender = GenderType.FEMALE,
-                        clubId = club.id,
-                        createdAt = now(),
-                    )
-
-                assertNotNull(athlete)
-                assertNotEquals(0, athlete?.id)
-                assertEquals("alice", athlete?.name)
-                assertEquals(GenderType.FEMALE, athlete?.gender)
-                assertEquals(club.id, athlete?.clubId)
+                assertNotEqualsZero(created.id)
+                assertEquals("Diogo", created.name)
+                assertEquals(GenderType.MALE, created.gender)
+                assertEquals(club.id, created.club.id)
             }
 
         @Test
-        fun `should return null when club does not exist`() =
+        fun `should persist the athlete so it can be found by id`() =
             trx.run {
-                val athlete =
-                    repoAthlete.createAthlete(
-                        name = "ghost",
-                        gender = GenderType.MALE,
-                        clubId = -1,
-                        createdAt = now(),
-                    )
+                val created = newAthlete()
 
-                assertNull(athlete)
+                val found = athletes.findByIdOrNull(created.id)
+
+                assertNotNull(found)
+                assertEquals(created.name, found?.name)
             }
     }
 
     @Nested
     inner class FindByClubId {
         @Test
-        fun `should return athletes for a club`() =
+        fun `should return only the athletes of the given club`() =
             trx.run {
-                val club = newClub("club-a")
-                newAthlete(club.id, "a1", GenderType.MALE)
-                newAthlete(club.id, "a2", GenderType.FEMALE)
+                val clubA = newClub()
+                val clubB = newClub()
+                val inA = newAthlete(club = clubA)
+                newAthlete(club = clubB)
 
-                val athletes = repoAthlete.findByClubId(club.id)
+                val found = athletes.findByClubId(clubA.id)
 
-                assertEquals(2, athletes.size)
+                assertEquals(1, found.size)
+                assertEquals(inA.id, found.first().id)
             }
 
         @Test
         fun `should return empty list when club has no athletes`() =
             trx.run {
-                val club = newClub("club-b")
+                val empty = newClub()
 
-                val athletes = repoAthlete.findByClubId(club.id)
-
-                assertTrue(athletes.isEmpty())
+                assertTrue(athletes.findByClubId(empty.id).isEmpty())
             }
     }
 
     @Nested
     inner class FindByGender {
         @Test
-        fun `should return athletes with the given gender`() =
+        fun `should return only athletes with the given gender`() =
             trx.run {
-                val club = newClub("club-c")
-                newAthlete(club.id, "m1", GenderType.MALE)
-                newAthlete(club.id, "f1", GenderType.FEMALE)
+                newAthlete(name = "male-1", gender = GenderType.MALE)
+                newAthlete(name = "female-1", gender = GenderType.FEMALE)
 
-                val athletes = repoAthlete.findByGender(GenderType.FEMALE)
+                val males = athletes.findByGender(GenderType.MALE)
 
-                assertEquals(1, athletes.size)
-                assertEquals("f1", athletes.first().name)
+                assertTrue(males.all { it.gender == GenderType.MALE })
+                assertTrue(males.any { it.name == "male-1" })
             }
     }
 
     @Nested
     inner class FindById {
         @Test
-        fun `should find an existing athlete by id`() =
-            trx.run {
-                val club = newClub()
-                val created = newAthlete(club.id)
-
-                val found = repoAthlete.findById(created.id)
-
-                assertNotNull(found)
-                assertEquals(created.id, found?.id)
-            }
-
-        @Test
         fun `should return null when id does not exist`() =
             trx.run {
-                assertNull(repoAthlete.findById(-1))
-            }
-    }
-
-    @Nested
-    inner class FindAll {
-        @Test
-        fun `should return all created athletes`() =
-            trx.run {
-                val club = newClub()
-                newAthlete(club.id, "a1")
-                newAthlete(club.id, "a2")
-
-                val athletes = repoAthlete.findAll()
-
-                assertEquals(2, athletes.size)
-            }
-
-        @Test
-        fun `should return empty list when there are no athletes`() =
-            trx.run {
-                assertTrue(repoAthlete.findAll().isEmpty())
+                assertNull(athletes.findByIdOrNull(-1))
             }
     }
 
@@ -155,15 +131,13 @@ class AthleteRepositoryTest {
         @Test
         fun `should update an existing athlete`() =
             trx.run {
-                val club = newClub("club-save")
-                val created = newAthlete(club.id, "john")
-                val updated = created.copy(name = "john-updated")
+                val created = newAthlete(name = "old-name")
 
-                val saved = repoAthlete.save(updated)
+                created.name = "new-name"
+                val saved = athletes.save(created)
 
-                assertNotNull(saved)
-                assertEquals("john-updated", saved?.name)
-                assertEquals(created.id, saved?.id)
+                assertEquals("new-name", saved.name)
+                assertEquals(created.id, saved.id)
             }
     }
 
@@ -172,48 +146,15 @@ class AthleteRepositoryTest {
         @Test
         fun `should remove the athlete`() =
             trx.run {
-                val club = newClub()
-                val created = newAthlete(club.id)
+                val created = newAthlete()
 
-                repoAthlete.deleteById(created.id)
+                athletes.deleteById(created.id)
 
-                assertNull(repoAthlete.findById(created.id))
+                assertNull(athletes.findByIdOrNull(created.id))
             }
     }
 
-    @Nested
-    inner class Clear {
-        @Test
-        fun `should remove all athletes`() =
-            trx.run {
-                val club = newClub()
-                newAthlete(club.id, "a1")
-                newAthlete(club.id, "a2")
-
-                repoAthlete.clear()
-
-                assertTrue(repoAthlete.findAll().isEmpty())
-            }
+    private fun assertNotEqualsZero(id: Int) {
+        assertNotEquals(0, id)
     }
-
-    private fun now() = Instant.now().truncatedTo(ChronoUnit.SECONDS)
-
-    private fun Transaction.newClub(name: String = "club-${System.nanoTime()}") =
-        repoClub.createClub(
-            name = name,
-            shortName = "c",
-            createdAt = now(),
-        )
-
-    private fun Transaction.newAthlete(
-        clubId: Int,
-        name: String = "athlete-${System.nanoTime()}",
-        gender: GenderType = GenderType.MALE,
-    ): Athlete =
-        repoAthlete.createAthlete(
-            name = name,
-            gender = gender,
-            clubId = clubId,
-            createdAt = now(),
-        )!!
 }

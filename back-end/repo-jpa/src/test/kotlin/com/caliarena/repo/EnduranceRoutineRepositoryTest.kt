@@ -1,8 +1,12 @@
 package com.caliarena.repo
 
 import com.caliarena.domain.routine.ExerciseType
-import com.caliarena.repo.jpa.TransactionManagerJpa
+import com.caliarena.repo.entities.routine.EnduranceRoutineEntity
+import com.caliarena.repo.entities.routine.ExerciseEntity
+import com.caliarena.repo.trx.Transaction
+import com.caliarena.repo.trx.TransactionManagerJpa
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
@@ -12,7 +16,7 @@ import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
-import java.math.BigDecimal
+import org.springframework.data.repository.findByIdOrNull
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 
@@ -24,102 +28,60 @@ class EnduranceRoutineRepositoryTest {
     @BeforeEach
     fun cleanup() {
         trx.run {
-            repoEnduranceRoutine.clear()
+            matchProgresses.deleteAll()
+            matches.deleteAll()
+            screenRoutines.deleteAll()
+            exercises.deleteAll()
+            routines.deleteAll()
         }
     }
+
+    private fun now() = Instant.now().truncatedTo(ChronoUnit.SECONDS)
+
+    private fun Transaction.newRoutine(name: String = "routine-${System.nanoTime()}"): EnduranceRoutineEntity =
+        routines.save(EnduranceRoutineEntity(name = name, timeCapSeconds = 600, createdAt = now().epochSecond))
+
+    private fun Transaction.newExercise(
+        routine: EnduranceRoutineEntity,
+        order: Int = 1,
+    ): ExerciseEntity =
+        exercises.save(
+            ExerciseEntity(
+                routine = routine,
+                name = "ex-$order",
+                targetReps = 10,
+                exerciseOrder = order,
+                type = ExerciseType.NORMAL,
+            ),
+        )
 
     @Nested
     inner class CreateRoutine {
         @Test
         fun `should create a routine with the given fields`() =
             trx.run {
-                val routine =
-                    repoEnduranceRoutine.createRoutine(
-                        name = "routine-a",
-                        timeCapSeconds = 1200,
-                        createdAt = Instant.now().truncatedTo(ChronoUnit.SECONDS),
-                    )
+                val created = newRoutine(name = "push-day")
 
-                assertNotEquals(0, routine.id)
-                assertEquals("routine-a", routine.name)
-                assertEquals(1200, routine.timeCapSeconds)
+                assertNotEqualsZero(created.id)
+                assertEquals("push-day", created.name)
+                assertEquals(600, created.timeCapSeconds)
             }
-    }
 
-    @Nested
-    inner class FindByName {
         @Test
-        fun `should find an existing routine by name`() =
+        fun `should find a routine by name`() =
             trx.run {
-                repoEnduranceRoutine.createRoutine("routine-b", null, Instant.now().truncatedTo(ChronoUnit.SECONDS))
+                newRoutine(name = "unique-name")
 
-                val found = repoEnduranceRoutine.findByName("routine-b")
+                val found = routines.findByName("unique-name")
 
                 assertNotNull(found)
-                assertEquals("routine-b", found?.name)
+                assertEquals("unique-name", found?.name)
             }
 
         @Test
         fun `should return null when name does not exist`() =
             trx.run {
-                assertNull(repoEnduranceRoutine.findByName("missing"))
-            }
-    }
-
-    @Nested
-    inner class CreateExercise {
-        @Test
-        fun `should create an exercise for an existing routine`() =
-            trx.run {
-                val routine = repoEnduranceRoutine.createRoutine("routine-c", null, Instant.now().truncatedTo(ChronoUnit.SECONDS))
-
-                val exercise =
-                    repoEnduranceRoutine.createExercise(
-                        routineId = routine.id,
-                        name = "push-up",
-                        targetReps = 15,
-                        addedWeight = BigDecimal("10.50"),
-                        exerciseOrder = 1,
-                        supersetOrder = null,
-                        type = ExerciseType.NORMAL,
-                    )
-
-                assertNotNull(exercise)
-                assertNotEquals(0, exercise?.id)
-                assertEquals("push-up", exercise?.name)
-                assertEquals(routine.id, exercise?.routineId)
-            }
-
-        @Test
-        fun `should return null when routine does not exist`() =
-            trx.run {
-                val exercise =
-                    repoEnduranceRoutine.createExercise(
-                        routineId = -1,
-                        name = "ghost",
-                        targetReps = 10,
-                        addedWeight = null,
-                        exerciseOrder = 1,
-                        supersetOrder = null,
-                        type = ExerciseType.UNBROKEN,
-                    )
-
-                assertNull(exercise)
-            }
-    }
-
-    @Nested
-    inner class FindExercisesByRoutineId {
-        @Test
-        fun `should return exercises for a routine`() =
-            trx.run {
-                val routine = repoEnduranceRoutine.createRoutine("routine-d", null, Instant.now().truncatedTo(ChronoUnit.SECONDS))
-                repoEnduranceRoutine.createExercise(routine.id, "e1", 10, null, 1, null, ExerciseType.NORMAL)
-                repoEnduranceRoutine.createExercise(routine.id, "e2", 12, null, 2, 1, ExerciseType.SUPERSET)
-
-                val exercises = repoEnduranceRoutine.findExercisesByRoutineId(routine.id)
-
-                assertEquals(2, exercises.size)
+                assertNull(routines.findByName("does-not-exist"))
             }
     }
 
@@ -128,81 +90,103 @@ class EnduranceRoutineRepositoryTest {
         @Test
         fun `should find an existing routine by id`() =
             trx.run {
-                val created = repoEnduranceRoutine.createRoutine("routine-e", 900, Instant.now().truncatedTo(ChronoUnit.SECONDS))
+                val created = newRoutine()
 
-                val found = repoEnduranceRoutine.findById(created.id)
-
-                assertNotNull(found)
-                assertEquals(created.id, found?.id)
+                assertNotNull(routines.findByIdOrNull(created.id))
             }
 
         @Test
         fun `should return null when id does not exist`() =
             trx.run {
-                assertNull(repoEnduranceRoutine.findById(-1))
+                assertNull(routines.findByIdOrNull(-1))
             }
     }
 
     @Nested
-    inner class FindAll {
+    inner class Exercises {
         @Test
-        fun `should return all created routines`() =
+        fun `should create an exercise for an existing routine`() =
             trx.run {
-                repoEnduranceRoutine.createRoutine("routine-f1", null, Instant.now().truncatedTo(ChronoUnit.SECONDS))
-                repoEnduranceRoutine.createRoutine("routine-f2", null, Instant.now().truncatedTo(ChronoUnit.SECONDS))
+                val routine = newRoutine()
 
-                val routines = repoEnduranceRoutine.findAll()
+                val exercise = newExercise(routine, order = 2)
 
-                assertEquals(2, routines.size)
+                assertNotEqualsZero(exercise.id)
+                assertEquals(routine.id, exercise.routine.id)
+                assertEquals(2, exercise.exerciseOrder)
             }
 
         @Test
-        fun `should return empty list when there are no routines`() =
+        fun `should list the exercises of a routine ordered`() =
             trx.run {
-                assertTrue(repoEnduranceRoutine.findAll().isEmpty())
+                val routine = newRoutine()
+                newExercise(routine, order = 2)
+                newExercise(routine, order = 1)
+
+                val list = exercises.findExercisesByRoutineId(routine.id)
+
+                assertEquals(2, list.size)
+            }
+
+        @Test
+        fun `should return empty list when routine has no exercises`() =
+            trx.run {
+                val routine = newRoutine()
+
+                assertTrue(exercises.findExercisesByRoutineId(routine.id).isEmpty())
+            }
+
+        @Test
+        fun `should report whether an order exists in the routine`() =
+            trx.run {
+                val routine = newRoutine()
+                newExercise(routine, order = 3)
+
+                assertTrue(exercises.existsByRoutineIdAndExerciseOrder(routine.id, 3))
+                assertFalse(exercises.existsByRoutineIdAndExerciseOrder(routine.id, 4))
+            }
+
+        @Test
+        fun `should shift exercise orders from a given position`() =
+            trx.run {
+                val routine = newRoutine()
+                val first = newExercise(routine, order = 1)
+                val second = newExercise(routine, order = 2)
+
+                exercises.shiftExerciseOrders(routine.id, 2)
+
+                assertEquals(1, exercises.findByIdOrNull(first.id)?.exerciseOrder)
+                assertEquals(3, exercises.findByIdOrNull(second.id)?.exerciseOrder)
             }
     }
 
     @Nested
-    inner class Save {
-        @Test
-        fun `should update an existing routine`() =
-            trx.run {
-                val created = repoEnduranceRoutine.createRoutine("routine-g", 600, Instant.now().truncatedTo(ChronoUnit.SECONDS))
-                val updated = created.copy(name = "routine-g-updated")
-
-                val saved = repoEnduranceRoutine.save(updated)
-
-                assertNotNull(saved)
-                assertEquals("routine-g-updated", saved?.name)
-                assertEquals(created.id, saved?.id)
-            }
-    }
-
-    @Nested
-    inner class DeleteById {
+    inner class Delete {
         @Test
         fun `should remove the routine`() =
             trx.run {
-                val created = repoEnduranceRoutine.createRoutine("routine-h", null, Instant.now().truncatedTo(ChronoUnit.SECONDS))
+                val created = newRoutine()
 
-                repoEnduranceRoutine.deleteById(created.id)
+                routines.deleteById(created.id)
 
-                assertNull(repoEnduranceRoutine.findById(created.id))
+                assertNull(routines.findByIdOrNull(created.id))
+            }
+
+        @Test
+        fun `should delete the routine after its exercises are removed`() =
+            trx.run {
+                val routine = newRoutine()
+                newExercise(routine)
+
+                exercises.findExercisesByRoutineId(routine.id).forEach { exercises.deleteById(it.id) }
+                routines.deleteById(routine.id)
+
+                assertNull(routines.findByIdOrNull(routine.id))
+                assertTrue(exercises.findExercisesByRoutineId(routine.id).isEmpty())
             }
     }
 
-    @Nested
-    inner class Clear {
-        @Test
-        fun `should remove all routines and exercises`() =
-            trx.run {
-                val routine = repoEnduranceRoutine.createRoutine("routine-i", null, Instant.now().truncatedTo(ChronoUnit.SECONDS))
-                repoEnduranceRoutine.createExercise(routine.id, "e1", 10, null, 1, null, ExerciseType.NORMAL)
-
-                repoEnduranceRoutine.clear()
-
-                assertTrue(repoEnduranceRoutine.findAll().isEmpty())
-            }
+    private fun assertNotEqualsZero(id: Int) {
+        assertNotEquals(0, id)
     }
 }

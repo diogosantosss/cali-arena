@@ -1,9 +1,10 @@
 package com.caliarena.service.sse
 
-import com.caliarena.TransactionManager
+import com.caliarena.repo.trx.TransactionManager
 import jakarta.annotation.PreDestroy
 import jakarta.inject.Named
 import org.slf4j.LoggerFactory
+import org.springframework.data.repository.findByIdOrNull
 import java.time.Instant
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
@@ -56,7 +57,7 @@ class SpectatorPublisher(
     ) = guard.withLock {
         val tournament =
             trx.run {
-                repoTournament.findById(tournamentId)
+                tournaments.findByIdOrNull(tournamentId)?.toDomain()
             }
         requireNotNull(tournament) { "Tournament with id $tournamentId not found" }
 

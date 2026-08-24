@@ -1,10 +1,10 @@
-package com.caliarena.repo.jpa.tournament
+package com.caliarena.repo
 
 import com.caliarena.domain.athlete.GenderType
 import com.caliarena.repo.entities.tournament.BracketEntity
-import org.springframework.data.jpa.repository.JpaRepository
+import org.springframework.data.repository.CrudRepository
 
-interface BracketRepositoryJpa : JpaRepository<BracketEntity, Int> {
+interface BracketRepository : CrudRepository<BracketEntity, Int> {
     fun findByTournamentId(tournamentId: Int): List<BracketEntity>
 
     fun findByTournamentIdAndGender(

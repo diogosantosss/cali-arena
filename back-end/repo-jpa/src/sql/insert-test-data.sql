@@ -43,13 +43,16 @@ VALUES (1, 'MALE', 'QUALIFIERS', 1787328276),
        (1, 'MALE', 'QUARTERFINALS', 1787328276),
        (1, 'MALE', 'SEMIFINALS', 1787328276),
        (1, 'MALE', 'FINALS', 1787328276);
-
 -- routines
 INSERT INTO endurance_routines (name, time_cap_seconds, created_at)
 VALUES ('Qualifiers', 600, 1787328276),
        ('Quarterfinals (MEN) ELITE', 720, 1787328276),
        ('Semi-Final (MEN) ELITE', 900, 1787328276),
        ('Final (MEN) ELITE', 1080, 1787328276);
+
+-- matches
+INSERT INTO matches (bracket_id, routine_id, judge_id, athlete_red_id, athlete_blue_id, winner_athlete_id, status, started_at, finished_at, created_at)
+VALUES (1, 1, 1, 1, 2, null, 'PENDING', null, null, 1787328276);
 
 -- exercises
 INSERT INTO exercises (routine_id, name, target_reps, added_weight, exercise_order, superset_order, type)

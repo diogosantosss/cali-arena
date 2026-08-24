@@ -1,7 +1,5 @@
-package com.caliarena.repo.jpa
+package com.caliarena.repo.trx
 
-import com.caliarena.Transaction
-import com.caliarena.TransactionManager
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
 

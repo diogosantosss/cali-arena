@@ -1,8 +1,10 @@
 package com.caliarena.service
 
-import com.caliarena.TransactionManager
 import com.caliarena.domain.athlete.Athlete
 import com.caliarena.domain.athlete.GenderType
+import com.caliarena.repo.entities.athlete.AthleteEntity
+import com.caliarena.repo.trx.TransactionManager
+import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Service
 import java.time.Clock
 
@@ -29,44 +31,47 @@ class AthleteService(
         clubId: Int,
     ): Either<AthleteError, Athlete> =
         trx.run {
-            repoClub.findById(clubId)
-                ?: return@run failure(AthleteError.ClubNotFound)
+            val club =
+                clubs.findByIdOrNull(clubId)
+                    ?: return@run failure(AthleteError.ClubNotFound)
 
             val genderType =
                 GenderType.entries.find { it.name == gender }
                     ?: return@run failure(AthleteError.InvalidGender)
 
             val athlete =
-                repoAthlete.createAthlete(
-                    name = name,
-                    gender = genderType,
-                    clubId = clubId,
-                    createdAt = clock.instant(),
-                ) ?: return@run failure(AthleteError.CreatingAthlete)
+                athletes.save(
+                    AthleteEntity(
+                        name = name,
+                        gender = genderType,
+                        club = club,
+                        createdAt = clock.instant().epochSecond,
+                    ),
+                )
 
-            success(athlete)
+            success(athlete.toDomain())
         }
 
     fun getAthleteById(id: Int): Either<AthleteError, Athlete> =
         trx.run {
             val athlete =
-                repoAthlete.findById(id)
+                athletes.findByIdOrNull(id)
                     ?: return@run failure(AthleteError.AthleteNotFound)
 
-            success(athlete)
+            success(athlete.toDomain())
         }
 
     fun getAllAthletes(): List<Athlete> =
         trx.run {
-            repoAthlete.findAll()
+            athletes.findAll().map(AthleteEntity::toDomain)
         }
 
     fun getAthletesByClub(clubId: Int): Either<AthleteError, List<Athlete>> =
         trx.run {
-            repoClub.findById(clubId)
+            clubs.findByIdOrNull(clubId)
                 ?: return@run failure(AthleteError.ClubNotFound)
 
-            success(repoAthlete.findByClubId(clubId))
+            success(athletes.findByClubId(clubId).map(AthleteEntity::toDomain))
         }
 
     fun getAthletesByGender(gender: String): Either<AthleteError, List<Athlete>> =
@@ -75,7 +80,7 @@ class AthleteService(
                 GenderType.entries.find { it.name == gender }
                     ?: return@run failure(AthleteError.InvalidGender)
 
-            success(repoAthlete.findByGender(genderType))
+            success(athletes.findByGender(genderType).map(AthleteEntity::toDomain))
         }
 
     fun updateAthlete(
@@ -86,21 +91,21 @@ class AthleteService(
     ): Either<AthleteError, Athlete> =
         trx.run {
             val existing =
-                repoAthlete.findById(id)
+                athletes.findByIdOrNull(id)
                     ?: return@run failure(AthleteError.AthleteNotFound)
 
             val genderType =
                 GenderType.entries.find { it.name == gender }
                     ?: return@run failure(AthleteError.InvalidGender)
 
-            repoClub.findById(clubId)
-                ?: return@run failure(AthleteError.ClubNotFound)
+            val club =
+                clubs.findByIdOrNull(clubId)
+                    ?: return@run failure(AthleteError.ClubNotFound)
 
-            val updated =
-                repoAthlete.save(
-                    existing.copy(name = name, gender = genderType, clubId = clubId),
-                ) ?: return@run failure(AthleteError.UpdatingAthlete)
+            existing.name = name
+            existing.gender = genderType
+            existing.club = club
 
-            success(updated)
+            success(athletes.save(existing).toDomain())
         }
 }

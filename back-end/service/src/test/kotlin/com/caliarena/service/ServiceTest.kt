@@ -1,15 +1,21 @@
 package com.caliarena.service
 
-import com.caliarena.RepositoryAthlete
-import com.caliarena.RepositoryClub
-import com.caliarena.RepositoryEnduranceRoutine
-import com.caliarena.RepositoryMatch
-import com.caliarena.RepositoryTournament
-import com.caliarena.RepositoryUser
-import com.caliarena.Transaction
-import com.caliarena.TransactionManager
 import com.caliarena.domain.token.TokenEncoder
 import com.caliarena.domain.user.UsersDomainConfig
+import com.caliarena.repo.AthleteRepository
+import com.caliarena.repo.BracketRepository
+import com.caliarena.repo.ClubRepository
+import com.caliarena.repo.EnduranceRoutineRepository
+import com.caliarena.repo.ExerciseRepository
+import com.caliarena.repo.MatchProgressRepository
+import com.caliarena.repo.MatchRepository
+import com.caliarena.repo.ScreenRoutineRepository
+import com.caliarena.repo.TokenRepository
+import com.caliarena.repo.TournamentRepository
+import com.caliarena.repo.TournamentStateRepository
+import com.caliarena.repo.UserRepository
+import com.caliarena.repo.trx.Transaction
+import com.caliarena.repo.trx.TransactionManager
 import org.junit.jupiter.api.extension.ExtendWith
 import org.mockito.Mock
 import org.mockito.junit.jupiter.MockitoExtension
@@ -28,22 +34,40 @@ abstract class ServiceTest {
     protected lateinit var transaction: Transaction
 
     @Mock
-    protected lateinit var repoUser: RepositoryUser
+    protected lateinit var users: UserRepository
 
     @Mock
-    protected lateinit var repoAthlete: RepositoryAthlete
+    protected lateinit var tokens: TokenRepository
 
     @Mock
-    protected lateinit var repoClub: RepositoryClub
+    protected lateinit var athletes: AthleteRepository
 
     @Mock
-    protected lateinit var repoTournament: RepositoryTournament
+    protected lateinit var clubs: ClubRepository
 
     @Mock
-    protected lateinit var repoMatch: RepositoryMatch
+    protected lateinit var routines: EnduranceRoutineRepository
 
     @Mock
-    protected lateinit var repoEnduranceRoutine: RepositoryEnduranceRoutine
+    protected lateinit var exercises: ExerciseRepository
+
+    @Mock
+    protected lateinit var screenRoutines: ScreenRoutineRepository
+
+    @Mock
+    protected lateinit var matches: MatchRepository
+
+    @Mock
+    protected lateinit var matchProgresses: MatchProgressRepository
+
+    @Mock
+    protected lateinit var brackets: BracketRepository
+
+    @Mock
+    protected lateinit var tournaments: TournamentRepository
+
+    @Mock
+    protected lateinit var tournamentStates: TournamentStateRepository
 
     @Mock
     protected lateinit var passwordEncoder: PasswordEncoder

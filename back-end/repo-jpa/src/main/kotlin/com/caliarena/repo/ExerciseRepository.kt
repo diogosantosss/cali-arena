@@ -1,20 +1,20 @@
-package com.caliarena.repo.jpa.routine
+package com.caliarena.repo
 
 import com.caliarena.repo.entities.routine.ExerciseEntity
-import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Modifying
 import org.springframework.data.jpa.repository.Query
+import org.springframework.data.repository.CrudRepository
 
-interface ExerciseRepositoryJpa : JpaRepository<ExerciseEntity, Int> {
+interface ExerciseRepository : CrudRepository<ExerciseEntity, Int> {
     fun findExercisesByRoutineId(routineId: Int): List<ExerciseEntity>
 
-    @Modifying
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query(
         """
-        UPDATE ExerciseEntity e 
-        SET e.exerciseOrder = e.exerciseOrder + 1 
-        WHERE e.routine.id = :routineId AND e.exerciseOrder >= :fromOrder
-    """,
+            UPDATE ExerciseEntity e
+            SET e.exerciseOrder = e.exerciseOrder + 1
+            WHERE e.routine.id = :routineId AND e.exerciseOrder >= :fromOrder
+        """,
     )
     fun shiftExerciseOrders(
         routineId: Int,

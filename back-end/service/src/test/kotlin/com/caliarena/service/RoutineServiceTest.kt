@@ -1,24 +1,29 @@
 package com.caliarena.service
 
-import com.caliarena.Transaction
 import com.caliarena.domain.routine.EnduranceRoutine
-import com.caliarena.domain.routine.Exercise
 import com.caliarena.domain.routine.ExerciseType
 import com.caliarena.domain.routine.RoutineOverview
+import com.caliarena.repo.entities.routine.EnduranceRoutineEntity
+import com.caliarena.repo.entities.routine.ExerciseEntity
+import com.caliarena.repo.trx.Transaction
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.lenient
 import org.mockito.kotlin.any
+import org.mockito.kotlin.never
+import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import java.util.Optional
 
 class RoutineServiceTest : ServiceTest() {
     private lateinit var service: RoutineService
 
     @BeforeEach
     fun setup() {
-        lenient().whenever(transaction.repoEnduranceRoutine).thenReturn(repoEnduranceRoutine)
+        lenient().whenever(transaction.routines).thenReturn(routines)
+        lenient().whenever(transaction.exercises).thenReturn(exercises)
 
         lenient()
             .doAnswer { invocation ->
@@ -30,76 +35,54 @@ class RoutineServiceTest : ServiceTest() {
         service = RoutineService(trxManager, clock)
     }
 
+    private val now = clock.instant()
+
+    private fun routineEntity(
+        id: Int = 1,
+        name: String = "Murph",
+    ) = EnduranceRoutineEntity(id, name, 3600, now.epochSecond)
+
+    private fun exerciseEntity(
+        id: Int = 10,
+        name: String = "Push-Ups",
+        order: Int = 1,
+    ) = ExerciseEntity(id, routineEntity(), name, 20, null, order, null, ExerciseType.NORMAL)
+
     @Nested
     inner class CreateRoutine {
-        private val now = clock.instant()
-
-        private val routine =
-            EnduranceRoutine(
-                id = 1,
-                name = "Murph",
-                timeCapSeconds = 3600,
-                createdAt = now,
-            )
-
         @Test
         fun `should create routine successfully`() {
-            whenever(repoEnduranceRoutine.findByName("Murph")).thenReturn(null)
-            whenever(repoEnduranceRoutine.createRoutine("Murph", 3600, now)).thenReturn(routine)
+            whenever(routines.findByName("Murph")).thenReturn(null)
+            whenever(routines.save(any())).thenReturn(routineEntity())
 
             val result = service.createRoutine("Murph", 3600)
 
-            assertEquals(success(routine), result)
+            assertEquals(success(EnduranceRoutine(1, "Murph", 3600, now)), result)
         }
 
         @Test
         fun `should fail when routine already exists`() {
-            whenever(repoEnduranceRoutine.findByName("Murph")).thenReturn(routine)
+            whenever(routines.findByName("Murph")).thenReturn(routineEntity())
 
             val result = service.createRoutine("Murph", 3600)
 
             assertEquals(failure(RoutineError.RoutineAlreadyExists), result)
+
+            verify(routines, never()).save(any())
         }
     }
 
     @Nested
     inner class CreateExercise {
-        private val now = clock.instant()
+        private val routine = routineEntity()
 
-        private val routine =
-            EnduranceRoutine(
-                id = 1,
-                name = "Murph",
-                timeCapSeconds = 3600,
-                createdAt = now,
-            )
-
-        private val exercise =
-            Exercise(
-                id = 10,
-                routineId = 1,
-                name = "Push-Ups",
-                targetReps = 20,
-                addedWeight = null,
-                exerciseOrder = 1,
-                supersetOrder = null,
-                type = ExerciseType.NORMAL,
-            )
+        private val exercise = exerciseEntity()
 
         @Test
         fun `should create exercise successfully`() {
-            whenever(repoEnduranceRoutine.findById(1)).thenReturn(routine)
-            whenever(
-                repoEnduranceRoutine.createExercise(
-                    routineId = 1,
-                    name = "Push-Ups",
-                    targetReps = 20,
-                    addedWeight = null,
-                    exerciseOrder = 1,
-                    supersetOrder = null,
-                    type = ExerciseType.NORMAL,
-                ),
-            ).thenReturn(exercise)
+            whenever(routines.findById(1)).thenReturn(Optional.of(routine))
+            whenever(exercises.existsByRoutineIdAndExerciseOrder(1, 1)).thenReturn(false)
+            whenever(exercises.save(any())).thenReturn(exercise)
 
             val result =
                 service.createExercise(
@@ -112,12 +95,12 @@ class RoutineServiceTest : ServiceTest() {
                     type = "NORMAL",
                 )
 
-            assertEquals(success(exercise), result)
+            assertEquals(success(exercise.toDomain()), result)
         }
 
         @Test
         fun `should fail when routine does not exist`() {
-            whenever(repoEnduranceRoutine.findById(1)).thenReturn(null)
+            whenever(routines.findById(1)).thenReturn(Optional.empty())
 
             val result =
                 service.createExercise(
@@ -135,7 +118,7 @@ class RoutineServiceTest : ServiceTest() {
 
         @Test
         fun `should fail when exercise type is invalid`() {
-            whenever(repoEnduranceRoutine.findById(1)).thenReturn(routine)
+            whenever(routines.findById(1)).thenReturn(Optional.of(routine))
 
             val result =
                 service.createExercise(
@@ -149,78 +132,40 @@ class RoutineServiceTest : ServiceTest() {
                 )
 
             assertEquals(failure(RoutineError.ExerciseTypeNotFound), result)
+
+            verify(exercises, never()).save(any())
         }
 
         @Test
-        fun `should fail when repository fails to create exercise`() {
-            whenever(repoEnduranceRoutine.findById(1)).thenReturn(routine)
-            whenever(
-                repoEnduranceRoutine.createExercise(
-                    routineId = 1,
-                    name = "Push-Ups",
-                    targetReps = 20,
-                    addedWeight = null,
-                    exerciseOrder = 1,
-                    supersetOrder = null,
-                    type = ExerciseType.NORMAL,
-                ),
-            ).thenReturn(null)
+        fun `should shift existing orders when position is taken by non-superset`() {
+            val saved = exerciseEntity(id = 11)
+            whenever(routines.findById(1)).thenReturn(Optional.of(routine))
+            whenever(exercises.existsByRoutineIdAndExerciseOrder(1, 1)).thenReturn(true)
+            whenever(exercises.save(any())).thenReturn(saved)
 
-            val result =
-                service.createExercise(
-                    routineId = 1,
-                    name = "Push-Ups",
-                    targetReps = 20,
-                    addedWeight = null,
-                    exerciseOrder = 1,
-                    supersetOrder = null,
-                    type = "NORMAL",
-                )
+            service.createExercise(
+                routineId = 1,
+                name = "Push-Ups",
+                targetReps = 20,
+                addedWeight = null,
+                exerciseOrder = 1,
+                supersetOrder = null,
+                type = "NORMAL",
+            )
 
-            assertEquals(failure(RoutineError.RoutineNotFound), result)
+            verify(exercises).shiftExerciseOrders(1, 1)
         }
     }
 
     @Nested
     inner class GetRoutineOverview {
-        private val now = clock.instant()
-
-        private val routine =
-            EnduranceRoutine(
-                id = 1,
-                name = "Murph",
-                timeCapSeconds = 3600,
-                createdAt = now,
-            )
-
-        private val exercises =
-            listOf(
-                Exercise(
-                    id = 10,
-                    routineId = 1,
-                    name = "Pull-Ups",
-                    targetReps = 100,
-                    addedWeight = null,
-                    exerciseOrder = 2,
-                    supersetOrder = null,
-                    type = ExerciseType.NORMAL,
-                ),
-                Exercise(
-                    id = 11,
-                    routineId = 1,
-                    name = "Push-Ups",
-                    targetReps = 200,
-                    addedWeight = null,
-                    exerciseOrder = 1,
-                    supersetOrder = null,
-                    type = ExerciseType.NORMAL,
-                ),
-            )
+        private val pullUps = exerciseEntity(id = 10, name = "Pull-Ups", order = 2)
+        private val pushUps = exerciseEntity(id = 11, name = "Push-Ups", order = 1)
 
         @Test
         fun `should return routine overview successfully`() {
-            whenever(repoEnduranceRoutine.findByName("Murph")).thenReturn(routine)
-            whenever(repoEnduranceRoutine.findExercisesByRoutineId(1)).thenReturn(exercises)
+            whenever(routines.findByName("Murph")).thenReturn(routineEntity())
+            whenever(exercises.findExercisesByRoutineId(1)).thenReturn(listOf(pullUps, pushUps))
 
             val result = service.getRoutineOverview("Murph")
 
@@ -229,7 +174,11 @@ class RoutineServiceTest : ServiceTest() {
                     name = "Murph",
                     timeCapSeconds = 3600,
                     createdAt = now,
-                    exercises = exercises.sortedBy { it.exerciseOrder },
+                    exercises =
+                        listOf(
+                            pushUps.toDomain(),
+                            pullUps.toDomain(),
+                        ),
                 )
 
             assertEquals(success(expected), result)
@@ -237,7 +186,7 @@ class RoutineServiceTest : ServiceTest() {
 
         @Test
         fun `should fail when routine does not exist`() {
-            whenever(repoEnduranceRoutine.findByName("Murph")).thenReturn(null)
+            whenever(routines.findByName("Murph")).thenReturn(null)
 
             val result = service.getRoutineOverview("Murph")
 

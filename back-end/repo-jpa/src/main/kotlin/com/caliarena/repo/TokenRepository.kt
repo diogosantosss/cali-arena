@@ -1,12 +1,12 @@
-package com.caliarena.repo.jpa.user
+package com.caliarena.repo
 
 import com.caliarena.repo.entities.user.TokenEntity
-import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Modifying
 import org.springframework.data.jpa.repository.Query
+import org.springframework.data.repository.CrudRepository
 import org.springframework.data.repository.query.Param
 
-interface TokenRepositoryJpa : JpaRepository<TokenEntity, String> {
+interface TokenRepository : CrudRepository<TokenEntity, String> {
     /**
      * Removes the least-recently-used tokens for a user, keeping only the newest [offset] entries.
      *

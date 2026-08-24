@@ -1,11 +1,13 @@
 package com.caliarena.service
 
-import com.caliarena.Transaction
 import com.caliarena.domain.token.Token
 import com.caliarena.domain.token.TokenValidationInfo
 import com.caliarena.domain.user.PasswordValidationInfo
 import com.caliarena.domain.user.User
 import com.caliarena.domain.user.UserRole
+import com.caliarena.repo.entities.user.TokenEntity
+import com.caliarena.repo.entities.user.UserEntity
+import com.caliarena.repo.trx.Transaction
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotNull
@@ -17,18 +19,19 @@ import org.junit.jupiter.api.Test
 import org.mockito.Mockito.lenient
 import org.mockito.kotlin.any
 import org.mockito.kotlin.argumentCaptor
-import org.mockito.kotlin.eq
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.verifyNoInteractions
 import org.mockito.kotlin.whenever
+import java.util.Optional
 
 class UserAuthServiceTest : ServiceTest() {
     private lateinit var service: UserAuthService
 
     @BeforeEach
     fun setup() {
-        lenient().whenever(transaction.repoUser).thenReturn(repoUser)
+        lenient().whenever(transaction.users).thenReturn(users)
+        lenient().whenever(transaction.tokens).thenReturn(tokens)
 
         lenient()
             .doAnswer { invocation ->
@@ -46,6 +49,15 @@ class UserAuthServiceTest : ServiceTest() {
                 clock,
             )
     }
+
+    private val now = clock.instant()
+
+    private fun userEntity(
+        id: Int = 1,
+        username: String = "diogo",
+        passwordHash: String = "encoded-password",
+        role: UserRole = UserRole.JUDGE,
+    ) = UserEntity(id, username, passwordHash, role, now.epochSecond)
 
     @Nested
     inner class ValidatePassword {
@@ -99,31 +111,16 @@ class UserAuthServiceTest : ServiceTest() {
     inner class CreateUser {
         @Test
         fun `should create user successfully`() {
-            val now = clock.instant()
-
-            val createdUser =
-                User(
-                    id = 1,
-                    username = "diogo",
-                    password = PasswordValidationInfo("encoded"),
-                    role = UserRole.JUDGE,
-                    createdAt = now,
-                )
+            val savedEntity =
+                userEntity(id = 1, username = "diogo", passwordHash = "encoded")
 
             whenever(passwordEncoder.encode("Password1"))
                 .thenReturn("encoded")
 
-            whenever(repoUser.findByUsername("diogo"))
+            whenever(users.findByUsername("diogo"))
                 .thenReturn(null)
 
-            whenever(
-                repoUser.createUser(
-                    eq("diogo"),
-                    any(),
-                    eq(UserRole.JUDGE),
-                    eq(now),
-                ),
-            ).thenReturn(createdUser)
+            whenever(users.save(any())).thenReturn(savedEntity)
 
             val result =
                 service.createUser(
@@ -131,33 +128,22 @@ class UserAuthServiceTest : ServiceTest() {
                     "Password1",
                 )
 
-            assertEquals(success(createdUser), result)
+            assertEquals(success(savedEntity.toDomain()), result)
 
-            verify(repoUser).findByUsername("diogo")
-            verify(repoUser).createUser(
-                eq("diogo"),
-                any(),
-                eq(UserRole.JUDGE),
-                eq(now),
-            )
+            val captor = argumentCaptor<UserEntity>()
+            verify(users).save(captor.capture())
+            assertEquals("diogo", captor.firstValue.username)
+            assertEquals("encoded", captor.firstValue.password)
+            assertEquals(UserRole.JUDGE, captor.firstValue.role)
         }
 
         @Test
         fun `should fail when username already exists`() {
-            val existingUser =
-                User(
-                    id = 1,
-                    username = "diogo",
-                    password = PasswordValidationInfo("hash"),
-                    role = UserRole.JUDGE,
-                    createdAt = clock.instant(),
-                )
-
             whenever(passwordEncoder.encode(any()))
                 .thenReturn("encoded")
 
-            whenever(repoUser.findByUsername("diogo"))
-                .thenReturn(existingUser)
+            whenever(users.findByUsername("diogo"))
+                .thenReturn(userEntity())
 
             val result =
                 service.createUser(
@@ -170,12 +156,7 @@ class UserAuthServiceTest : ServiceTest() {
                 result,
             )
 
-            verify(repoUser, never()).createUser(
-                any(),
-                any(),
-                any(),
-                any(),
-            )
+            verify(users, never()).save(any())
         }
 
         @Test
@@ -191,37 +172,20 @@ class UserAuthServiceTest : ServiceTest() {
                 result,
             )
 
-            verifyNoInteractions(repoUser)
+            verifyNoInteractions(users)
             verifyNoInteractions(passwordEncoder)
         }
 
         @Test
         fun `should create password validation info using encoder`() {
-            val now = clock.instant()
-
-            val createdUser =
-                User(
-                    id = 1,
-                    username = "diogo",
-                    password = PasswordValidationInfo("encoded-password"),
-                    role = UserRole.JUDGE,
-                    createdAt = now,
-                )
-
             whenever(passwordEncoder.encode("Password1"))
                 .thenReturn("encoded-password")
 
-            whenever(repoUser.findByUsername("diogo"))
+            whenever(users.findByUsername("diogo"))
                 .thenReturn(null)
 
-            whenever(
-                repoUser.createUser(
-                    eq("diogo"),
-                    any(),
-                    eq(UserRole.JUDGE),
-                    eq(now),
-                ),
-            ).thenReturn(createdUser)
+            whenever(users.save(any()))
+                .thenReturn(userEntity(username = "diogo", passwordHash = "encoded-password"))
 
             service.createUser(
                 "diogo",
@@ -234,16 +198,7 @@ class UserAuthServiceTest : ServiceTest() {
 
     @Nested
     inner class CreateToken {
-        private val now = clock.instant()
-
-        private val user =
-            User(
-                id = 1,
-                username = "diogo",
-                password = PasswordValidationInfo("encoded-password"),
-                role = UserRole.JUDGE,
-                createdAt = now,
-            )
+        private val user = userEntity()
 
         private val validationInfo = TokenValidationInfo("token-validation")
 
@@ -256,7 +211,7 @@ class UserAuthServiceTest : ServiceTest() {
                 result,
             )
 
-            verifyNoInteractions(repoUser)
+            verifyNoInteractions(users)
         }
 
         @Test
@@ -268,12 +223,12 @@ class UserAuthServiceTest : ServiceTest() {
                 result,
             )
 
-            verifyNoInteractions(repoUser)
+            verifyNoInteractions(users)
         }
 
         @Test
         fun `should fail when user does not exist`() {
-            whenever(repoUser.findByUsername("diogo"))
+            whenever(users.findByUsername("diogo"))
                 .thenReturn(null)
 
             val result =
@@ -287,19 +242,19 @@ class UserAuthServiceTest : ServiceTest() {
                 result,
             )
 
-            verify(repoUser).findByUsername("diogo")
-            verify(repoUser, never()).createToken(any(), any())
+            verify(users).findByUsername("diogo")
+            verify(tokens, never()).save(any())
         }
 
         @Test
         fun `should fail when password is incorrect`() {
-            whenever(repoUser.findByUsername("diogo"))
+            whenever(users.findByUsername("diogo"))
                 .thenReturn(user)
 
             whenever(
                 passwordEncoder.matches(
                     "WrongPassword",
-                    user.password.validationInfo,
+                    PasswordValidationInfo(user.password).validationInfo,
                 ),
             ).thenReturn(false)
 
@@ -314,18 +269,21 @@ class UserAuthServiceTest : ServiceTest() {
                 result,
             )
 
-            verify(repoUser, never()).createToken(any(), any())
+            verify(tokens, never()).save(any())
         }
 
         @Test
         fun `should create token successfully`() {
-            whenever(repoUser.findByUsername("diogo"))
+            whenever(users.findByUsername("diogo"))
                 .thenReturn(user)
+
+            whenever(users.findById(user.id))
+                .thenReturn(Optional.of(user))
 
             whenever(
                 passwordEncoder.matches(
                     "Password1",
-                    user.password.validationInfo,
+                    PasswordValidationInfo(user.password).validationInfo,
                 ),
             ).thenReturn(true)
 
@@ -340,27 +298,21 @@ class UserAuthServiceTest : ServiceTest() {
 
             assertTrue(result is Success)
 
-            val tokenCaptor = argumentCaptor<Token>()
+            verify(tokens).deleteOldestTokensExceeding(user.id, config.maxTokensPerUser - 1)
 
-            verify(repoUser).createToken(
-                tokenCaptor.capture(),
-                eq(config.maxTokensPerUser),
-            )
+            val captor = argumentCaptor<TokenEntity>()
+            verify(tokens).save(captor.capture())
 
-            val createdToken = tokenCaptor.firstValue
+            val createdToken = captor.firstValue
 
-            assertEquals(user.id, createdToken.userId)
-            assertEquals(now, createdToken.createdAt)
-            assertEquals(now, createdToken.lastUsedAt)
-            assertEquals(validationInfo, createdToken.tokenValidationInfo)
+            assertEquals(user.id, createdToken.user.id)
+            assertEquals(now.epochSecond, createdToken.createdAt)
+            assertEquals(now.epochSecond, createdToken.lastUsedAt)
+            assertEquals(validationInfo.validationInfo, createdToken.tokenValidation)
 
             val tokenInfo = (result as Success).value
 
             assertNotNull(tokenInfo.tokenValue)
-            assertEquals(
-                createdToken.expiration(config),
-                tokenInfo.tokenExpiration,
-            )
         }
     }
 
@@ -378,22 +330,13 @@ class UserAuthServiceTest : ServiceTest() {
             assertTrue(result)
 
             verify(tokenEncoder).createValidationInformation("token")
-            verify(repoUser).removeTokenByTokenValidation(validationInfo)
+            verify(tokens).deleteByTokenValidation(validationInfo.validationInfo)
         }
     }
 
     @Nested
     inner class GetUserByToken {
-        private val now = clock.instant()
-
-        private val user =
-            User(
-                id = 1,
-                username = "diogo",
-                password = PasswordValidationInfo("password"),
-                role = UserRole.JUDGE,
-                createdAt = now,
-            )
+        private val user = userEntity()
 
         private val validationInfo =
             TokenValidationInfo("validation")
@@ -406,7 +349,7 @@ class UserAuthServiceTest : ServiceTest() {
             assertNull(result)
 
             verifyNoInteractions(tokenEncoder)
-            verifyNoInteractions(repoUser)
+            verifyNoInteractions(tokens)
         }
 
         @Test
@@ -417,17 +360,15 @@ class UserAuthServiceTest : ServiceTest() {
             whenever(tokenEncoder.createValidationInformation(token))
                 .thenReturn(validationInfo)
 
-            whenever(
-                repoUser.getTokenByTokenValidation(validationInfo),
-            ).thenReturn(null)
+            whenever(tokens.findById(validationInfo.validationInfo))
+                .thenReturn(Optional.empty())
 
             val result =
                 service.getUserByToken(token)
 
             assertNull(result)
 
-            verify(repoUser).getTokenByTokenValidation(validationInfo)
-            verify(repoUser, never()).updateTokenLastUsed(any(), any())
+            verify(tokens).findById(validationInfo.validationInfo)
         }
 
         @Test
@@ -436,99 +377,73 @@ class UserAuthServiceTest : ServiceTest() {
                 Token.generateTokenValue(config)
 
             val expiredToken =
-                Token(
-                    tokenValidationInfo = validationInfo,
-                    userId = user.id,
-                    createdAt = now.minus(config.tokenTtl).minusSeconds(10),
-                    lastUsedAt = now.minus(config.tokenRollingTtl).minusSeconds(10),
+                TokenEntity(
+                    tokenValidation = validationInfo.validationInfo,
+                    user = user,
+                    createdAt = now.minus(config.tokenTtl).minusSeconds(10).epochSecond,
+                    lastUsedAt = now.minus(config.tokenRollingTtl).minusSeconds(10).epochSecond,
                 )
 
             whenever(tokenEncoder.createValidationInformation(tokenValue))
                 .thenReturn(validationInfo)
 
-            whenever(
-                repoUser.getTokenByTokenValidation(validationInfo),
-            ).thenReturn(user to expiredToken)
+            whenever(tokens.findById(validationInfo.validationInfo))
+                .thenReturn(Optional.of(expiredToken))
 
             val result =
                 service.getUserByToken(tokenValue)
 
             assertNull(result)
 
-            verify(repoUser, never()).updateTokenLastUsed(any(), any())
+            verify(tokens, never()).save(any())
         }
 
         @Test
-        fun `should return user when token is valid`() {
+        fun `should return user when token is valid and refresh last used`() {
             val tokenValue =
                 Token.generateTokenValue(config)
 
             val validToken =
-                Token(
-                    tokenValidationInfo = validationInfo,
-                    userId = user.id,
-                    createdAt = now.minusSeconds(60),
-                    lastUsedAt = now.minusSeconds(30),
+                TokenEntity(
+                    tokenValidation = validationInfo.validationInfo,
+                    user = user,
+                    createdAt = now.minusSeconds(60).epochSecond,
+                    lastUsedAt = now.minusSeconds(30).epochSecond,
                 )
 
             whenever(tokenEncoder.createValidationInformation(tokenValue))
                 .thenReturn(validationInfo)
 
-            whenever(
-                repoUser.getTokenByTokenValidation(validationInfo),
-            ).thenReturn(user to validToken)
+            whenever(tokens.findById(validationInfo.validationInfo))
+                .thenReturn(Optional.of(validToken))
 
             val result =
                 service.getUserByToken(tokenValue)
 
-            assertEquals(user, result)
+            assertEquals(user.toDomain(), result)
 
-            verify(repoUser).updateTokenLastUsed(
-                validToken,
-                now,
-            )
+            val captor = argumentCaptor<TokenEntity>()
+            verify(tokens).save(captor.capture())
+            assertEquals(now.epochSecond, captor.firstValue.lastUsedAt)
         }
     }
 
     @Nested
     inner class UpdateUserRole {
-        private val now = clock.instant()
-
-        private val admin =
-            User(
-                id = 1,
-                username = "admin",
-                password = PasswordValidationInfo("password"),
-                role = UserRole.ADMIN,
-                createdAt = now,
-            )
-
-        private val judge =
-            User(
-                id = 2,
-                username = "judge",
-                password = PasswordValidationInfo("password"),
-                role = UserRole.JUDGE,
-                createdAt = now,
-            )
+        private val admin = userEntity(id = 1, username = "admin", role = UserRole.ADMIN)
+        private val judge = userEntity(id = 2, username = "judge", role = UserRole.JUDGE)
 
         private val validationInfo = TokenValidationInfo("validation")
 
-        private val token =
-            Token(
-                tokenValidationInfo = validationInfo,
-                userId = admin.id,
-                createdAt = now,
-                lastUsedAt = now,
-            )
+        private fun adminTokenEntity() = TokenEntity(validationInfo.validationInfo, admin, now.epochSecond, now.epochSecond)
 
         @Test
         fun `should fail when authenticated user does not exist`() {
             whenever(tokenEncoder.createValidationInformation("token"))
                 .thenReturn(validationInfo)
 
-            whenever(repoUser.getTokenByTokenValidation(validationInfo))
-                .thenReturn(null)
+            whenever(tokens.findById(validationInfo.validationInfo))
+                .thenReturn(Optional.empty())
 
             val result =
                 service.updateUserRole(
@@ -548,8 +463,8 @@ class UserAuthServiceTest : ServiceTest() {
             whenever(tokenEncoder.createValidationInformation("token"))
                 .thenReturn(validationInfo)
 
-            whenever(repoUser.getTokenByTokenValidation(validationInfo))
-                .thenReturn(judge to token)
+            whenever(tokens.findById(validationInfo.validationInfo))
+                .thenReturn(Optional.of(TokenEntity(validationInfo.validationInfo, judge, now.epochSecond, now.epochSecond)))
 
             val result =
                 service.updateUserRole(
@@ -563,7 +478,7 @@ class UserAuthServiceTest : ServiceTest() {
                 result,
             )
 
-            verify(repoUser, never()).updateUserRole(any(), any())
+            verify(users, never()).save(any())
         }
 
         @Test
@@ -571,8 +486,8 @@ class UserAuthServiceTest : ServiceTest() {
             whenever(tokenEncoder.createValidationInformation("token"))
                 .thenReturn(validationInfo)
 
-            whenever(repoUser.getTokenByTokenValidation(validationInfo))
-                .thenReturn(admin to token)
+            whenever(tokens.findById(validationInfo.validationInfo))
+                .thenReturn(Optional.of(adminTokenEntity()))
 
             val result =
                 service.updateUserRole(
@@ -586,7 +501,7 @@ class UserAuthServiceTest : ServiceTest() {
                 result,
             )
 
-            verify(repoUser, never()).updateUserRole(any(), any())
+            verify(users, never()).save(any())
         }
 
         @Test
@@ -594,11 +509,11 @@ class UserAuthServiceTest : ServiceTest() {
             whenever(tokenEncoder.createValidationInformation("token"))
                 .thenReturn(validationInfo)
 
-            whenever(repoUser.getTokenByTokenValidation(validationInfo))
-                .thenReturn(admin to token)
+            whenever(tokens.findById(validationInfo.validationInfo))
+                .thenReturn(Optional.of(adminTokenEntity()))
 
-            whenever(repoUser.findById(2))
-                .thenReturn(null)
+            whenever(users.findById(2))
+                .thenReturn(Optional.empty())
 
             val result =
                 service.updateUserRole(
@@ -612,63 +527,24 @@ class UserAuthServiceTest : ServiceTest() {
                 result,
             )
 
-            verify(repoUser).findById(2)
-            verify(repoUser, never()).updateUserRole(any(), any())
-        }
-
-        @Test
-        fun `should fail when repository fails to update role`() {
-            whenever(tokenEncoder.createValidationInformation("token"))
-                .thenReturn(validationInfo)
-
-            whenever(repoUser.getTokenByTokenValidation(validationInfo))
-                .thenReturn(admin to token)
-
-            whenever(repoUser.findById(2))
-                .thenReturn(judge)
-
-            whenever(
-                repoUser.updateUserRole(
-                    2,
-                    UserRole.ADMIN,
-                ),
-            ).thenReturn(null)
-
-            val result =
-                service.updateUserRole(
-                    "token",
-                    2,
-                    "ADMIN",
-                )
-
-            assertEquals(
-                failure(UserError.ErrorUpdatingUserRole),
-                result,
-            )
+            verify(users).findById(2)
+            verify(users, never()).save(any())
         }
 
         @Test
         fun `should update user role successfully`() {
-            val updatedUser =
-                judge.copy(
-                    role = UserRole.ADMIN,
-                )
+            val updatedJudge = userEntity(id = 2, username = "judge", role = UserRole.ADMIN)
 
             whenever(tokenEncoder.createValidationInformation("token"))
                 .thenReturn(validationInfo)
 
-            whenever(repoUser.getTokenByTokenValidation(validationInfo))
-                .thenReturn(admin to token)
+            whenever(tokens.findById(validationInfo.validationInfo))
+                .thenReturn(Optional.of(adminTokenEntity()))
 
-            whenever(repoUser.findById(2))
-                .thenReturn(judge)
+            whenever(users.findById(2))
+                .thenReturn(Optional.of(updatedJudge))
 
-            whenever(
-                repoUser.updateUserRole(
-                    2,
-                    UserRole.ADMIN,
-                ),
-            ).thenReturn(updatedUser)
+            whenever(users.save(any())).thenReturn(updatedJudge)
 
             val result =
                 service.updateUserRole(
@@ -678,13 +554,8 @@ class UserAuthServiceTest : ServiceTest() {
                 )
 
             assertEquals(
-                success(updatedUser),
+                success(User(2, "judge", PasswordValidationInfo("encoded-password"), UserRole.ADMIN, now)),
                 result,
-            )
-
-            verify(repoUser).updateUserRole(
-                2,
-                UserRole.ADMIN,
             )
         }
     }

@@ -12,7 +12,10 @@ repositories {
 }
 
 dependencies {
-    api(project(":repo"))
+    api(project(":domain"))
+
+    // TransactionManager, entities and Spring Data repositories
+    implementation(project(":repo-jpa"))
 
     // For dependency injection
     implementation("jakarta.inject:jakarta.inject-api:2.0.1")

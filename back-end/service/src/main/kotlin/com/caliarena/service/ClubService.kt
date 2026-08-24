@@ -1,7 +1,9 @@
 package com.caliarena.service
 
-import com.caliarena.TransactionManager
 import com.caliarena.domain.club.Club
+import com.caliarena.repo.entities.club.ClubEntity
+import com.caliarena.repo.trx.TransactionManager
+import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Service
 import java.time.Clock
 
@@ -23,32 +25,34 @@ class ClubService(
         shortName: String?,
     ): Either<ClubError, Club> =
         trx.run {
-            if (repoClub.findByName(name) != null) {
+            if (clubs.findByName(name) != null) {
                 return@run failure(ClubError.ClubAlreadyExists)
             }
 
             val club =
-                repoClub.createClub(
-                    name = name,
-                    shortName = shortName,
-                    createdAt = clock.instant(),
+                clubs.save(
+                    ClubEntity(
+                        name = name,
+                        shortName = shortName,
+                        createdAt = clock.instant().epochSecond,
+                    ),
                 )
 
-            success(club)
+            success(club.toDomain())
         }
 
     fun getClubById(id: Int): Either<ClubError, Club> =
         trx.run {
             val club =
-                repoClub.findById(id)
+                clubs.findByIdOrNull(id)
                     ?: return@run failure(ClubError.ClubNotFound)
 
-            success(club)
+            success(club.toDomain())
         }
 
     fun getAllClubs(): List<Club> =
         trx.run {
-            repoClub.findAll()
+            clubs.findAll().map(ClubEntity::toDomain)
         }
 
     fun updateClub(
@@ -58,18 +62,17 @@ class ClubService(
     ): Either<ClubError, Club> =
         trx.run {
             val existing =
-                repoClub.findById(id)
+                clubs.findByIdOrNull(id)
                     ?: return@run failure(ClubError.ClubNotFound)
 
-            val nameConflict = repoClub.findByName(name)
+            val nameConflict = clubs.findByName(name)
             if (nameConflict != null && nameConflict.id != id) {
                 return@run failure(ClubError.ClubAlreadyExists)
             }
 
-            val updated =
-                repoClub.save(existing.copy(name = name, shortName = shortName))
-                    ?: return@run failure(ClubError.UpdatingClub)
+            existing.name = name
+            existing.shortName = shortName
 
-            success(updated)
+            success(clubs.save(existing).toDomain())
         }
 }

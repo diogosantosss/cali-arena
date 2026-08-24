@@ -1,23 +1,20 @@
 package com.caliarena.repo
 
-import com.caliarena.Transaction
-import com.caliarena.domain.token.Token
-import com.caliarena.domain.token.TokenValidationInfo
-import com.caliarena.domain.user.PasswordValidationInfo
-import com.caliarena.domain.user.User
 import com.caliarena.domain.user.UserRole
-import com.caliarena.repo.jpa.TransactionManagerJpa
-import org.junit.jupiter.api.Assertions.assertDoesNotThrow
+import com.caliarena.repo.entities.user.TokenEntity
+import com.caliarena.repo.entities.user.UserEntity
+import com.caliarena.repo.trx.Transaction
+import com.caliarena.repo.trx.TransactionManagerJpa
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
-import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.data.repository.findByIdOrNull
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 
@@ -29,8 +26,46 @@ class UserRepositoryTest {
     @BeforeEach
     fun cleanup() {
         trx.run {
-            repoUser.clear()
+            matchProgresses.deleteAll()
+            matches.deleteAll()
+            screenRoutines.deleteAll()
+            tournamentStates.deleteAll()
+            brackets.deleteAll()
+            tournaments.deleteAll()
+            tokens.deleteAll()
+            users.deleteAll()
+            athletes.deleteAll()
+            clubs.deleteAll()
         }
+    }
+
+    private fun now() = Instant.now().truncatedTo(ChronoUnit.SECONDS)
+
+    private fun Transaction.newUser(username: String = "user-${System.nanoTime()}"): UserEntity =
+        users.save(
+            UserEntity(
+                username = username,
+                password = "hashed_pw",
+                role = UserRole.JUDGE,
+                createdAt = now().epochSecond,
+            ),
+        )
+
+    private fun Transaction.createToken(
+        user: UserEntity,
+        validation: String,
+        lastUsedAt: Instant = now(),
+    ): TokenEntity {
+        val token =
+            TokenEntity(
+                tokenValidation = validation,
+                user = user,
+                createdAt = lastUsedAt.epochSecond,
+                lastUsedAt = lastUsedAt.epochSecond,
+            )
+        // mesmo comportamento do service: manter apenas (max - 1) tokens antes de inserir o novo
+        tokens.deleteOldestTokensExceeding(user.id, 1)
+        return tokens.save(token)
     }
 
     @Nested
@@ -38,11 +73,11 @@ class UserRepositoryTest {
         @Test
         fun `should create a user with the given fields`() =
             trx.run {
-                val user = newUser("alice")
+                val created = newUser("alice")
 
-                assertNotEquals(0, user.id)
-                assertEquals("alice", user.username)
-                assertEquals(UserRole.JUDGE, user.role)
+                assertNotEquals(0, created.id)
+                assertEquals("alice", created.username)
+                assertEquals(UserRole.JUDGE, created.role)
             }
 
         @Test
@@ -50,7 +85,7 @@ class UserRepositoryTest {
             trx.run {
                 val created = newUser("bob")
 
-                val found = repoUser.findById(created.id)
+                val found = users.findByIdOrNull(created.id)
 
                 assertNotNull(found)
                 assertEquals(created.username, found?.username)
@@ -64,7 +99,7 @@ class UserRepositoryTest {
             trx.run {
                 newUser("carlos")
 
-                val found = repoUser.findByUsername("carlos")
+                val found = users.findByUsername("carlos")
 
                 assertNotNull(found)
                 assertEquals("carlos", found?.username)
@@ -73,7 +108,7 @@ class UserRepositoryTest {
         @Test
         fun `should return null when username does not exist`() =
             trx.run {
-                assertNull(repoUser.findByUsername("does-not-exist"))
+                assertNull(users.findByUsername("does-not-exist"))
             }
     }
 
@@ -84,7 +119,7 @@ class UserRepositoryTest {
             trx.run {
                 val created = newUser()
 
-                val found = repoUser.findById(created.id)
+                val found = users.findByIdOrNull(created.id)
 
                 assertNotNull(found)
                 assertEquals(created.id, found?.id)
@@ -93,7 +128,7 @@ class UserRepositoryTest {
         @Test
         fun `should return null when id does not exist`() =
             trx.run {
-                assertNull(repoUser.findById(-1))
+                assertNull(users.findByIdOrNull(-1))
             }
     }
 
@@ -106,13 +141,13 @@ class UserRepositoryTest {
                 newUser("u2")
                 newUser("u3")
 
-                assertEquals(3, repoUser.findAll().size)
+                assertEquals(3, users.findAll().count())
             }
 
         @Test
         fun `should return empty list when there are no users`() =
             trx.run {
-                assertTrue(repoUser.findAll().isEmpty())
+                assertEquals(0, users.findAll().count())
             }
     }
 
@@ -122,12 +157,11 @@ class UserRepositoryTest {
         fun `should update an existing user`() =
             trx.run {
                 val created = newUser("dave")
-                val updated = created.copy(username = "dave-updated")
+                created.username = "dave-updated"
+                val saved = users.save(created)
 
-                val saved = repoUser.save(updated)
-
-                assertEquals("dave-updated", saved?.username)
-                assertEquals(created.id, saved?.id)
+                assertEquals("dave-updated", saved.username)
+                assertEquals(created.id, saved.id)
             }
     }
 
@@ -138,161 +172,72 @@ class UserRepositoryTest {
             trx.run {
                 val created = newUser()
 
-                repoUser.deleteById(created.id)
+                users.deleteById(created.id)
 
-                assertNull(repoUser.findById(created.id))
+                assertNull(users.findByIdOrNull(created.id))
             }
     }
 
     @Nested
-    inner class Clear {
-        @Test
-        fun `should remove all users`() =
-            trx.run {
-                newUser("u1")
-                newUser("u2")
-
-                repoUser.clear()
-
-                assertTrue(repoUser.findAll().isEmpty())
-            }
-    }
-
-    @Nested
-    inner class CreateToken {
+    inner class Tokens {
         @Test
         fun `should create a token for an existing user`() =
             trx.run {
                 val user = newUser()
-                val token = newToken(user.id)
+                val validation = "token-${System.nanoTime()}"
 
-                repoUser.createToken(token, maxToken = 3)
+                createToken(user, validation)
 
-                val result = repoUser.getTokenByTokenValidation(token.tokenValidationInfo)
+                val result = tokens.findByIdOrNull(validation)
                 assertNotNull(result)
-                assertEquals(user.id, result?.first?.id)
+                assertEquals(user.id, result?.user?.id)
             }
 
         @Test
-        fun `should delete the oldest token when max tokens is exceeded`() =
+        fun `should delete the oldest tokens when max is exceeded`() =
             trx.run {
                 val user = newUser()
                 val base = now()
 
-                val t1 = newToken(user.id, "token-1", base)
-                val t2 = newToken(user.id, "token-2", base.plusSeconds(1))
-                val t3 = newToken(user.id, "token-3", base.plusSeconds(2))
+                createToken(user, "token-1", base)
+                createToken(user, "token-2", base.plusSeconds(1))
+                createToken(user, "token-3", base.plusSeconds(2))
 
-                repoUser.createToken(t1, maxToken = 2)
-                repoUser.createToken(t2, maxToken = 2)
-                repoUser.createToken(t3, maxToken = 2)
-
-                assertNull(repoUser.getTokenByTokenValidation(t1.tokenValidationInfo))
-                assertNotNull(repoUser.getTokenByTokenValidation(t2.tokenValidationInfo))
-                assertNotNull(repoUser.getTokenByTokenValidation(t3.tokenValidationInfo))
+                assertNull(tokens.findByIdOrNull("token-1"))
+                assertNotNull(tokens.findByIdOrNull("token-2"))
+                assertNotNull(tokens.findByIdOrNull("token-3"))
             }
 
         @Test
-        fun `should not create a token for a non-existing user`() =
-            trx.run {
-                val token = newToken(userId = -1, validation = "orphan-token")
-
-                repoUser.createToken(token, maxToken = 3)
-
-                assertNull(repoUser.getTokenByTokenValidation(token.tokenValidationInfo))
-            }
-    }
-
-    @Nested
-    inner class GetTokenByTokenValidation {
-        @Test
-        fun `should return the user and token when validation exists`() =
+        fun `should update last used timestamp`() =
             trx.run {
                 val user = newUser()
-                val token = newToken(user.id)
-                repoUser.createToken(token, maxToken = 3)
-
-                val result = repoUser.getTokenByTokenValidation(token.tokenValidationInfo)
-
-                assertNotNull(result)
-                assertEquals(user.id, result?.first?.id)
-                assertEquals(token.tokenValidationInfo, result?.second?.tokenValidationInfo)
-            }
-
-        @Test
-        fun `should return null when token validation does not exist`() =
-            trx.run {
-                assertNull(repoUser.getTokenByTokenValidation(TokenValidationInfo("does-not-exist")))
-            }
-    }
-
-    @Nested
-    inner class UpdateTokenLastUsed {
-        @Test
-        fun `should update the last used timestamp`() =
-            trx.run {
-                val user = newUser()
-                val token = newToken(user.id)
-                repoUser.createToken(token, maxToken = 3)
-
                 val newTime = now().plusSeconds(60)
-                repoUser.updateTokenLastUsed(token, newTime)
+                createToken(user, "token-lu", newTime.minusSeconds(60))
 
-                val result = repoUser.getTokenByTokenValidation(token.tokenValidationInfo)
-                assertEquals(newTime, result?.second?.lastUsedAt)
+                val stored = tokens.findByIdOrNull("token-lu")!!
+                stored.lastUsedAt = newTime.epochSecond
+                tokens.save(stored)
+
+                assertEquals(newTime.epochSecond, tokens.findByIdOrNull("token-lu")?.lastUsedAt)
             }
 
         @Test
-        fun `should do nothing when token does not exist`() =
-            trx.run {
-                val nonExisting = newToken(userId = -1, validation = "ghost-token")
-
-                assertDoesNotThrow {
-                    repoUser.updateTokenLastUsed(nonExisting, now())
-                }
-            }
-    }
-
-    @Nested
-    inner class RemoveTokenByTokenValidation {
-        @Test
-        fun `should remove an existing token and return 1`() =
+        fun `should delete a token by validation`() =
             trx.run {
                 val user = newUser()
-                val token = newToken(user.id)
-                repoUser.createToken(token, maxToken = 3)
+                createToken(user, "token-del")
 
-                val deletions = repoUser.removeTokenByTokenValidation(token.tokenValidationInfo)
+                val deletions = tokens.deleteByTokenValidation("token-del")
 
                 assertEquals(1, deletions)
-                assertNull(repoUser.getTokenByTokenValidation(token.tokenValidationInfo))
+                assertNull(tokens.findByIdOrNull("token-del"))
             }
 
         @Test
-        fun `should return 0 when token does not exist`() =
+        fun `should return 0 when deleting a non-existing token`() =
             trx.run {
-                assertEquals(0, repoUser.removeTokenByTokenValidation(TokenValidationInfo("does-not-exist")))
+                assertEquals(0, tokens.deleteByTokenValidation("does-not-exist"))
             }
     }
-
-    private fun Transaction.now() = Instant.now().truncatedTo(ChronoUnit.SECONDS)
-
-    private fun Transaction.newUser(username: String = "user-${System.nanoTime()}"): User =
-        repoUser.createUser(
-            username = username,
-            passwordValidationInfo = PasswordValidationInfo("hashed_pw"),
-            role = UserRole.JUDGE,
-            createdAt = now(),
-        )
-
-    private fun Transaction.newToken(
-        userId: Int,
-        validation: String = "token-${System.nanoTime()}",
-        lastUsedAt: Instant = Instant.now().truncatedTo(ChronoUnit.SECONDS),
-    ) = Token(
-        tokenValidationInfo = TokenValidationInfo(validation),
-        userId = userId,
-        createdAt = lastUsedAt,
-        lastUsedAt = lastUsedAt,
-    )
 }
