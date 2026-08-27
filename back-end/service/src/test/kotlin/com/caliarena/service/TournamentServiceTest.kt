@@ -4,6 +4,7 @@ import com.caliarena.domain.tournament.ScreenState
 import com.caliarena.domain.tournament.TournamentStatus
 import com.caliarena.domain.user.UserRole
 import com.caliarena.repo.entities.match.MatchEntity
+import com.caliarena.repo.entities.tournament.BracketEntity
 import com.caliarena.repo.entities.tournament.TournamentEntity
 import com.caliarena.repo.entities.tournament.TournamentStateEntity
 import com.caliarena.repo.entities.user.UserEntity
@@ -28,6 +29,7 @@ class TournamentServiceTest : ServiceTest() {
         lenient().whenever(transaction.tournaments).thenReturn(tournaments)
         lenient().whenever(transaction.tournamentStates).thenReturn(tournamentStates)
         lenient().whenever(transaction.matches).thenReturn(matches)
+        lenient().whenever(transaction.brackets).thenReturn(brackets)
 
         lenient()
             .doAnswer { invocation ->
@@ -77,6 +79,17 @@ class TournamentServiceTest : ServiceTest() {
             finishedAt = now.plusSeconds(60).toEpochMilli(),
             createdAt = now.epochSecond,
         )
+
+    private fun bracketEntity(
+        id: Int = 1,
+        tournament: TournamentEntity = tournamentEntity(),
+    ) = BracketEntity(
+        id = id,
+        tournament = tournament,
+        gender = com.caliarena.domain.athlete.GenderType.MALE,
+        stage = com.caliarena.domain.bracket.BracketStage.QUALIFIERS,
+        createdAt = now.epochSecond,
+    )
 
     @Nested
     inner class CreateTournament {
@@ -202,7 +215,7 @@ class TournamentServiceTest : ServiceTest() {
             whenever(tournamentStates.findByTournamentId(1)).thenReturn(state)
             whenever(tournamentStates.save(any())).thenReturn(state)
 
-            val result = service.updateScreen(1, "BATTLE", null)
+            val result = service.updateScreen(1, "BATTLE", null, null)
 
             assertTrue(result is Either.Right)
             assertEquals(ScreenState.BATTLE, (result as Either.Right).value.currentScreen)
@@ -223,16 +236,58 @@ class TournamentServiceTest : ServiceTest() {
             whenever(matches.findById(match.id)).thenReturn(Optional.of(match))
             whenever(tournamentStates.save(any())).thenReturn(state)
 
-            val result = service.updateScreen(1, "BATTLE", match.id)
+            val result = service.updateScreen(1, "BATTLE", match.id, null)
 
             assertTrue(result is Either.Right)
+        }
+
+        @Test
+        fun `should set current bracket when provided`() {
+            val tournament = tournamentEntity()
+            val state =
+                TournamentStateEntity(
+                    tournament = tournament,
+                    currentScreen = ScreenState.WAITING,
+                    updatedAt = now.epochSecond,
+                )
+            val bracket = bracketEntity(tournament = tournament)
+            whenever(tournaments.findById(1)).thenReturn(Optional.of(tournament))
+            whenever(tournamentStates.findByTournamentId(1)).thenReturn(state)
+            whenever(brackets.findById(bracket.id)).thenReturn(Optional.of(bracket))
+            whenever(tournamentStates.save(any())).thenReturn(state)
+
+            val result = service.updateScreen(1, "LEADERBOARD", null, bracket.id)
+
+            assertTrue(result is Either.Right)
+            assertEquals(bracket.id, (result as Either.Right).value.currentBracketId)
+        }
+
+        @Test
+        fun `should fail when bracket does not exist`() {
+            whenever(tournaments.findById(1)).thenReturn(Optional.of(tournamentEntity()))
+            whenever(brackets.findById(99)).thenReturn(Optional.empty())
+
+            val result = service.updateScreen(1, "LEADERBOARD", null, 99)
+
+            assertEquals(failure(ApiError.BRACKET_NOT_FOUND), result)
+        }
+
+        @Test
+        fun `should fail when bracket belongs to another tournament`() {
+            whenever(tournaments.findById(1)).thenReturn(Optional.of(tournamentEntity()))
+            val otherBracket = bracketEntity(tournament = tournamentEntity(id = 2))
+            whenever(brackets.findById(otherBracket.id)).thenReturn(Optional.of(otherBracket))
+
+            val result = service.updateScreen(1, "LEADERBOARD", null, otherBracket.id)
+
+            assertEquals(failure(ApiError.BRACKET_NOT_FOUND), result)
         }
 
         @Test
         fun `should fail when screen is invalid`() {
             whenever(tournaments.findById(1)).thenReturn(Optional.of(tournamentEntity()))
 
-            val result = service.updateScreen(1, "INVALID", null)
+            val result = service.updateScreen(1, "INVALID", null, null)
 
             assertEquals(failure(ApiError.INVALID_SCREEN_STATE), result)
         }
@@ -242,7 +297,7 @@ class TournamentServiceTest : ServiceTest() {
             whenever(tournaments.findById(1)).thenReturn(Optional.of(tournamentEntity()))
             whenever(tournamentStates.findByTournamentId(1)).thenReturn(null)
 
-            val result = service.updateScreen(1, "BATTLE", null)
+            val result = service.updateScreen(1, "BATTLE", null, null)
 
             assertEquals(failure(ApiError.TOURNAMENT_STATE_NOT_FOUND), result)
         }

@@ -11,6 +11,7 @@ import com.caliarena.domain.user.UserRole
 import com.caliarena.repo.entities.athlete.AthleteEntity
 import com.caliarena.repo.entities.club.ClubEntity
 import com.caliarena.repo.entities.match.MatchEntity
+import com.caliarena.repo.entities.match.MatchProgressEntity
 import com.caliarena.repo.entities.tournament.BracketEntity
 import com.caliarena.repo.entities.tournament.TournamentEntity
 import com.caliarena.repo.entities.user.UserEntity
@@ -90,6 +91,17 @@ class BracketServiceTest : ServiceTest() {
         finishedAt = now.plusSeconds(60).toEpochMilli(),
         createdAt = now.epochSecond,
     )
+
+    private fun matchProgressEntity(
+        match: MatchEntity,
+        redFinishedAtEpoch: Long? = null,
+        blueFinishedAtEpoch: Long? = null,
+    ) = MatchProgressEntity(
+        match = match,
+        redFinishedAt = redFinishedAtEpoch,
+        blueFinishedAt = blueFinishedAtEpoch,
+        updatedAt = now.epochSecond,
+    ).also { it.id = 1 }
 
     @Nested
     inner class CreateBracket {
@@ -248,16 +260,53 @@ class BracketServiceTest : ServiceTest() {
         }
 
         @Test
-        fun `should fail when match not finished`() {
+        fun `should include finished sides of running match`() {
             val tournament = tournamentEntity()
             val bracket = bracketEntity(tournament = tournament)
-            val runningMatch = matchEntity(status = MatchStatus.RUNNING)
+            val runningMatch = matchEntity(id = 1, status = MatchStatus.RUNNING)
+            val progress =
+                matchProgressEntity(
+                    match = runningMatch,
+                    redFinishedAtEpoch = now.plusSeconds(10).toEpochMilli(),
+                )
             whenever(brackets.findById(1)).thenReturn(Optional.of(bracket))
             whenever(matches.findByBracketId(1)).thenReturn(listOf(runningMatch))
+            whenever(matchProgresses.findByMatchId(1)).thenReturn(progress)
 
             val result = service.getBracketLeaderboard(1)
 
-            assertEquals(failure(ApiError.MATCH_NOT_FINISHED), result)
+            val leaderboard: BracketLeaderboard? = if (result is Either.Right<*>) result.value as BracketLeaderboard else null
+            assertEquals(listOf("Red"), leaderboard?.entries?.map { it.athleteName })
+            assertEquals("0:10.000", leaderboard?.entries?.first()?.duration)
+            assertTrue(result is Either.Right<*>)
+        }
+
+        @Test
+        fun `should keep best time per athlete`() {
+            val tournament = tournamentEntity()
+            val bracket = bracketEntity(tournament = tournament)
+            val slowerMatch = matchEntity(id = 1, status = MatchStatus.FINISHED)
+            val fasterMatch = matchEntity(id = 2, status = MatchStatus.FINISHED)
+            val slowerMatchProgress =
+                matchProgressEntity(
+                    match = slowerMatch,
+                    redFinishedAtEpoch = now.plusSeconds(60).toEpochMilli(),
+                )
+            val fasterMatchProgress =
+                matchProgressEntity(
+                    match = fasterMatch,
+                    redFinishedAtEpoch = now.plusSeconds(30).toEpochMilli(),
+                )
+            whenever(brackets.findById(1)).thenReturn(Optional.of(bracket))
+            whenever(matches.findByBracketId(1)).thenReturn(listOf(slowerMatch, fasterMatch))
+            whenever(matchProgresses.findByMatchId(1)).thenReturn(slowerMatchProgress)
+            whenever(matchProgresses.findByMatchId(2)).thenReturn(fasterMatchProgress)
+
+            val result = service.getBracketLeaderboard(1)
+
+            val leaderboard: BracketLeaderboard? = if (result is Either.Right<*>) result.value as BracketLeaderboard else null
+            assertEquals(listOf("Red"), leaderboard?.entries?.map { it.athleteName })
+            assertEquals("0:30.000", leaderboard?.entries?.first()?.duration)
         }
     }
 

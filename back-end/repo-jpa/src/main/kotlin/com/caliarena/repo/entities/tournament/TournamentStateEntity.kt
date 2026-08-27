@@ -31,6 +31,9 @@ class TournamentStateEntity(
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "current_match_id")
     var currentMatch: MatchEntity? = null,
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "current_bracket_id")
+    var currentBracket: BracketEntity? = null,
     @Column(name = "updated_at", nullable = false)
     var updatedAt: Long = 0L,
 ) {
@@ -40,6 +43,7 @@ class TournamentStateEntity(
             tournamentId = tournament.id,
             currentScreen = currentScreen,
             currentMatchId = currentMatch?.id,
+            currentBracketId = currentBracket?.id,
             updatedAt = Instant.ofEpochSecond(updatedAt),
         )
 
@@ -47,11 +51,13 @@ class TournamentStateEntity(
         fun TournamentState.fromDomain(
             tournament: TournamentEntity,
             currentMatch: MatchEntity?,
+            currentBracket: BracketEntity?,
         ) = TournamentStateEntity(
             id = this.id,
             tournament = tournament,
             currentScreen = this.currentScreen,
             currentMatch = currentMatch,
+            currentBracket = currentBracket,
             updatedAt = this.updatedAt.epochSecond,
         )
     }

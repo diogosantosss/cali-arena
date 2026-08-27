@@ -9,14 +9,12 @@ import com.caliarena.domain.bracket.BracketStage
 import com.caliarena.domain.bracket.BracketSummary
 import com.caliarena.domain.bracket.LeaderboardEntry
 import com.caliarena.domain.bracket.TournamentBracketsResponse
-import com.caliarena.domain.match.MatchStatus
 import com.caliarena.repo.entities.match.MatchEntity
 import com.caliarena.repo.entities.tournament.BracketEntity
 import com.caliarena.repo.trx.TransactionManager
 import jakarta.inject.Named
 import org.springframework.data.repository.findByIdOrNull
 import java.time.Clock
-import java.time.Duration
 import java.time.Instant
 
 @Named
@@ -115,49 +113,39 @@ class BracketService(
                 brackets.findByIdOrNull(bracketId)
                     ?: return@run failure(ApiError.BRACKET_NOT_FOUND)
 
-            val bracketMatches = matches.findByBracketId(bracketId)
+            val times = mutableListOf<Triple<String, Long, Int>>()
 
-            if (bracketMatches.isEmpty()) {
-                return@run success(BracketLeaderboard(bracket.id, bracket.gender, bracket.stage, emptyList()))
-            }
-
-            if (bracketMatches.any { it.status != MatchStatus.FINISHED }) {
-                return@run failure(ApiError.MATCH_NOT_FINISHED)
-            }
-
-            val entries = mutableListOf<LeaderboardEntry>()
-
-            for (match in bracketMatches) {
+            for (match in matches.findByBracketId(bracketId)) {
+                val startedAt = match.startedAt ?: continue
                 val progress = matchProgresses.findByMatchId(match.id)
 
-                match.athleteRed?.let {
-                    entries +=
-                        LeaderboardEntry(
-                            athleteName = it.name,
-                            duration =
-                                formatMatchTime(
-                                    match.startedAt!!,
-                                    progress?.redFinishedAt!!,
-                                ),
-                            matchId = match.id,
-                        )
+                match.athleteRed?.let { athlete ->
+                    progress?.redFinishedAt?.let { finishedAt ->
+                        times += Triple(athlete.name, (finishedAt - startedAt), match.id)
+                    }
                 }
 
-                match.athleteBlue?.let {
-                    entries +=
-                        LeaderboardEntry(
-                            athleteName = it.name,
-                            duration =
-                                formatMatchTime(
-                                    match.startedAt!!,
-                                    progress?.blueFinishedAt!!,
-                                ),
-                            matchId = match.id,
-                        )
+                match.athleteBlue?.let { athlete ->
+                    progress?.blueFinishedAt?.let { finishedAt ->
+                        times += Triple(athlete.name, (finishedAt - startedAt), match.id)
+                    }
                 }
             }
 
-            entries.sortBy(LeaderboardEntry::duration)
+            val entries =
+                times
+                    .groupBy { it.first }
+                    .map { (name, results) ->
+                        val best = results.minBy { it.second }
+                        Triple(name, best.second, best.third)
+                    }.sortedBy { it.second }
+                    .map { (name, millis, matchId) ->
+                        LeaderboardEntry(
+                            athleteName = name,
+                            duration = formatDuration(millis),
+                            matchId = matchId,
+                        )
+                    }
 
             success(
                 BracketLeaderboard(bracket.id, bracket.gender, bracket.stage, entries),
@@ -204,17 +192,7 @@ class BracketService(
             success(TournamentBracketsResponse(tournamentId, validGender, summaries))
         }
 
-    private fun formatMatchTime(
-        startedAt: Long,
-        finishedAt: Long,
-    ): String {
-        val totalMs =
-            Duration
-                .between(
-                    Instant.ofEpochMilli(startedAt),
-                    Instant.ofEpochMilli(finishedAt),
-                ).toMillis()
-
+    private fun formatDuration(totalMs: Long): String {
         val minutes = totalMs / 60000
         val seconds = (totalMs % 60000) / 1000
         val ms = totalMs % 1000

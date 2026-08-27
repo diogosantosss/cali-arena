@@ -112,6 +112,7 @@ class TournamentService(
         tournamentId: Int,
         screen: String,
         currentMatchId: Int?,
+        currentBracketId: Int?,
     ): Either<ApiError, TournamentState> =
         trx.run {
             tournaments.findByIdOrNull(tournamentId)?.toDomain()
@@ -121,12 +122,20 @@ class TournamentService(
                 ScreenState.entries.find { it.name.equals(screen, true) }
                     ?: return@run failure(ApiError.INVALID_SCREEN_STATE)
 
+            val bracket =
+                currentBracketId?.let { id ->
+                    val found = brackets.findByIdOrNull(id) ?: return@run failure(ApiError.BRACKET_NOT_FOUND)
+                    if (found.tournament.id != tournamentId) return@run failure(ApiError.BRACKET_NOT_FOUND)
+                    found
+                }
+
             val state =
                 tournamentStates.findByTournamentId(tournamentId)
                     ?: return@run failure(ApiError.TOURNAMENT_STATE_NOT_FOUND)
 
             state.currentScreen = screenState
             state.currentMatch = currentMatchId?.let { matches.findByIdOrNull(it) }
+            state.currentBracket = bracket
             state.updatedAt = clock.instant().epochSecond
 
             val updated = tournamentStates.save(state).toDomain()

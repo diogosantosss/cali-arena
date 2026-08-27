@@ -34,8 +34,8 @@ VALUES ('BAR-WINGS ENDURANCE CHAMPIONSHIP 2026',
         'READY',
         1787328276);
 
-INSERT INTO tournament_state (tournament_id, current_screen, current_match_id, updated_at)
-VALUES (1, 'WAITING', NULL, 1787328276);
+INSERT INTO tournament_state (tournament_id, current_screen, current_match_id, current_bracket_id, updated_at)
+VALUES (1, 'WAITING', NULL, NULL, 1787328276);
 
 -- brackets
 INSERT INTO brackets (tournament_id, gender, stage, created_at)
