@@ -1,11 +1,10 @@
 package com.caliarena.http
 
 import com.caliarena.domain.routine.RoutineOverview
-import com.caliarena.http.model.Problem
 import com.caliarena.http.model.routine.CreateExerciseInput
 import com.caliarena.http.model.routine.CreateRoutineInput
+import com.caliarena.http.model.toResponseEntity
 import com.caliarena.http.utils.toResponse
-import com.caliarena.service.RoutineError
 import com.caliarena.service.RoutineService
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
@@ -80,16 +79,4 @@ class RoutineController(
 
     @GetMapping
     fun getRoutines(): ResponseEntity<Any> = ResponseEntity.ok(routineService.getRoutines())
-
-    private fun RoutineError.toResponseEntity(): ResponseEntity<Any> =
-        when (this) {
-            RoutineError.RoutineNotFound ->
-                Problem.RoutineNotFound.response(HttpStatus.NOT_FOUND)
-
-            RoutineError.ExerciseTypeNotFound ->
-                Problem.ExerciseTypeNotFound.response(HttpStatus.NOT_FOUND)
-
-            RoutineError.RoutineAlreadyExists ->
-                Problem.RoutineAlreadyExists.response(HttpStatus.CONFLICT)
-        }
 }

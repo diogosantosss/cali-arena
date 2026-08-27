@@ -1,12 +1,11 @@
 package com.caliarena.http
 
 import com.caliarena.domain.routine.ScreenRoutine
-import com.caliarena.http.model.Problem
 import com.caliarena.http.model.screen.CreateScreenRoutineInput
 import com.caliarena.http.model.screen.UpdateDisplayOrderInput
 import com.caliarena.http.model.screen.UpdateVisibilityInput
+import com.caliarena.http.model.toResponseEntity
 import com.caliarena.http.utils.toResponse
-import com.caliarena.service.ScreenRoutineError
 import com.caliarena.service.ScreenRoutineService
 import com.caliarena.service.sse.SpectatorPublisher
 import org.springframework.http.HttpHeaders
@@ -112,18 +111,4 @@ class ScreenRoutineController(
                 onSuccess = { ResponseEntity.noContent().build() },
                 onError = { it.toResponseEntity() },
             )
-
-    private fun ScreenRoutineError.toResponseEntity() =
-        when (this) {
-            ScreenRoutineError.TournamentNotFound ->
-                Problem.TournamentNotFound.response(HttpStatus.NOT_FOUND)
-            ScreenRoutineError.RoutineNotFound ->
-                Problem.RoutineNotFound.response(HttpStatus.NOT_FOUND)
-            ScreenRoutineError.ScreenRoutineNotFound ->
-                Problem.ScreenRoutineNotFound.response(HttpStatus.NOT_FOUND)
-            ScreenRoutineError.TournamentMismatch ->
-                Problem.TournamentMismatch.response(HttpStatus.CONFLICT)
-            ScreenRoutineError.ErrorUpdatingScreenRoutine ->
-                Problem.ErrorUpdatingScreenRoutine.response(HttpStatus.INTERNAL_SERVER_ERROR)
-        }
 }

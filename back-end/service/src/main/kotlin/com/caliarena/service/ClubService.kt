@@ -1,17 +1,11 @@
 package com.caliarena.service
 
-import com.caliarena.TransactionManager
 import com.caliarena.domain.club.Club
+import com.caliarena.repo.entities.club.ClubEntity
+import com.caliarena.repo.trx.TransactionManager
+import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Service
 import java.time.Clock
-
-sealed class ClubError {
-    data object ClubAlreadyExists : ClubError()
-
-    data object ClubNotFound : ClubError()
-
-    data object UpdatingClub : ClubError()
-}
 
 @Service
 class ClubService(
@@ -21,55 +15,56 @@ class ClubService(
     fun createClub(
         name: String,
         shortName: String?,
-    ): Either<ClubError, Club> =
+    ): Either<ApiError, Club> =
         trx.run {
-            if (repoClub.findByName(name) != null) {
-                return@run failure(ClubError.ClubAlreadyExists)
+            if (clubs.findByName(name) != null) {
+                return@run failure(ApiError.CLUB_ALREADY_EXISTS)
             }
 
             val club =
-                repoClub.createClub(
-                    name = name,
-                    shortName = shortName,
-                    createdAt = clock.instant(),
+                clubs.save(
+                    ClubEntity(
+                        name = name,
+                        shortName = shortName,
+                        createdAt = clock.instant().epochSecond,
+                    ),
                 )
 
-            success(club)
+            success(club.toDomain())
         }
 
-    fun getClubById(id: Int): Either<ClubError, Club> =
+    fun getClubById(id: Int): Either<ApiError, Club> =
         trx.run {
             val club =
-                repoClub.findById(id)
-                    ?: return@run failure(ClubError.ClubNotFound)
+                clubs.findByIdOrNull(id)
+                    ?: return@run failure(ApiError.CLUB_NOT_FOUND)
 
-            success(club)
+            success(club.toDomain())
         }
 
     fun getAllClubs(): List<Club> =
         trx.run {
-            repoClub.findAll()
+            clubs.findAll().map(ClubEntity::toDomain)
         }
 
     fun updateClub(
         id: Int,
         name: String,
         shortName: String?,
-    ): Either<ClubError, Club> =
+    ): Either<ApiError, Club> =
         trx.run {
             val existing =
-                repoClub.findById(id)
-                    ?: return@run failure(ClubError.ClubNotFound)
+                clubs.findByIdOrNull(id)
+                    ?: return@run failure(ApiError.CLUB_NOT_FOUND)
 
-            val nameConflict = repoClub.findByName(name)
+            val nameConflict = clubs.findByName(name)
             if (nameConflict != null && nameConflict.id != id) {
-                return@run failure(ClubError.ClubAlreadyExists)
+                return@run failure(ApiError.CLUB_ALREADY_EXISTS)
             }
 
-            val updated =
-                repoClub.save(existing.copy(name = name, shortName = shortName))
-                    ?: return@run failure(ClubError.UpdatingClub)
+            existing.name = name
+            existing.shortName = shortName
 
-            success(updated)
+            success(clubs.save(existing).toDomain())
         }
 }

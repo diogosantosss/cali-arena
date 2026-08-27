@@ -8,7 +8,7 @@ import {
   LogOut,
   Dumbbell,
 } from "lucide-react";
-import { useAuth } from "@/AuthContext";
+import { useAuth } from "@/features/auth/hooks/use-auth";
 
 const navItems = [
   { to: "/dashboard", label: "Tournaments", icon: Trophy, end: true },
@@ -27,7 +27,7 @@ const pageTitles: Record<string, string> = {
 };
 
 export function DashboardLayout() {
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -40,9 +40,9 @@ export function DashboardLayout() {
 
   return (
     <TooltipProvider>
-      <div className="flex min-h-screen w-full" style={{ background: "#0f0f11" }}>
+      <div className="flex h-screen w-full overflow-hidden" style={{ background: "#0f0f11" }}>
         <aside
-          className="flex flex-col items-center w-14 lg:w-48 shrink-0 py-5 gap-1"
+          className="flex flex-col items-center w-14 lg:w-48 shrink-0 h-full py-5 gap-1"
           style={{ background: "#0f0f11", borderRight: "1px solid #252528" }}
         >
           <div className="mb-5 flex items-center justify-center gap-2">
@@ -95,6 +95,20 @@ export function DashboardLayout() {
             ))}
           </div>
 
+          {user && (
+            <div className="w-full flex flex-col items-center gap-1 mb-2 lg:px-10">
+              <span className="hidden lg:inline text-[11px]" style={{ color: "#6b6560" }}>
+                Logged as <span style={{ color: "#f0ede8" }}>{user.username}</span>
+              </span>
+              <span
+                className="text-[9px] uppercase tracking-widest px-1.5 py-0.5 rounded-full"
+                style={{ background: "rgba(232,160,32,0.12)", color: "#e8a020" }}
+              >
+                {user.role}
+              </span>
+            </div>
+          )}
+
           <Tooltip>
             <TooltipTrigger asChild>
               <button
@@ -115,7 +129,7 @@ export function DashboardLayout() {
           </Tooltip>
         </aside>
 
-        <div className="flex flex-col flex-1 min-w-0">
+        <div className="flex flex-col flex-1 min-w-0 h-full min-h-0">
           <header
             className="h-11 flex items-center px-7 shrink-0"
             style={{ borderBottom: "1px solid #252528" }}
@@ -128,7 +142,7 @@ export function DashboardLayout() {
             </span>
           </header>
 
-          <main className="flex-1 overflow-auto px-7 py-7">
+          <main className="flex-1 overflow-y-auto px-7 py-7">
             <Outlet />
           </main>
         </div>

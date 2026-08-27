@@ -1,6 +1,5 @@
 package com.caliarena.service
 
-import com.caliarena.TransactionManager
 import com.caliarena.domain.token.Token
 import com.caliarena.domain.token.Token.Companion.canBeToken
 import com.caliarena.domain.token.Token.Companion.generateTokenValue
@@ -10,25 +9,15 @@ import com.caliarena.domain.user.PasswordValidationInfo
 import com.caliarena.domain.user.User
 import com.caliarena.domain.user.UserRole
 import com.caliarena.domain.user.UsersDomainConfig
+import com.caliarena.repo.entities.user.TokenEntity
+import com.caliarena.repo.entities.user.TokenEntity.Companion.toDomain
+import com.caliarena.repo.entities.user.UserEntity
+import com.caliarena.repo.trx.TransactionManager
 import jakarta.inject.Named
+import org.slf4j.LoggerFactory
+import org.springframework.data.repository.findByIdOrNull
 import org.springframework.security.crypto.password.PasswordEncoder
 import java.time.Clock
-
-sealed class UserError {
-    data object AlreadyUsedUsername : UserError()
-
-    data object InsecurePassword : UserError()
-
-    data object UserNotFound : UserError()
-
-    data object InvalidRole : UserError()
-
-    data object ErrorUpdatingUserRole : UserError()
-
-    data object UserOrPasswordAreInvalid : UserError()
-
-    data object NotAuthorized : UserError()
-}
 
 @Named
 class UserAuthService(
@@ -38,6 +27,10 @@ class UserAuthService(
     private val trxManager: TransactionManager,
     private val clock: Clock,
 ) {
+    companion object {
+        private val logger = LoggerFactory.getLogger(UserAuthService::class.java)
+    }
+
     fun validatePassword(
         password: String,
         validationInfo: PasswordValidationInfo,
@@ -54,49 +47,55 @@ class UserAuthService(
     fun createUser(
         username: String,
         password: String,
-    ): Either<UserError, User> {
+    ): Either<ApiError, User> {
         if (!PasswordValidationInfo.isSafePassword(password)) {
-            return failure(UserError.InsecurePassword)
+            return failure(ApiError.INSECURE_PASSWORD)
         }
 
         val passwordValidationInfo = createPasswordValidationInformation(password)
 
         return trxManager.run {
-            if (repoUser.findByUsername(username) != null) {
-                return@run failure(UserError.AlreadyUsedUsername)
+            if (users.findByUsername(username) != null) {
+                return@run failure(ApiError.ALREADY_USED_USERNAME)
             }
 
-            val user =
-                repoUser.createUser(
-                    username = username,
-                    passwordValidationInfo = passwordValidationInfo,
-                    role = UserRole.JUDGE,
-                    createdAt = clock.instant(),
+            val userEntity =
+                users.save(
+                    UserEntity(
+                        username = username,
+                        password = passwordValidationInfo.validationInfo,
+                        role = UserRole.JUDGE,
+                        createdAt = clock.instant().epochSecond,
+                    ),
                 )
 
-            return@run success(user)
+            return@run success(userEntity.toDomain())
         }
     }
 
     fun createToken(
         username: String,
         password: String,
-    ): Either<UserError, TokenExternalInfo> {
+    ): Either<ApiError, TokenExternalInfo> {
         if (username.isBlank() || password.isBlank()) {
-            return failure(UserError.UserOrPasswordAreInvalid)
+            return failure(ApiError.USER_OR_PASSWORD_ARE_INVALID)
         }
 
         return trxManager.run {
-            val user =
-                repoUser.findByUsername(username)
-                    ?: return@run failure(UserError.UserOrPasswordAreInvalid)
+            val userEntity =
+                users.findByUsername(username)
+                    ?: return@run failure(ApiError.USER_OR_PASSWORD_ARE_INVALID)
+
+            val user = userEntity.toDomain()
 
             if (!validatePassword(password, user.password)) {
-                return@run failure(UserError.UserOrPasswordAreInvalid)
+                return@run failure(ApiError.USER_OR_PASSWORD_ARE_INVALID)
             }
 
             val tokenValue = generateTokenValue(config)
             val now = clock.instant()
+
+            logger.debug("token value {}, user {}", tokenValue, user.username)
 
             val token =
                 Token(
@@ -106,7 +105,17 @@ class UserAuthService(
                     lastUsedAt = now,
                 )
 
-            repoUser.createToken(token, config.maxTokensPerUser)
+            users.findByIdOrNull(token.userId)?.let { entity ->
+                tokens.deleteOldestTokensExceeding(entity.id, config.maxTokensPerUser - 1)
+                tokens.save(
+                    TokenEntity(
+                        tokenValidation = token.tokenValidationInfo.validationInfo,
+                        user = entity,
+                        createdAt = token.createdAt.epochSecond,
+                        lastUsedAt = token.lastUsedAt.epochSecond,
+                    ),
+                )
+            }
 
             success(
                 TokenExternalInfo(
@@ -120,7 +129,7 @@ class UserAuthService(
     fun revokeToken(token: String): Boolean {
         val tokenValidationInfo = tokenEncoder.createValidationInformation(token)
         return trxManager.run {
-            repoUser.removeTokenByTokenValidation(tokenValidationInfo)
+            tokens.deleteByTokenValidation(tokenValidationInfo.validationInfo)
             true
         }
     }
@@ -131,10 +140,12 @@ class UserAuthService(
         }
         return trxManager.run {
             val tokenValidationInfo = tokenEncoder.createValidationInformation(token)
-            val userAndToken: Pair<User, Token>? = repoUser.getTokenByTokenValidation(tokenValidationInfo)
-            if (userAndToken != null && userAndToken.second.isTimeValid(clock, config)) {
-                repoUser.updateTokenLastUsed(userAndToken.second, clock.instant())
-                userAndToken.first
+            val tokenEntity = tokens.findByIdOrNull(tokenValidationInfo.validationInfo)
+
+            if (tokenEntity != null && tokenEntity.toDomain().isTimeValid(clock, config)) {
+                tokenEntity.lastUsedAt = clock.instant().epochSecond
+                tokens.save(tokenEntity)
+                tokenEntity.user.toDomain()
             } else {
                 null
             }
@@ -145,33 +156,35 @@ class UserAuthService(
         token: String,
         userToUpdateId: Int,
         role: String,
-    ): Either<UserError, User> =
+    ): Either<ApiError, User> =
         trxManager.run {
-            val user: Pair<User, Token> =
-                repoUser.getTokenByTokenValidation(
-                    tokenEncoder.createValidationInformation(token),
-                ) ?: return@run failure(UserError.UserNotFound)
+            val validationInfo =
+                tokenEncoder.createValidationInformation(token).validationInfo
 
-            if (user.first.role != UserRole.ADMIN) {
-                return@run failure(UserError.NotAuthorized)
+            val requester =
+                tokens
+                    .findByIdOrNull(validationInfo)
+                    ?.user ?: return@run failure(ApiError.USER_NOT_FOUND)
+
+            if (requester.role != UserRole.ADMIN) {
+                return@run failure(ApiError.NOT_AUTHORIZED)
             }
 
             val role =
                 UserRole.entries.find { it.name.equals(role, true) }
-                    ?: return@run failure(UserError.InvalidRole)
+                    ?: return@run failure(ApiError.INVALID_ROLE)
 
-            repoUser.findById(userToUpdateId)
-                ?: return@run failure(UserError.UserNotFound)
+            val target =
+                users.findByIdOrNull(userToUpdateId)
+                    ?: return@run failure(ApiError.USER_NOT_FOUND)
 
-            val updatedUser =
-                repoUser.updateUserRole(userToUpdateId, role)
-                    ?: return@run failure(UserError.ErrorUpdatingUserRole)
+            target.role = role
 
-            success(updatedUser)
+            success(users.save(target).toDomain())
         }
 
     fun getUsers(): List<User> =
         trxManager.run {
-            repoUser.findAll()
+            users.findAll().map { it.toDomain() }
         }
 }

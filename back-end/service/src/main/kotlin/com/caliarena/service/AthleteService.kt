@@ -1,22 +1,12 @@
 package com.caliarena.service
 
-import com.caliarena.TransactionManager
 import com.caliarena.domain.athlete.Athlete
 import com.caliarena.domain.athlete.GenderType
+import com.caliarena.repo.entities.athlete.AthleteEntity
+import com.caliarena.repo.trx.TransactionManager
+import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Service
 import java.time.Clock
-
-sealed class AthleteError {
-    data object AthleteNotFound : AthleteError()
-
-    data object ClubNotFound : AthleteError()
-
-    data object InvalidGender : AthleteError()
-
-    data object CreatingAthlete : AthleteError()
-
-    data object UpdatingAthlete : AthleteError()
-}
 
 @Service
 class AthleteService(
@@ -27,55 +17,58 @@ class AthleteService(
         name: String,
         gender: String,
         clubId: Int,
-    ): Either<AthleteError, Athlete> =
+    ): Either<ApiError, Athlete> =
         trx.run {
-            repoClub.findById(clubId)
-                ?: return@run failure(AthleteError.ClubNotFound)
+            val club =
+                clubs.findByIdOrNull(clubId)
+                    ?: return@run failure(ApiError.CLUB_NOT_FOUND)
 
             val genderType =
                 GenderType.entries.find { it.name == gender }
-                    ?: return@run failure(AthleteError.InvalidGender)
+                    ?: return@run failure(ApiError.INVALID_GENDER)
 
             val athlete =
-                repoAthlete.createAthlete(
-                    name = name,
-                    gender = genderType,
-                    clubId = clubId,
-                    createdAt = clock.instant(),
-                ) ?: return@run failure(AthleteError.CreatingAthlete)
+                athletes.save(
+                    AthleteEntity(
+                        name = name,
+                        gender = genderType,
+                        club = club,
+                        createdAt = clock.instant().epochSecond,
+                    ),
+                )
 
-            success(athlete)
+            success(athlete.toDomain())
         }
 
-    fun getAthleteById(id: Int): Either<AthleteError, Athlete> =
+    fun getAthleteById(id: Int): Either<ApiError, Athlete> =
         trx.run {
             val athlete =
-                repoAthlete.findById(id)
-                    ?: return@run failure(AthleteError.AthleteNotFound)
+                athletes.findByIdOrNull(id)
+                    ?: return@run failure(ApiError.ATHLETE_NOT_FOUND)
 
-            success(athlete)
+            success(athlete.toDomain())
         }
 
     fun getAllAthletes(): List<Athlete> =
         trx.run {
-            repoAthlete.findAll()
+            athletes.findAll().map(AthleteEntity::toDomain)
         }
 
-    fun getAthletesByClub(clubId: Int): Either<AthleteError, List<Athlete>> =
+    fun getAthletesByClub(clubId: Int): Either<ApiError, List<Athlete>> =
         trx.run {
-            repoClub.findById(clubId)
-                ?: return@run failure(AthleteError.ClubNotFound)
+            clubs.findByIdOrNull(clubId)
+                ?: return@run failure(ApiError.CLUB_NOT_FOUND)
 
-            success(repoAthlete.findByClubId(clubId))
+            success(athletes.findByClubId(clubId).map(AthleteEntity::toDomain))
         }
 
-    fun getAthletesByGender(gender: String): Either<AthleteError, List<Athlete>> =
+    fun getAthletesByGender(gender: String): Either<ApiError, List<Athlete>> =
         trx.run {
             val genderType =
                 GenderType.entries.find { it.name == gender }
-                    ?: return@run failure(AthleteError.InvalidGender)
+                    ?: return@run failure(ApiError.INVALID_GENDER)
 
-            success(repoAthlete.findByGender(genderType))
+            success(athletes.findByGender(genderType).map(AthleteEntity::toDomain))
         }
 
     fun updateAthlete(
@@ -83,24 +76,24 @@ class AthleteService(
         name: String,
         gender: String,
         clubId: Int,
-    ): Either<AthleteError, Athlete> =
+    ): Either<ApiError, Athlete> =
         trx.run {
             val existing =
-                repoAthlete.findById(id)
-                    ?: return@run failure(AthleteError.AthleteNotFound)
+                athletes.findByIdOrNull(id)
+                    ?: return@run failure(ApiError.ATHLETE_NOT_FOUND)
 
             val genderType =
                 GenderType.entries.find { it.name == gender }
-                    ?: return@run failure(AthleteError.InvalidGender)
+                    ?: return@run failure(ApiError.INVALID_GENDER)
 
-            repoClub.findById(clubId)
-                ?: return@run failure(AthleteError.ClubNotFound)
+            val club =
+                clubs.findByIdOrNull(clubId)
+                    ?: return@run failure(ApiError.CLUB_NOT_FOUND)
 
-            val updated =
-                repoAthlete.save(
-                    existing.copy(name = name, gender = genderType, clubId = clubId),
-                ) ?: return@run failure(AthleteError.UpdatingAthlete)
+            existing.name = name
+            existing.gender = genderType
+            existing.club = club
 
-            success(updated)
+            success(athletes.save(existing).toDomain())
         }
 }

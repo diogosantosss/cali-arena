@@ -1,9 +1,10 @@
 package com.caliarena.service
 
-import com.caliarena.Transaction
 import com.caliarena.domain.athlete.Athlete
 import com.caliarena.domain.athlete.GenderType
-import com.caliarena.domain.club.Club
+import com.caliarena.repo.entities.athlete.AthleteEntity
+import com.caliarena.repo.entities.club.ClubEntity
+import com.caliarena.repo.trx.Transaction
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
@@ -11,18 +12,18 @@ import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.lenient
 import org.mockito.kotlin.any
-import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import java.util.Optional
 
 class AthleteServiceTest : ServiceTest() {
     private lateinit var service: AthleteService
 
     @BeforeEach
     fun setup() {
-        lenient().whenever(transaction.repoAthlete).thenReturn(repoAthlete)
-        lenient().whenever(transaction.repoClub).thenReturn(repoClub)
+        lenient().whenever(transaction.athletes).thenReturn(athletes)
+        lenient().whenever(transaction.clubs).thenReturn(clubs)
 
         lenient()
             .doAnswer { invocation ->
@@ -34,306 +35,193 @@ class AthleteServiceTest : ServiceTest() {
         service = AthleteService(trxManager, clock)
     }
 
+    private val now = clock.instant()
+
+    private fun clubEntity(
+        id: Int = 1,
+        name: String = "Club A",
+    ) = ClubEntity(id, name, null, now.epochSecond)
+
+    private fun athleteEntity(
+        id: Int = 1,
+        name: String = "João Silva",
+        gender: GenderType = GenderType.MALE,
+        club: ClubEntity = clubEntity(),
+    ) = AthleteEntity(id, name, gender, club, now.epochSecond)
+
     @Nested
     inner class CreateAthlete {
-        private val now = clock.instant()
-
-        private val club = Club(id = 1, name = "Club A", shortName = "CA", createdAt = now)
-
-        private val athlete =
-            Athlete(
-                id = 1,
-                name = "João Silva",
-                gender = GenderType.MALE,
-                clubId = club.id,
-                createdAt = now,
-            )
-
         @Test
         fun `should create athlete successfully`() {
-            whenever(repoClub.findById(1)).thenReturn(club)
+            val club = clubEntity()
+            val created = athleteEntity(name = "João Silva", gender = GenderType.MALE, club = club)
 
-            whenever(
-                repoAthlete.createAthlete(
-                    name = "João Silva",
-                    gender = GenderType.MALE,
-                    clubId = 1,
-                    createdAt = now,
-                ),
-            ).thenReturn(athlete)
+            whenever(clubs.findById(1)).thenReturn(Optional.of(club))
+            whenever(athletes.save(any())).thenReturn(created)
 
             val result = service.createAthlete("João Silva", "MALE", 1)
 
-            assertEquals(success(athlete), result)
+            assertEquals(success(created.toDomain()), result)
 
-            verify(repoClub).findById(1)
-            verify(repoAthlete).createAthlete(
-                name = "João Silva",
-                gender = GenderType.MALE,
-                clubId = 1,
-                createdAt = now,
-            )
+            verify(clubs).findById(1)
         }
 
         @Test
         fun `should fail when club does not exist`() {
-            whenever(repoClub.findById(1)).thenReturn(null)
+            whenever(clubs.findById(1)).thenReturn(Optional.empty())
 
             val result = service.createAthlete("João Silva", "MALE", 1)
 
-            assertEquals(failure(AthleteError.ClubNotFound), result)
+            assertEquals(failure(ApiError.CLUB_NOT_FOUND), result)
 
-            verify(repoAthlete, never()).createAthlete(any(), any(), any(), any())
+            verify(athletes, never()).save(any())
         }
 
         @Test
         fun `should fail when gender is invalid`() {
-            whenever(repoClub.findById(1)).thenReturn(club)
+            whenever(clubs.findById(1)).thenReturn(Optional.of(clubEntity()))
 
-            val result = service.createAthlete("João Silva", "INVALID_GENDER", 1)
+            val result = service.createAthlete("João Silva", "INVALID", 1)
 
-            assertEquals(failure(AthleteError.InvalidGender), result)
+            assertEquals(failure(ApiError.INVALID_GENDER), result)
 
-            verify(repoAthlete, never()).createAthlete(any(), any(), any(), any())
-        }
-
-        @Test
-        fun `should fail when repository fails to create athlete`() {
-            whenever(repoClub.findById(1)).thenReturn(club)
-
-            whenever(
-                repoAthlete.createAthlete(
-                    name = "João Silva",
-                    gender = GenderType.MALE,
-                    clubId = 1,
-                    createdAt = now,
-                ),
-            ).thenReturn(null)
-
-            val result = service.createAthlete("João Silva", "MALE", 1)
-
-            assertEquals(failure(AthleteError.CreatingAthlete), result)
+            verify(athletes, never()).save(any())
         }
     }
 
     @Nested
     inner class GetAthleteById {
-        private val now = clock.instant()
-
-        private val athlete =
-            Athlete(
-                id = 1,
-                name = "João Silva",
-                gender = GenderType.MALE,
-                clubId = 1,
-                createdAt = now,
-            )
-
         @Test
         fun `should return athlete when found`() {
-            whenever(repoAthlete.findById(1)).thenReturn(athlete)
+            whenever(athletes.findById(1)).thenReturn(Optional.of(athleteEntity()))
 
             val result = service.getAthleteById(1)
 
-            assertEquals(success(athlete), result)
-
-            verify(repoAthlete).findById(1)
+            assertEquals(success(athleteEntity().toDomain()), result)
         }
 
         @Test
         fun `should fail when athlete does not exist`() {
-            whenever(repoAthlete.findById(1)).thenReturn(null)
+            whenever(athletes.findById(1)).thenReturn(Optional.empty())
 
             val result = service.getAthleteById(1)
 
-            assertEquals(failure(AthleteError.AthleteNotFound), result)
+            assertEquals(failure(ApiError.ATHLETE_NOT_FOUND), result)
         }
     }
 
     @Nested
     inner class GetAllAthletes {
-        private val now = clock.instant()
-
-        private val athletes =
-            listOf(
-                Athlete(id = 1, name = "João Silva", gender = GenderType.MALE, clubId = 1, createdAt = now),
-                Athlete(id = 2, name = "Ana Costa", gender = GenderType.FEMALE, clubId = 1, createdAt = now),
-            )
-
         @Test
         fun `should return all athletes`() {
-            whenever(repoAthlete.findAll()).thenReturn(athletes)
+            val list =
+                listOf(
+                    athleteEntity(id = 1),
+                    athleteEntity(id = 2, name = "Maria Silva", gender = GenderType.FEMALE),
+                )
+            whenever(athletes.findAll()).thenReturn(list)
 
             val result = service.getAllAthletes()
 
-            assertEquals(athletes, result)
-
-            verify(repoAthlete).findAll()
+            assertEquals(list.map { it.toDomain() }, result)
         }
 
         @Test
         fun `should return empty list when no athletes exist`() {
-            whenever(repoAthlete.findAll()).thenReturn(emptyList())
+            whenever(athletes.findAll()).thenReturn(emptyList())
 
-            val result = service.getAllAthletes()
-
-            assertTrue(result.isEmpty())
+            assertTrue(service.getAllAthletes().isEmpty())
         }
     }
 
     @Nested
     inner class GetAthletesByClub {
-        private val now = clock.instant()
-
-        private val club = Club(id = 1, name = "Club A", shortName = "CA", createdAt = now)
-
-        private val athletes =
-            listOf(
-                Athlete(id = 1, name = "João Silva", gender = GenderType.MALE, clubId = 1, createdAt = now),
-                Athlete(id = 2, name = "Ana Costa", gender = GenderType.FEMALE, clubId = 1, createdAt = now),
-            )
-
         @Test
-        fun `should return athletes for existing club`() {
-            whenever(repoClub.findById(1)).thenReturn(club)
-            whenever(repoAthlete.findByClubId(1)).thenReturn(athletes)
+        fun `should return athletes of the given club`() {
+            val club = clubEntity()
+            val list = listOf(athleteEntity(club = club))
+
+            whenever(clubs.findById(1)).thenReturn(Optional.of(club))
+            whenever(athletes.findByClubId(1)).thenReturn(list)
 
             val result = service.getAthletesByClub(1)
 
-            assertEquals(success(athletes), result)
-
-            verify(repoClub).findById(1)
-            verify(repoAthlete).findByClubId(1)
+            assertEquals(success(list.map { it.toDomain() }), result)
         }
 
         @Test
         fun `should fail when club does not exist`() {
-            whenever(repoClub.findById(1)).thenReturn(null)
+            whenever(clubs.findById(1)).thenReturn(Optional.empty())
 
             val result = service.getAthletesByClub(1)
 
-            assertEquals(failure(AthleteError.ClubNotFound), result)
-
-            verify(repoAthlete, never()).findByClubId(any())
-        }
-
-        @Test
-        fun `should return empty list when club has no athletes`() {
-            whenever(repoClub.findById(1)).thenReturn(club)
-            whenever(repoAthlete.findByClubId(1)).thenReturn(emptyList())
-
-            val result = service.getAthletesByClub(1)
-
-            assertEquals(success(emptyList<Athlete>()), result)
+            assertEquals(failure(ApiError.CLUB_NOT_FOUND), result)
         }
     }
 
     @Nested
     inner class GetAthletesByGender {
-        private val now = clock.instant()
-
-        private val maleAthletes =
-            listOf(
-                Athlete(id = 1, name = "João Silva", gender = GenderType.MALE, clubId = 1, createdAt = now),
-                Athlete(id = 3, name = "Carlos Ramos", gender = GenderType.MALE, clubId = 2, createdAt = now),
-            )
-
         @Test
-        fun `should return athletes filtered by gender`() {
-            whenever(repoAthlete.findByGender(GenderType.MALE)).thenReturn(maleAthletes)
+        fun `should return athletes with the given gender`() {
+            val list = listOf(athleteEntity(gender = GenderType.FEMALE))
+            whenever(athletes.findByGender(GenderType.FEMALE)).thenReturn(list)
 
-            val result = service.getAthletesByGender("MALE")
+            val result = service.getAthletesByGender("FEMALE")
 
-            assertEquals(success(maleAthletes), result)
-
-            verify(repoAthlete).findByGender(GenderType.MALE)
+            assertEquals(success(list.map { it.toDomain() }), result)
         }
 
         @Test
-        fun `should return empty list when no athletes match gender`() {
-            whenever(repoAthlete.findByGender(GenderType.FEMALE)).thenReturn(emptyList())
+        fun `should fail when gender is invalid`() {
+            val result = service.getAthletesByGender("INVALID")
 
-            val result: Either<AthleteError, List<Athlete>> = service.getAthletesByGender("FEMALE")
-
-            success(emptyList<Athlete>())
+            assertEquals(failure(ApiError.INVALID_GENDER), result)
         }
     }
 
     @Nested
     inner class UpdateAthlete {
-        private val now = clock.instant()
-
-        private val club = Club(id = 1, name = "Club A", shortName = "CA", createdAt = now)
-        private val newClub = Club(id = 2, name = "Club B", shortName = "CB", createdAt = now)
-
-        private val existing =
-            Athlete(
-                id = 1,
-                name = "João Silva",
-                gender = GenderType.MALE,
-                clubId = 1,
-                createdAt = now,
-            )
-
-        private val updated =
-            existing.copy(name = "João Atualizado", gender = GenderType.FEMALE, clubId = 2)
-
         @Test
         fun `should update athlete successfully`() {
-            val expectedSaved =
-                existing.copy(
-                    name = "João Atualizado",
-                    gender = GenderType.MALE,
-                    clubId = 2,
-                )
+            val clubA = clubEntity()
+            val existing = athleteEntity(name = "old", club = clubA)
+            val newClub = clubEntity(id = 2, name = "Club B")
 
-            whenever(repoAthlete.findById(1)).thenReturn(existing)
-            whenever(repoClub.findById(2)).thenReturn(newClub)
-            whenever(repoAthlete.save(any<Athlete>())).thenReturn(expectedSaved)
+            whenever(athletes.findById(1)).thenReturn(Optional.of(existing))
+            whenever(clubs.findById(2)).thenReturn(Optional.of(newClub))
+            whenever(athletes.save(any())).thenAnswer { it.getArgument<AthleteEntity>(0) }
 
-            val result = service.updateAthlete(1, "João Atualizado", "MALE", 2)
+            val result = service.updateAthlete(1, "new-name", "MALE", 2)
 
-            assertEquals(success(expectedSaved), result)
-
-            val captor = argumentCaptor<Athlete>()
-            verify(repoAthlete).save(captor.capture())
-            val saved = captor.firstValue
-            assertEquals(expectedSaved, saved)
+            assertEquals(success(Athlete(1, "new-name", GenderType.MALE, 2, now)), result)
         }
 
         @Test
         fun `should fail when athlete does not exist`() {
-            whenever(repoAthlete.findById(1)).thenReturn(null)
+            whenever(athletes.findById(1)).thenReturn(Optional.empty())
 
-            val result = service.updateAthlete(1, "João Atualizado", "male", 1)
+            val result = service.updateAthlete(1, "new-name", "MALE", 2)
 
-            assertEquals(failure(AthleteError.AthleteNotFound), result)
-
-            verify(repoClub, never()).findById(any())
-            verify(repoAthlete, never()).save(any())
+            assertEquals(failure(ApiError.ATHLETE_NOT_FOUND), result)
         }
 
         @Test
-        fun `should fail when new club does not exist`() {
-            whenever(repoAthlete.findById(1)).thenReturn(existing)
-            whenever(repoClub.findById(99)).thenReturn(null)
+        fun `should fail when gender is invalid`() {
+            whenever(athletes.findById(1)).thenReturn(Optional.of(athleteEntity()))
 
-            val result = service.updateAthlete(1, "João Atualizado", "MALE", 99)
+            val result = service.updateAthlete(1, "new-name", "INVALID", 2)
 
-            assertEquals(failure(AthleteError.ClubNotFound), result)
-
-            verify(repoAthlete, never()).save(any())
+            assertEquals(failure(ApiError.INVALID_GENDER), result)
         }
 
         @Test
-        fun `should fail when repository fails to save updated athlete`() {
-            whenever(repoAthlete.findById(1)).thenReturn(existing)
-            whenever(repoClub.findById(1)).thenReturn(club)
-            whenever(repoAthlete.save(any())).thenReturn(null)
+        fun `should fail when club does not exist`() {
+            whenever(athletes.findById(1)).thenReturn(Optional.of(athleteEntity()))
+            whenever(clubs.findById(2)).thenReturn(Optional.empty())
 
-            val result = service.updateAthlete(1, "João Atualizado", "MALE", 1)
+            val result = service.updateAthlete(1, "new-name", "MALE", 2)
 
-            assertEquals(failure(AthleteError.UpdatingAthlete), result)
+            assertEquals(failure(ApiError.CLUB_NOT_FOUND), result)
         }
     }
 }

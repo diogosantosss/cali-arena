@@ -1,16 +1,18 @@
 package com.caliarena.repo
 
-import com.caliarena.repo.jpa.TransactionManagerJpa
+import com.caliarena.repo.entities.club.ClubEntity
+import com.caliarena.repo.trx.Transaction
+import com.caliarena.repo.trx.TransactionManagerJpa
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
-import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.data.repository.findByIdOrNull
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 
@@ -22,26 +24,44 @@ class ClubRepositoryTest {
     @BeforeEach
     fun cleanup() {
         trx.run {
-            repoAthlete.clear()
-            repoClub.clear()
+            matchProgresses.deleteAll()
+            matches.deleteAll()
+            screenRoutines.deleteAll()
+            tournamentStates.deleteAll()
+            brackets.deleteAll()
+            tournaments.deleteAll()
+            tokens.deleteAll()
+            users.deleteAll()
+            athletes.deleteAll()
+            clubs.deleteAll()
         }
     }
 
+    private fun now() = Instant.now().truncatedTo(ChronoUnit.SECONDS)
+
+    private fun Transaction.newClub(
+        name: String = "club-${System.nanoTime()}",
+        shortName: String? = null,
+    ): ClubEntity = clubs.save(ClubEntity(name = name, shortName = shortName, createdAt = now().epochSecond))
+
     @Nested
-    inner class CreateClub {
+    inner class Create {
         @Test
         fun `should create a club with the given fields`() =
             trx.run {
-                val club =
-                    repoClub.createClub(
-                        name = "alpha",
-                        shortName = "A",
-                        createdAt = Instant.now().truncatedTo(ChronoUnit.SECONDS),
-                    )
+                val created = newClub(name = "Sporting", shortName = "SCP")
 
-                assertNotEquals(0, club.id)
-                assertEquals("alpha", club.name)
-                assertEquals("A", club.shortName)
+                assertNotEquals(0, created.id)
+                assertEquals("Sporting", created.name)
+                assertEquals("SCP", created.shortName)
+            }
+
+        @Test
+        fun `should create a club without short name`() =
+            trx.run {
+                val created = newClub()
+
+                assertNull(created.shortName)
             }
     }
 
@@ -50,18 +70,18 @@ class ClubRepositoryTest {
         @Test
         fun `should find an existing club by name`() =
             trx.run {
-                repoClub.createClub("bravo", "B", Instant.now().truncatedTo(ChronoUnit.SECONDS))
+                newClub(name = "Benfica")
 
-                val found = repoClub.findByName("bravo")
+                val found = clubs.findByName("Benfica")
 
                 assertNotNull(found)
-                assertEquals("bravo", found?.name)
+                assertEquals("Benfica", found?.name)
             }
 
         @Test
         fun `should return null when name does not exist`() =
             trx.run {
-                assertNull(repoClub.findByName("missing"))
+                assertNull(clubs.findByName("does-not-exist"))
             }
     }
 
@@ -70,38 +90,15 @@ class ClubRepositoryTest {
         @Test
         fun `should find an existing club by id`() =
             trx.run {
-                val created = repoClub.createClub("charlie", null, Instant.now().truncatedTo(ChronoUnit.SECONDS))
+                val created = newClub()
 
-                val found = repoClub.findById(created.id)
-
-                assertNotNull(found)
-                assertEquals(created.id, found?.id)
+                assertNotNull(clubs.findByIdOrNull(created.id))
             }
 
         @Test
         fun `should return null when id does not exist`() =
             trx.run {
-                assertNull(repoClub.findById(-1))
-            }
-    }
-
-    @Nested
-    inner class FindAll {
-        @Test
-        fun `should return all created clubs`() =
-            trx.run {
-                repoClub.createClub("c1", null, Instant.now().truncatedTo(ChronoUnit.SECONDS))
-                repoClub.createClub("c2", null, Instant.now().truncatedTo(ChronoUnit.SECONDS))
-
-                val clubs = repoClub.findAll()
-
-                assertEquals(2, clubs.size)
-            }
-
-        @Test
-        fun `should return empty list when there are no clubs`() =
-            trx.run {
-                assertTrue(repoClub.findAll().isEmpty())
+                assertNull(clubs.findByIdOrNull(-1))
             }
     }
 
@@ -110,14 +107,13 @@ class ClubRepositoryTest {
         @Test
         fun `should update an existing club`() =
             trx.run {
-                val created = repoClub.createClub("delta", "D", Instant.now().truncatedTo(ChronoUnit.SECONDS))
-                val updated = created.copy(name = "delta-updated")
+                val created = newClub(name = "old")
 
-                val saved = repoClub.save(updated)
+                created.name = "updated"
+                val saved = clubs.save(created)
 
-                assertNotNull(saved)
-                assertEquals("delta-updated", saved?.name)
-                assertEquals(created.id, saved?.id)
+                assertEquals("updated", saved.name)
+                assertEquals(created.id, saved.id)
             }
     }
 
@@ -126,25 +122,11 @@ class ClubRepositoryTest {
         @Test
         fun `should remove the club`() =
             trx.run {
-                val created = repoClub.createClub("echo", "E", Instant.now().truncatedTo(ChronoUnit.SECONDS))
+                val created = newClub()
 
-                repoClub.deleteById(created.id)
+                clubs.deleteById(created.id)
 
-                assertNull(repoClub.findById(created.id))
-            }
-    }
-
-    @Nested
-    inner class Clear {
-        @Test
-        fun `should remove all clubs`() =
-            trx.run {
-                repoClub.createClub("f1", null, Instant.now().truncatedTo(ChronoUnit.SECONDS))
-                repoClub.createClub("f2", null, Instant.now().truncatedTo(ChronoUnit.SECONDS))
-
-                repoClub.clear()
-
-                assertTrue(repoClub.findAll().isEmpty())
+                assertNull(clubs.findByIdOrNull(created.id))
             }
     }
 }

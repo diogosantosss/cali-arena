@@ -117,11 +117,12 @@ CREATE TABLE matches
 
 CREATE TABLE tournament_state
 (
-    id               SERIAL PRIMARY KEY,
-    tournament_id    INT REFERENCES tournaments (id),
-    current_screen   VARCHAR(20) NOT NULL,
-    current_match_id INT REFERENCES matches (id),
-    updated_at       BIGINT       NOT NULL
+    id                 SERIAL PRIMARY KEY,
+    tournament_id      INT REFERENCES tournaments (id),
+    current_screen     VARCHAR(20) NOT NULL,
+    current_match_id   INT REFERENCES matches (id),
+    current_bracket_id INT REFERENCES brackets (id),
+    updated_at         BIGINT       NOT NULL
 );
 
 

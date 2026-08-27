@@ -1,10 +1,9 @@
 package com.caliarena
 
-import com.caliarena.http.model.Problem
+import com.caliarena.http.model.invalidRequestContent
 import jakarta.servlet.http.HttpServletRequest
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpHeaders
-import org.springframework.http.HttpStatus
 import org.springframework.http.HttpStatusCode
 import org.springframework.http.ResponseEntity
 import org.springframework.http.converter.HttpMessageNotReadableException
@@ -23,7 +22,7 @@ class ExceptionHandler : ResponseEntityExceptionHandler() {
         request: WebRequest,
     ): ResponseEntity<Any>? {
         log.info("Handling MethodArgumentNotValidException: {}", ex.message)
-        return Problem.InvalidRequestContent.response(HttpStatus.BAD_REQUEST)
+        return invalidRequestContent()
     }
 
     override fun handleHttpMessageNotReadable(
@@ -33,7 +32,7 @@ class ExceptionHandler : ResponseEntityExceptionHandler() {
         request: WebRequest,
     ): ResponseEntity<Any> {
         log.info("Handling HttpMessageNotReadableException: {}", ex.message)
-        return Problem.InvalidRequestContent.response(HttpStatus.BAD_REQUEST)
+        return invalidRequestContent()
     }
 
     @ExceptionHandler(

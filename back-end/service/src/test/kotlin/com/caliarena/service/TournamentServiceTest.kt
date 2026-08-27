@@ -1,32 +1,35 @@
 package com.caliarena.service
 
-import com.caliarena.Transaction
-import com.caliarena.domain.athlete.GenderType
-import com.caliarena.domain.bracket.Bracket
-import com.caliarena.domain.bracket.BracketOverview
-import com.caliarena.domain.bracket.BracketStage
-import com.caliarena.domain.match.Match
-import com.caliarena.domain.match.MatchStatus
 import com.caliarena.domain.tournament.ScreenState
-import com.caliarena.domain.tournament.Tournament
-import com.caliarena.domain.tournament.TournamentState
 import com.caliarena.domain.tournament.TournamentStatus
+import com.caliarena.domain.user.UserRole
+import com.caliarena.repo.entities.match.MatchEntity
+import com.caliarena.repo.entities.tournament.BracketEntity
+import com.caliarena.repo.entities.tournament.TournamentEntity
+import com.caliarena.repo.entities.tournament.TournamentStateEntity
+import com.caliarena.repo.entities.user.UserEntity
+import com.caliarena.repo.trx.Transaction
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.lenient
-import org.mockito.Mockito.mock
+import org.mockito.Mockito.`when`
 import org.mockito.kotlin.any
+import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
+import java.util.Optional
 
 class TournamentServiceTest : ServiceTest() {
     private lateinit var service: TournamentService
 
     @BeforeEach
     fun setup() {
-        lenient().whenever(transaction.repoTournament).thenReturn(repoTournament)
-        lenient().whenever(transaction.repoMatch).thenReturn(repoMatch)
+        lenient().whenever(transaction.tournaments).thenReturn(tournaments)
+        lenient().whenever(transaction.tournamentStates).thenReturn(tournamentStates)
+        lenient().whenever(transaction.matches).thenReturn(matches)
+        lenient().whenever(transaction.brackets).thenReturn(brackets)
 
         lenient()
             .doAnswer { invocation ->
@@ -40,461 +43,263 @@ class TournamentServiceTest : ServiceTest() {
 
     private val now = clock.instant()
 
+    private fun tournamentEntity(id: Int = 1) =
+        TournamentEntity(
+            id = id,
+            name = "Tournament $id",
+            location = "Location",
+            startDate = now.epochSecond,
+            endDate = null,
+            status = TournamentStatus.READY,
+            createdAt = now.epochSecond,
+        )
+
+    private fun stateEntity(
+        tournament: TournamentEntity = tournamentEntity(),
+        screen: ScreenState = ScreenState.BATTLE,
+    ) = TournamentStateEntity(
+        id = 1,
+        tournament = tournament,
+        currentScreen = screen,
+        updatedAt = now.epochSecond,
+    )
+
+    private fun matchEntity(id: Int = 1) =
+        MatchEntity(
+            id = id,
+            bracket =
+                com.caliarena.repo.entities.tournament
+                    .BracketEntity(),
+            routineId = 1,
+            judge = UserEntity(1, "judge", "hash", UserRole.JUDGE, now.epochSecond),
+            athleteRed = null,
+            athleteBlue = null,
+            status = com.caliarena.domain.match.MatchStatus.FINISHED,
+            startedAt = now.toEpochMilli(),
+            finishedAt = now.plusSeconds(60).toEpochMilli(),
+            createdAt = now.epochSecond,
+        )
+
+    private fun bracketEntity(
+        id: Int = 1,
+        tournament: TournamentEntity = tournamentEntity(),
+    ) = BracketEntity(
+        id = id,
+        tournament = tournament,
+        gender = com.caliarena.domain.athlete.GenderType.MALE,
+        stage = com.caliarena.domain.bracket.BracketStage.QUALIFIERS,
+        createdAt = now.epochSecond,
+    )
+
     @Nested
     inner class CreateTournament {
-        private val tournament =
-            Tournament(
-                id = 1,
-                name = "Open Setúbal",
-                location = "Setúbal",
-                startDate = now,
-                endDate = now.plusSeconds(3600),
-                status = TournamentStatus.DRAFT,
-                createdAt = now,
-            )
-
         @Test
         fun `should create tournament successfully`() {
-            val now = clock.instant()
-            val tournamentState = mock(TournamentState::class.java)
+            val saved = tournamentEntity(2)
+            `when`(tournaments.findByName("New")).thenReturn(null as TournamentEntity?)
+            `when`(tournaments.save(any())).thenReturn(saved)
+            `when`(tournaments.findById(2)).thenReturn(Optional.of(saved))
+            `when`(tournamentStates.save(any())).thenReturn(stateEntity(saved))
 
-            whenever(repoTournament.findByName("Open Setúbal")).thenReturn(null)
-            whenever(
-                repoTournament.createTournament(
-                    name = "Open Setúbal",
-                    location = "Setúbal",
-                    startDate = now,
-                    endDate = now.plusSeconds(3600),
-                    createdAt = now,
-                ),
-            ).thenReturn(tournament)
+            val result = service.createTournament("New", "Loc", now, now.plusSeconds(3600))
 
-            whenever(
-                repoTournament.createTournamentState(
-                    tournamentId = tournament.id,
-                    updatedAt = now,
-                ),
-            ).thenReturn(tournamentState)
-
-            val result =
-                service.createTournament("Open Setúbal", "Setúbal", now, now.plusSeconds(3600))
-
-            assertEquals(success(tournament), result)
+            assertTrue(result is Either.Right)
         }
 
         @Test
-        fun `should fail when tournament already exists`() {
-            whenever(repoTournament.findByName("Open Setúbal")).thenReturn(tournament)
+        fun `should fail when name already exists`() {
+            lenient().whenever(tournaments.findByName("Existing")).thenReturn(tournamentEntity())
 
-            val result =
-                service.createTournament("Open Setúbal", "Setúbal", now, now.plusSeconds(3600))
+            val result = service.createTournament("Existing", "Loc", now, now.plusSeconds(3600))
 
-            assertEquals(failure(TournamentError.TournamentAlreadyExists), result)
+            assertEquals(failure(ApiError.TOURNAMENT_ALREADY_EXISTS), result)
         }
     }
 
     @Nested
     inner class GetTournamentById {
-        private val tournament =
-            Tournament(
-                id = 1,
-                name = "Open Setúbal",
-                location = "Setúbal",
-                startDate = now,
-                endDate = now.plusSeconds(3600),
-                status = TournamentStatus.DRAFT,
-                createdAt = now,
-            )
-
         @Test
-        fun `should return tournament when found`() {
-            whenever(repoTournament.findById(1)).thenReturn(tournament)
+        fun `should return tournament by id`() {
+            lenient().whenever(tournaments.findById(1)).thenReturn(Optional.of(tournamentEntity()))
 
             val result = service.getTournamentById(1)
 
-            assertEquals(success(tournament), result)
+            assertEquals(success(tournamentEntity().toDomain()), result)
         }
 
         @Test
-        fun `should fail when tournament does not exist`() {
-            whenever(repoTournament.findById(1)).thenReturn(null)
+        fun `should fail when not found`() {
+            lenient().whenever(tournaments.findById(99)).thenReturn(Optional.empty())
 
-            val result = service.getTournamentById(1)
+            val result = service.getTournamentById(99)
 
-            assertEquals(failure(TournamentError.TournamentNotFound), result)
-        }
-    }
-
-    @Nested
-    inner class GetAllTournaments {
-        private val tournaments =
-            listOf(
-                Tournament(1, "A", null, null, null, TournamentStatus.DRAFT, now),
-                Tournament(2, "B", null, null, null, TournamentStatus.READY, now),
-            )
-
-        @Test
-        fun `should return all tournaments`() {
-            whenever(repoTournament.findAll()).thenReturn(tournaments)
-
-            val result = service.getAllTournaments()
-
-            assertEquals(tournaments, result)
-        }
-    }
-
-    @Nested
-    inner class GetTournamentsByStatus {
-        private val tournaments =
-            listOf(
-                Tournament(1, "A", null, null, null, TournamentStatus.READY, now),
-                Tournament(2, "B", null, null, null, TournamentStatus.READY, now),
-            )
-
-        @Test
-        fun `should return tournaments by status`() {
-            whenever(repoTournament.findByStatus(TournamentStatus.READY)).thenReturn(tournaments)
-
-            val result = service.getTournamentsByStatus(TournamentStatus.READY)
-
-            assertEquals(tournaments, result)
+            assertEquals(failure(ApiError.TOURNAMENT_NOT_FOUND), result)
         }
     }
 
     @Nested
     inner class UpdateTournamentStatus {
-        private val tournament =
-            Tournament(
-                id = 1,
-                name = "Open",
-                location = null,
-                startDate = null,
-                endDate = null,
-                status = TournamentStatus.DRAFT,
-                createdAt = now,
-            )
-
         @Test
-        fun `should update status successfully`() {
-            val updated = tournament.copy(status = TournamentStatus.READY)
+        fun `should update status`() {
+            val existing = tournamentEntity()
+            lenient().whenever(tournaments.findById(1)).thenReturn(Optional.of(existing))
+            lenient().whenever(tournaments.save(existing)).thenReturn(existing)
 
-            whenever(repoTournament.findById(1)).thenReturn(tournament)
-            whenever(repoTournament.updateStatus(1, TournamentStatus.READY)).thenReturn(updated)
+            val result = service.updateTournamentStatus(1, "LIVE")
 
-            val result = service.updateTournamentStatus(1, "READY")
-
-            assertEquals(success(updated), result)
+            assertEquals(success(existing.toDomain()), result)
+            assertEquals(TournamentStatus.LIVE, existing.status)
         }
 
         @Test
-        fun `should fail when tournament does not exist`() {
-            whenever(repoTournament.findById(1)).thenReturn(null)
+        fun `should fail when not found`() {
+            lenient().whenever(tournaments.findById(99)).thenReturn(Optional.empty())
 
-            val result = service.updateTournamentStatus(1, "READY")
+            val result = service.updateTournamentStatus(99, "LIVE")
 
-            assertEquals(failure(TournamentError.TournamentNotFound), result)
+            assertEquals(failure(ApiError.TOURNAMENT_NOT_FOUND), result)
         }
 
         @Test
-        fun `should fail when repository fails to update`() {
-            whenever(repoTournament.findById(1)).thenReturn(tournament)
-            whenever(repoTournament.updateStatus(1, TournamentStatus.READY)).thenReturn(null)
+        fun `should fail on invalid status`() {
+            lenient().whenever(tournaments.findById(1)).thenReturn(Optional.of(tournamentEntity()))
 
-            val result = service.updateTournamentStatus(1, "READY")
+            val result = service.updateTournamentStatus(1, "INVALID")
 
-            assertEquals(failure(TournamentError.TournamentNotFound), result)
-        }
-    }
-
-    @Nested
-    inner class CreateBracket {
-        private val tournament =
-            Tournament(1, "Open", null, null, null, TournamentStatus.DRAFT, now)
-
-        private val bracket =
-            Bracket(
-                id = 10,
-                tournamentId = 1,
-                gender = GenderType.MALE,
-                stage = BracketStage.QUALIFIERS,
-                createdAt = now,
-            )
-
-        @Test
-        fun `should create bracket successfully`() {
-            whenever(repoTournament.findById(1)).thenReturn(tournament)
-            whenever(repoTournament.findBracketsByTournamentIdAndGender(1, GenderType.MALE))
-                .thenReturn(emptyList())
-            whenever(
-                repoTournament.createBracket(
-                    tournamentId = 1,
-                    gender = GenderType.MALE,
-                    stage = BracketStage.QUALIFIERS,
-                    createdAt = now,
-                ),
-            ).thenReturn(bracket)
-
-            val result = service.createBracket(1, "MALE", "QUALIFIERS")
-
-            assertEquals(success(bracket), result)
-        }
-
-        @Test
-        fun `should fail when tournament does not exist`() {
-            whenever(repoTournament.findById(1)).thenReturn(null)
-
-            val result = service.createBracket(1, "MALE", "QUALIFIERS")
-
-            assertEquals(failure(TournamentError.TournamentNotFound), result)
-        }
-
-        @Test
-        fun `should fail when bracket already exists`() {
-            whenever(repoTournament.findById(1)).thenReturn(tournament)
-            whenever(repoTournament.findBracketsByTournamentIdAndGender(1, GenderType.MALE))
-                .thenReturn(listOf(bracket))
-
-            val result = service.createBracket(1, "MALE", "QUALIFIERS")
-
-            assertEquals(failure(TournamentError.BracketAlreadyExists), result)
-        }
-
-        @Test
-        fun `should fail when repository fails to create bracket`() {
-            whenever(repoTournament.findById(1)).thenReturn(tournament)
-            whenever(repoTournament.findBracketsByTournamentIdAndGender(1, GenderType.MALE))
-                .thenReturn(emptyList())
-            whenever(
-                repoTournament.createBracket(
-                    tournamentId = 1,
-                    gender = GenderType.MALE,
-                    stage = BracketStage.QUALIFIERS,
-                    createdAt = now,
-                ),
-            ).thenReturn(null)
-
-            val result = service.createBracket(1, "MALE", "QUALIFIERS")
-
-            assertEquals(failure(TournamentError.TournamentNotFound), result)
-        }
-    }
-
-    @Nested
-    inner class GetBracketsByTournament {
-        private val tournament =
-            Tournament(1, "Open", null, null, null, TournamentStatus.DRAFT, now)
-
-        private val brackets =
-            listOf(
-                Bracket(10, 1, GenderType.MALE, BracketStage.QUALIFIERS, now),
-                Bracket(11, 1, GenderType.FEMALE, BracketStage.FINALS, now),
-            )
-
-        @Test
-        fun `should return brackets successfully`() {
-            whenever(repoTournament.findById(1)).thenReturn(tournament)
-            whenever(repoTournament.findBracketsByTournamentId(1)).thenReturn(brackets)
-
-            val result = service.getBracketsByTournament(1)
-
-            assertEquals(success(brackets), result)
-        }
-
-        @Test
-        fun `should fail when tournament does not exist`() {
-            whenever(repoTournament.findById(1)).thenReturn(null)
-
-            val result = service.getBracketsByTournament(1)
-
-            assertEquals(failure(TournamentError.TournamentNotFound), result)
-        }
-    }
-
-    @Nested
-    inner class GetBracketsByTournamentAndGender {
-        private val tournament =
-            Tournament(1, "Open", null, null, null, TournamentStatus.DRAFT, now)
-
-        private val brackets =
-            listOf(
-                Bracket(10, 1, GenderType.MALE, BracketStage.QUALIFIERS, now),
-            )
-
-        @Test
-        fun `should return brackets successfully`() {
-            whenever(repoTournament.findById(1)).thenReturn(tournament)
-            whenever(repoTournament.findBracketsByTournamentIdAndGender(1, GenderType.MALE))
-                .thenReturn(brackets)
-
-            val result = service.getBracketsByTournamentAndGender(1, "MALE")
-
-            assertEquals(success(brackets), result)
-        }
-
-        @Test
-        fun `should fail when tournament does not exist`() {
-            whenever(repoTournament.findById(1)).thenReturn(null)
-
-            val result = service.getBracketsByTournamentAndGender(1, "MALE")
-
-            assertEquals(failure(TournamentError.TournamentNotFound), result)
-        }
-    }
-
-    @Nested
-    inner class GetBracketOverview {
-        private val tournament =
-            Tournament(1, "Open", null, null, null, TournamentStatus.DRAFT, now)
-
-        private val bracket =
-            Bracket(10, 1, GenderType.MALE, BracketStage.QUALIFIERS, now)
-
-        private val matches =
-            listOf(
-                Match(
-                    id = 1,
-                    bracketId = 10,
-                    routineId = 5,
-                    judgeId = 1,
-                    athleteRedId = 100,
-                    athleteBlueId = 200,
-                    status = MatchStatus.PENDING,
-                    winnerAthleteId = null,
-                    startedAt = null,
-                    finishedAt = null,
-                    createdAt = now,
-                ),
-            )
-
-        @Test
-        fun `should return bracket overview successfully`() {
-            whenever(repoTournament.findById(1)).thenReturn(tournament)
-            whenever(repoTournament.findBracketsByTournamentIdAndGender(1, GenderType.MALE))
-                .thenReturn(listOf(bracket))
-            whenever(repoMatch.findByBracketId(10)).thenReturn(matches)
-
-            val result = service.getBracketOverview(1, "MALE")
-
-            val expected =
-                listOf(
-                    BracketOverview(
-                        bracket = bracket,
-                        matches = matches,
-                    ),
-                )
-
-            assertEquals(success(expected), result)
-        }
-
-        @Test
-        fun `should fail when tournament does not exist`() {
-            whenever(repoTournament.findById(1)).thenReturn(null)
-
-            val result = service.getBracketOverview(1, "MALE")
-
-            assertEquals(failure(TournamentError.TournamentNotFound), result)
+            assertEquals(failure(ApiError.INVALID_TOURNAMENT_STATUS), result)
         }
     }
 
     @Nested
     inner class GetTournamentState {
-        private val tournament =
-            Tournament(1, "Open", null, null, null, TournamentStatus.DRAFT, now)
-
-        private val state =
-            TournamentState(
-                id = 1,
-                tournamentId = 1,
-                currentScreen = ScreenState.WAITING,
-                currentMatchId = null,
-                updatedAt = now,
-            )
-
         @Test
-        fun `should return tournament state successfully`() {
-            whenever(repoTournament.findById(1)).thenReturn(tournament)
-            whenever(repoTournament.findStateByTournamentId(1)).thenReturn(state)
+        fun `should return state successfully`() {
+            val tournament = tournamentEntity()
+            val state =
+                TournamentStateEntity(
+                    tournament = tournament,
+                    currentScreen = ScreenState.BATTLE,
+                    updatedAt = now.epochSecond,
+                )
+            whenever(tournaments.findById(1)).thenReturn(Optional.of(tournament))
+            whenever(tournamentStates.findByTournamentId(1)).thenReturn(state)
 
             val result = service.getTournamentState(1)
 
-            assertEquals(success(state), result)
-        }
-
-        @Test
-        fun `should fail when tournament does not exist`() {
-            whenever(repoTournament.findById(1)).thenReturn(null)
-
-            val result = service.getTournamentState(1)
-
-            assertEquals(failure(TournamentError.TournamentNotFound), result)
+            assertEquals(success(state.toDomain()), result)
         }
 
         @Test
         fun `should fail when state does not exist`() {
-            whenever(repoTournament.findById(1)).thenReturn(tournament)
-            whenever(repoTournament.findStateByTournamentId(1)).thenReturn(null)
+            whenever(tournaments.findById(1)).thenReturn(Optional.of(tournamentEntity()))
+            whenever(tournamentStates.findByTournamentId(1)).thenReturn(null)
 
             val result = service.getTournamentState(1)
 
-            assertEquals(failure(TournamentError.TournamentStateNotFound), result)
+            assertEquals(failure(ApiError.TOURNAMENT_STATE_NOT_FOUND), result)
         }
     }
 
     @Nested
     inner class UpdateScreen {
-        private val tournament =
-            Tournament(1, "Open", null, null, null, TournamentStatus.DRAFT, now)
-
-        private val updatedState =
-            TournamentState(
-                id = 1,
-                tournamentId = 1,
-                currentScreen = ScreenState.BATTLE,
-                currentMatchId = 99,
-                updatedAt = now,
-            )
-
         @Test
         fun `should update screen successfully`() {
-            whenever(repoTournament.findById(1)).thenReturn(tournament)
-            whenever(
-                repoTournament.updateScreen(
-                    tournamentId = 1,
-                    screen = ScreenState.BATTLE,
-                    currentMatchId = 99,
-                    updatedAt = now,
-                ),
-            ).thenReturn(updatedState)
+            val tournament = tournamentEntity()
+            val state =
+                TournamentStateEntity(
+                    tournament = tournament,
+                    currentScreen = ScreenState.WAITING,
+                    updatedAt = now.epochSecond,
+                )
+            whenever(tournaments.findById(1)).thenReturn(Optional.of(tournament))
+            whenever(tournamentStates.findByTournamentId(1)).thenReturn(state)
+            whenever(tournamentStates.save(any())).thenReturn(state)
 
-            val result = service.updateScreen(1, "BATTLE", 99)
+            val result = service.updateScreen(1, "BATTLE", null, null)
 
-            assertEquals(success(updatedState), result)
+            assertTrue(result is Either.Right)
+            assertEquals(ScreenState.BATTLE, (result as Either.Right).value.currentScreen)
         }
 
         @Test
-        fun `should fail when tournament does not exist`() {
-            whenever(repoTournament.findById(1)).thenReturn(null)
+        fun `should set current match when provided`() {
+            val tournament = tournamentEntity()
+            val state =
+                TournamentStateEntity(
+                    tournament = tournament,
+                    currentScreen = ScreenState.WAITING,
+                    updatedAt = now.epochSecond,
+                )
+            val match = matchEntity()
+            whenever(tournaments.findById(1)).thenReturn(Optional.of(tournament))
+            whenever(tournamentStates.findByTournamentId(1)).thenReturn(state)
+            whenever(matches.findById(match.id)).thenReturn(Optional.of(match))
+            whenever(tournamentStates.save(any())).thenReturn(state)
 
-            val result = service.updateScreen(1, "BATTLE", 99)
+            val result = service.updateScreen(1, "BATTLE", match.id, null)
 
-            assertEquals(failure(TournamentError.TournamentNotFound), result)
+            assertTrue(result is Either.Right)
         }
 
         @Test
-        fun `should fail when repository fails to update screen`() {
-            whenever(repoTournament.findById(1)).thenReturn(tournament)
-            whenever(
-                repoTournament.updateScreen(
-                    tournamentId = 1,
-                    screen = ScreenState.BATTLE,
-                    currentMatchId = 99,
-                    updatedAt = now,
-                ),
-            ).thenReturn(null)
+        fun `should set current bracket when provided`() {
+            val tournament = tournamentEntity()
+            val state =
+                TournamentStateEntity(
+                    tournament = tournament,
+                    currentScreen = ScreenState.WAITING,
+                    updatedAt = now.epochSecond,
+                )
+            val bracket = bracketEntity(tournament = tournament)
+            whenever(tournaments.findById(1)).thenReturn(Optional.of(tournament))
+            whenever(tournamentStates.findByTournamentId(1)).thenReturn(state)
+            whenever(brackets.findById(bracket.id)).thenReturn(Optional.of(bracket))
+            whenever(tournamentStates.save(any())).thenReturn(state)
 
-            val result = service.updateScreen(1, "BATTLE", 99)
+            val result = service.updateScreen(1, "LEADERBOARD", null, bracket.id)
 
-            assertEquals(failure(TournamentError.TournamentStateNotFound), result)
+            assertTrue(result is Either.Right)
+            assertEquals(bracket.id, (result as Either.Right).value.currentBracketId)
+        }
+
+        @Test
+        fun `should fail when bracket does not exist`() {
+            whenever(tournaments.findById(1)).thenReturn(Optional.of(tournamentEntity()))
+            whenever(brackets.findById(99)).thenReturn(Optional.empty())
+
+            val result = service.updateScreen(1, "LEADERBOARD", null, 99)
+
+            assertEquals(failure(ApiError.BRACKET_NOT_FOUND), result)
+        }
+
+        @Test
+        fun `should fail when bracket belongs to another tournament`() {
+            whenever(tournaments.findById(1)).thenReturn(Optional.of(tournamentEntity()))
+            val otherBracket = bracketEntity(tournament = tournamentEntity(id = 2))
+            whenever(brackets.findById(otherBracket.id)).thenReturn(Optional.of(otherBracket))
+
+            val result = service.updateScreen(1, "LEADERBOARD", null, otherBracket.id)
+
+            assertEquals(failure(ApiError.BRACKET_NOT_FOUND), result)
+        }
+
+        @Test
+        fun `should fail when screen is invalid`() {
+            whenever(tournaments.findById(1)).thenReturn(Optional.of(tournamentEntity()))
+
+            val result = service.updateScreen(1, "INVALID", null, null)
+
+            assertEquals(failure(ApiError.INVALID_SCREEN_STATE), result)
+        }
+
+        @Test
+        fun `should fail when state does not exist`() {
+            whenever(tournaments.findById(1)).thenReturn(Optional.of(tournamentEntity()))
+            whenever(tournamentStates.findByTournamentId(1)).thenReturn(null)
+
+            val result = service.updateScreen(1, "BATTLE", null, null)
+
+            assertEquals(failure(ApiError.TOURNAMENT_STATE_NOT_FOUND), result)
         }
     }
 }

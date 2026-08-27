@@ -18,19 +18,21 @@ repositories {
 }
 
 dependencies {
-    implementation(project(":repo"))
-    implementation(project(":domain"))
+    // exposed because entities and Spring Data repository interfaces
+    // are part of this module's public API (used directly by services)
+    api(project(":domain"))
+    api("org.springframework.data:spring-data-jpa:3.5.4")
 
     implementation("org.jetbrains.kotlin:kotlin-reflect")
 
     // Spring Data JPA
-    implementation("org.springframework.boot:spring-boot-starter-data-jpa")
+    implementation("org.springframework.boot:spring-boot-starter-data-jpa:3.5.6")
 
     // Jakarta Persistence API
     implementation("jakarta.persistence:jakarta.persistence-api:3.1.0")
 
     // Driver
-    runtimeOnly("org.postgresql:postgresql")
+    runtimeOnly("org.postgresql:postgresql:42.7.2")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
 }

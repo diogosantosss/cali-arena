@@ -7,5 +7,6 @@ data class TournamentState(
     val tournamentId: Int,
     val currentScreen: ScreenState,
     val currentMatchId: Int?,
+    val currentBracketId: Int?,
     val updatedAt: Instant,
 )

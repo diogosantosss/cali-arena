@@ -17,6 +17,8 @@ dependencies {
     api(project(":http"))
     implementation(project(":repo-jpa"))
 
+    // for Spring Boot
+    implementation("org.springframework.boot:spring-boot-starter-websocket")
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
 

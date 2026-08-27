@@ -2,11 +2,10 @@ package com.caliarena.http
 
 import com.caliarena.domain.match.Match
 import com.caliarena.domain.match.MatchProgress
-import com.caliarena.http.model.Problem
 import com.caliarena.http.model.match.CreateMatchInput
 import com.caliarena.http.model.match.UpdateRepsInput
+import com.caliarena.http.model.toResponseEntity
 import com.caliarena.http.utils.toResponse
-import com.caliarena.service.MatchError
 import com.caliarena.service.MatchService
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
@@ -118,36 +117,4 @@ class MatchController(
                 },
                 onError = { it.toResponseEntity() },
             )
-
-    private fun MatchError.toResponseEntity(): ResponseEntity<Any> =
-        when (this) {
-            MatchError.AthleteNotFound ->
-                Problem.AthleteNotFound.response(HttpStatus.NOT_FOUND)
-            MatchError.BracketNotFound ->
-                Problem.BracketNotFound.response(HttpStatus.NOT_FOUND)
-            MatchError.ExerciseNotFound ->
-                Problem.ExerciseNotFound.response(HttpStatus.NOT_FOUND)
-            MatchError.JudgeNotFound ->
-                Problem.JudgeNotFound.response(HttpStatus.NOT_FOUND)
-            MatchError.MatchNotFound ->
-                Problem.MatchNotFound.response(HttpStatus.NOT_FOUND)
-            MatchError.ProgressNotFound ->
-                Problem.ProgressNotFound.response(HttpStatus.NOT_FOUND)
-            MatchError.RoutineNotFound ->
-                Problem.RoutineNotFound.response(HttpStatus.NOT_FOUND)
-            MatchError.AthleteNotInMatch ->
-                Problem.AthleteNotInMatch.response(HttpStatus.BAD_REQUEST)
-            MatchError.AthletesNotAssigned ->
-                Problem.AthletesNotAssigned.response(HttpStatus.BAD_REQUEST)
-            MatchError.SameAthleteOnBothSides ->
-                Problem.SameAthleteOnBothSides.response(HttpStatus.BAD_REQUEST)
-            MatchError.MatchNotRunning ->
-                Problem.MatchNotRunning.response(HttpStatus.CONFLICT)
-            MatchError.ProgressAlreadyExists ->
-                Problem.ProgressAlreadyExists.response(HttpStatus.CONFLICT)
-            MatchError.MatchAlreadyStarted ->
-                Problem.MatchAlreadyStarted.response(HttpStatus.CONFLICT)
-            MatchError.ErrorCreatingMatchProg ->
-                Problem.ErrorCreatingMatchProg.response(HttpStatus.INTERNAL_SERVER_ERROR)
-        }
 }

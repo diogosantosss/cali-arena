@@ -1,11 +1,9 @@
 package com.caliarena.http
 
-import com.caliarena.domain.club.Club
-import com.caliarena.http.model.Problem
 import com.caliarena.http.model.club.CreateClubInput
 import com.caliarena.http.model.club.UpdateClubInput
+import com.caliarena.http.model.toResponseEntity
 import com.caliarena.http.utils.toResponse
-import com.caliarena.service.ClubError
 import com.caliarena.service.ClubService
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
@@ -29,7 +27,7 @@ class ClubController(
     ): ResponseEntity<Any> =
         clubService
             .createClub(input.name, input.shortName)
-            .toResponse<ClubError, Club>(
+            .toResponse(
                 onSuccess = { club ->
                     ResponseEntity
                         .status(HttpStatus.CREATED)
@@ -45,7 +43,7 @@ class ClubController(
     ): ResponseEntity<Any> =
         clubService
             .getClubById(id)
-            .toResponse<ClubError, Club>(
+            .toResponse(
                 onSuccess = { club ->
                     ResponseEntity
                         .status(HttpStatus.OK)
@@ -67,7 +65,7 @@ class ClubController(
     ): ResponseEntity<Any> =
         clubService
             .updateClub(id, input.name, input.shortName)
-            .toResponse<ClubError, Club>(
+            .toResponse(
                 onSuccess = { club ->
                     ResponseEntity
                         .status(HttpStatus.OK)
@@ -75,16 +73,4 @@ class ClubController(
                 },
                 onError = { it.toResponseEntity() },
             )
-
-    private fun ClubError.toResponseEntity(): ResponseEntity<Any> =
-        when (this) {
-            ClubError.ClubAlreadyExists ->
-                Problem.ClubAlreadyExists.response(HttpStatus.CONFLICT)
-
-            ClubError.ClubNotFound ->
-                Problem.ClubNotFound.response(HttpStatus.NOT_FOUND)
-
-            ClubError.UpdatingClub ->
-                Problem.CreatingClub.response(HttpStatus.BAD_REQUEST)
-        }
 }

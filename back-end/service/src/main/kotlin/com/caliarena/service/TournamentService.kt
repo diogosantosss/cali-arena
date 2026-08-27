@@ -1,41 +1,18 @@
 package com.caliarena.service
 
-import com.caliarena.TransactionManager
-import com.caliarena.domain.athlete.GenderType
-import com.caliarena.domain.bracket.Bracket
-import com.caliarena.domain.bracket.BracketOverview
-import com.caliarena.domain.bracket.BracketStage
 import com.caliarena.domain.tournament.ScreenState
 import com.caliarena.domain.tournament.Tournament
 import com.caliarena.domain.tournament.TournamentState
 import com.caliarena.domain.tournament.TournamentStatus
+import com.caliarena.repo.entities.tournament.TournamentEntity
+import com.caliarena.repo.entities.tournament.TournamentStateEntity
+import com.caliarena.repo.trx.TransactionManager
 import com.caliarena.service.sse.SpectatorPublisher
 import com.caliarena.service.sse.TournamentStateUpdatedEvent
 import jakarta.inject.Named
+import org.springframework.data.repository.findByIdOrNull
 import java.time.Clock
 import java.time.Instant
-
-sealed class TournamentError {
-    data object TournamentNotFound : TournamentError()
-
-    data object TournamentAlreadyExists : TournamentError()
-
-    data object InvalidTournamentStatus : TournamentError()
-
-    data object BracketNotFound : TournamentError()
-
-    data object BracketAlreadyExists : TournamentError()
-
-    data object TournamentStateNotFound : TournamentError()
-
-    data object TournamentStateAlreadyExists : TournamentError()
-
-    data object InvalidBracketStage : TournamentError()
-
-    data object InvalidGender : TournamentError()
-
-    data object InvalidScreenState : TournamentError()
-}
 
 @Named
 class TournamentService(
@@ -48,154 +25,85 @@ class TournamentService(
         location: String?,
         startDate: Instant?,
         endDate: Instant?,
-    ): Either<TournamentError, Tournament> =
+    ): Either<ApiError, Tournament> =
         trx.run {
-            if (repoTournament.findByName(name) != null) {
-                return@run failure(TournamentError.TournamentAlreadyExists)
+            if (tournaments.findByName(name) != null) {
+                return@run failure(ApiError.TOURNAMENT_ALREADY_EXISTS)
             }
 
             val tournament =
-                repoTournament.createTournament(
-                    name = name,
-                    location = location,
-                    startDate = startDate,
-                    endDate = endDate,
-                    createdAt = clock.instant(),
-                )
+                tournaments
+                    .save(
+                        TournamentEntity(
+                            name = name,
+                            location = location,
+                            startDate = startDate?.epochSecond,
+                            endDate = endDate?.epochSecond,
+                            status = TournamentStatus.DRAFT,
+                            createdAt = clock.instant().epochSecond,
+                        ),
+                    ).toDomain()
 
-            repoTournament.createTournamentState(
-                tournamentId = tournament.id,
-                updatedAt = clock.instant(),
-            ) ?: return@run failure(TournamentError.TournamentNotFound)
+            val tournamentEntity =
+                tournaments.findByIdOrNull(tournament.id)
+                    ?: return@run failure(ApiError.TOURNAMENT_NOT_FOUND)
+
+            tournamentStates.save(
+                TournamentStateEntity(
+                    tournament = tournamentEntity,
+                    currentScreen = ScreenState.WAITING,
+                    updatedAt = clock.instant().epochSecond,
+                ),
+            )
 
             success(tournament)
         }
 
-    fun getTournamentById(id: Int): Either<TournamentError, Tournament> =
+    fun getTournamentById(id: Int): Either<ApiError, Tournament> =
         trx.run {
             val tournament =
-                repoTournament.findById(id)
-                    ?: return@run failure(TournamentError.TournamentNotFound)
+                tournaments.findByIdOrNull(id)?.toDomain()
+                    ?: return@run failure(ApiError.TOURNAMENT_NOT_FOUND)
 
             success(tournament)
         }
 
     fun getAllTournaments(): List<Tournament> =
         trx.run {
-            repoTournament.findAll()
+            tournaments.findAll().map { it.toDomain() }
         }
 
     fun getTournamentsByStatus(status: TournamentStatus): List<Tournament> =
         trx.run {
-            repoTournament.findByStatus(status)
+            tournaments.findByStatus(status).map { it.toDomain() }
         }
 
     fun updateTournamentStatus(
         id: Int,
         newStatus: String,
-    ): Either<TournamentError, Tournament> =
+    ): Either<ApiError, Tournament> =
         trx.run {
-            repoTournament.findById(id)
-                ?: return@run failure(TournamentError.TournamentNotFound)
+            val existing =
+                tournaments.findByIdOrNull(id)
+                    ?: return@run failure(ApiError.TOURNAMENT_NOT_FOUND)
 
             val status =
                 TournamentStatus.entries.find { it.name.equals(newStatus, true) }
-                    ?: return@run failure(TournamentError.InvalidTournamentStatus)
+                    ?: return@run failure(ApiError.INVALID_TOURNAMENT_STATUS)
 
-            val updated =
-                repoTournament.updateStatus(id, status)
-                    ?: return@run failure(TournamentError.TournamentNotFound)
+            existing.status = status
 
-            success(updated)
+            success(tournaments.save(existing).toDomain())
         }
 
-    fun createBracket(
-        tournamentId: Int,
-        gender: String,
-        stage: String,
-    ): Either<TournamentError, Bracket> =
+    fun getTournamentState(tournamentId: Int): Either<ApiError, TournamentState> =
         trx.run {
-            repoTournament.findById(tournamentId)
-                ?: return@run failure(TournamentError.TournamentNotFound)
-
-            val genderType =
-                GenderType.entries.find { it.name.equals(gender, true) }
-                    ?: return@run failure(TournamentError.InvalidGender)
-
-            val bracketStage =
-                BracketStage.entries.find { it.name.equals(stage, true) }
-                    ?: return@run failure(TournamentError.InvalidBracketStage)
-
-            val existing = repoTournament.findBracketsByTournamentIdAndGender(tournamentId, genderType)
-            if (existing.any { it.stage == bracketStage }) {
-                return@run failure(TournamentError.BracketAlreadyExists)
-            }
-
-            val bracket =
-                repoTournament.createBracket(
-                    tournamentId = tournamentId,
-                    gender = genderType,
-                    stage = bracketStage,
-                    createdAt = clock.instant(),
-                ) ?: return@run failure(TournamentError.TournamentNotFound)
-
-            success(bracket)
-        }
-
-    fun getBracketsByTournament(tournamentId: Int): Either<TournamentError, List<Bracket>> =
-        trx.run {
-            repoTournament.findById(tournamentId)
-                ?: return@run failure(TournamentError.TournamentNotFound)
-
-            success(repoTournament.findBracketsByTournamentId(tournamentId))
-        }
-
-    fun getBracketsByTournamentAndGender(
-        tournamentId: Int,
-        gender: String,
-    ): Either<TournamentError, List<Bracket>> =
-        trx.run {
-            repoTournament.findById(tournamentId)
-                ?: return@run failure(TournamentError.TournamentNotFound)
-
-            val genderType =
-                GenderType.entries.find { it.name.equals(gender, true) }
-                    ?: return@run failure(TournamentError.InvalidGender)
-
-            success(repoTournament.findBracketsByTournamentIdAndGender(tournamentId, genderType))
-        }
-
-    fun getBracketOverview(
-        tournamentId: Int,
-        gender: String,
-    ): Either<TournamentError, List<BracketOverview>> =
-        trx.run {
-            repoTournament.findById(tournamentId)
-                ?: return@run failure(TournamentError.TournamentNotFound)
-
-            val genderType =
-                GenderType.entries.find { it.name.equals(gender, true) }
-                    ?: return@run failure(TournamentError.InvalidGender)
-
-            val brackets = repoTournament.findBracketsByTournamentIdAndGender(tournamentId, genderType)
-
-            val overview =
-                brackets.map { bracket ->
-                    val matches = repoMatch.findByBracketId(bracket.id)
-                    BracketOverview(bracket = bracket, matches = matches)
-                }
-
-            success(overview)
-        }
-
-    fun getTournamentState(tournamentId: Int): Either<TournamentError, TournamentState> =
-        trx.run {
-            repoTournament.findById(tournamentId)
-                ?: return@run failure(TournamentError.TournamentNotFound)
+            tournaments.findByIdOrNull(tournamentId)?.toDomain()
+                ?: return@run failure(ApiError.TOURNAMENT_NOT_FOUND)
 
             val state =
-                repoTournament.findStateByTournamentId(tournamentId)
-                    ?: return@run failure(TournamentError.TournamentStateNotFound)
+                tournamentStates.findByTournamentId(tournamentId)?.toDomain()
+                    ?: return@run failure(ApiError.TOURNAMENT_STATE_NOT_FOUND)
 
             success(state)
         }
@@ -204,22 +112,33 @@ class TournamentService(
         tournamentId: Int,
         screen: String,
         currentMatchId: Int?,
-    ): Either<TournamentError, TournamentState> =
+        currentBracketId: Int?,
+    ): Either<ApiError, TournamentState> =
         trx.run {
-            repoTournament.findById(tournamentId)
-                ?: return@run failure(TournamentError.TournamentNotFound)
+            tournaments.findByIdOrNull(tournamentId)?.toDomain()
+                ?: return@run failure(ApiError.TOURNAMENT_NOT_FOUND)
 
             val screenState =
                 ScreenState.entries.find { it.name.equals(screen, true) }
-                    ?: return@run failure(TournamentError.InvalidScreenState)
+                    ?: return@run failure(ApiError.INVALID_SCREEN_STATE)
 
-            val updated: TournamentState =
-                repoTournament.updateScreen(
-                    tournamentId = tournamentId,
-                    screen = screenState,
-                    currentMatchId = currentMatchId,
-                    updatedAt = clock.instant(),
-                ) ?: return@run failure(TournamentError.TournamentStateNotFound)
+            val bracket =
+                currentBracketId?.let { id ->
+                    val found = brackets.findByIdOrNull(id) ?: return@run failure(ApiError.BRACKET_NOT_FOUND)
+                    if (found.tournament.id != tournamentId) return@run failure(ApiError.BRACKET_NOT_FOUND)
+                    found
+                }
+
+            val state =
+                tournamentStates.findByTournamentId(tournamentId)
+                    ?: return@run failure(ApiError.TOURNAMENT_STATE_NOT_FOUND)
+
+            state.currentScreen = screenState
+            state.currentMatch = currentMatchId?.let { matches.findByIdOrNull(it) }
+            state.currentBracket = bracket
+            state.updatedAt = clock.instant().epochSecond
+
+            val updated = tournamentStates.save(state).toDomain()
 
             TournamentStateUpdatedEvent(
                 tournamentId = tournamentId,

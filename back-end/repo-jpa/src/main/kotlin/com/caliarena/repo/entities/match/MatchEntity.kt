@@ -61,8 +61,8 @@ class MatchEntity(
             athleteBlueId = athleteBlue?.id,
             winnerAthleteId = winnerAthlete?.id,
             status = status,
-            startedAt = startedAt?.let { Instant.ofEpochSecond(it) },
-            finishedAt = finishedAt?.let { Instant.ofEpochSecond(it) },
+            startedAt = startedAt?.let { Instant.ofEpochMilli(it) },
+            finishedAt = finishedAt?.let { Instant.ofEpochMilli(it) },
             createdAt = Instant.ofEpochSecond(createdAt),
         )
 
@@ -82,8 +82,8 @@ class MatchEntity(
             athleteBlue = athleteBlue,
             winnerAthlete = winnerAthlete,
             status = this.status,
-            startedAt = this.startedAt?.epochSecond,
-            finishedAt = this.finishedAt?.epochSecond,
+            startedAt = this.startedAt?.toEpochMilli(),
+            finishedAt = this.finishedAt?.toEpochMilli(),
             createdAt = this.createdAt.epochSecond,
         )
     }

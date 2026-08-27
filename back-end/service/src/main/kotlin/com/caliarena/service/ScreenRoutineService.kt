@@ -1,27 +1,18 @@
 package com.caliarena.service
 
-import com.caliarena.TransactionManager
 import com.caliarena.domain.routine.Exercise
 import com.caliarena.domain.routine.RoutineOverview
 import com.caliarena.domain.routine.ScreenRoutine
+import com.caliarena.repo.entities.routine.ExerciseEntity
+import com.caliarena.repo.entities.routine.ScreenRoutineEntity
+import com.caliarena.repo.trx.TransactionManager
 import com.caliarena.service.sse.ScreenRoutineDeletedEvent
 import com.caliarena.service.sse.ScreenRoutinesEvent
 import com.caliarena.service.sse.SpectatorAction
 import com.caliarena.service.sse.SpectatorPublisher
+import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Service
 import java.time.Clock
-
-sealed class ScreenRoutineError {
-    data object TournamentNotFound : ScreenRoutineError()
-
-    data object RoutineNotFound : ScreenRoutineError()
-
-    data object ScreenRoutineNotFound : ScreenRoutineError()
-
-    data object TournamentMismatch : ScreenRoutineError()
-
-    data object ErrorUpdatingScreenRoutine : ScreenRoutineError()
-}
 
 @Service
 class ScreenRoutineService(
@@ -29,11 +20,12 @@ class ScreenRoutineService(
     private val clock: Clock,
     private val publisher: SpectatorPublisher,
 ) {
-    fun getByTournamentId(tournamentId: Int): Either<ScreenRoutineError, List<ScreenRoutine>> =
+    fun getByTournamentId(tournamentId: Int): Either<ApiError, List<ScreenRoutine>> =
         trx.run {
-            repoTournament.findById(tournamentId)
-                ?: return@run failure(ScreenRoutineError.TournamentNotFound)
-            success(repoScreenRoutine.findByTournamentId(tournamentId))
+            tournaments.findByIdOrNull(tournamentId)?.toDomain()
+                ?: return@run failure(ApiError.TOURNAMENT_NOT_FOUND)
+
+            success(screenRoutines.findByTournamentIdOrderByDisplayOrder(tournamentId).map(ScreenRoutineEntity::toDomain))
         }
 
     fun create(
@@ -41,20 +33,35 @@ class ScreenRoutineService(
         routineId: Int,
         displayOrder: Int,
         label: String?,
-    ): Either<ScreenRoutineError, ScreenRoutine> =
+    ): Either<ApiError, ScreenRoutine> =
         trx.run {
-            repoTournament.findById(tournamentId)
-                ?: return@run failure(ScreenRoutineError.TournamentNotFound)
-            val routine =
-                repoEnduranceRoutine.findById(routineId)
-                    ?: return@run failure(ScreenRoutineError.RoutineNotFound)
+            tournaments.findByIdOrNull(tournamentId)
+                ?: return@run failure(ApiError.TOURNAMENT_NOT_FOUND)
 
-            val screenRoutine: ScreenRoutine =
-                repoScreenRoutine.create(tournamentId, routineId, displayOrder, label, clock.instant())
+            val routine =
+                routines.findByIdOrNull(routineId)?.toDomain()
+                    ?: return@run failure(ApiError.ROUTINE_NOT_FOUND)
+
+            val now = clock.instant()
+
+            val screenRoutine =
+                screenRoutines
+                    .save(
+                        ScreenRoutineEntity(
+                            tournamentId = tournamentId,
+                            routineId = routineId,
+                            displayOrder = displayOrder,
+                            isVisible = true,
+                            label = label,
+                            createdAt = now.epochSecond,
+                            updatedAt = now.epochSecond,
+                        ),
+                    ).toDomain()
 
             val routineOverview: RoutineOverview =
-                repoEnduranceRoutine
+                exercises
                     .findExercisesByRoutineId(routine.id)
+                    .map(ExerciseEntity::toDomain)
                     .sortedBy(Exercise::exerciseOrder)
                     .let { RoutineOverview(routine.name, routine.timeCapSeconds, routine.createdAt, it) }
 
@@ -76,27 +83,31 @@ class ScreenRoutineService(
         isVisible: Boolean?,
         displayOrder: Int?,
         label: String?,
-    ): Either<ScreenRoutineError, ScreenRoutine> =
+    ): Either<ApiError, ScreenRoutine> =
         trx.run {
             val existing =
-                repoScreenRoutine.findById(id)
-                    ?: return@run failure(ScreenRoutineError.ScreenRoutineNotFound)
+                screenRoutines.findByIdOrNull(id)
+                    ?: return@run failure(ApiError.SCREEN_ROUTINE_NOT_FOUND)
 
             if (existing.tournamentId != tournamentId) {
-                return@run failure(ScreenRoutineError.TournamentMismatch)
+                return@run failure(ApiError.TOURNAMENT_MISMATCH)
             }
 
-            val result =
-                repoScreenRoutine.update(id, isVisible, displayOrder, label, clock.instant())
-                    ?: return@run failure(ScreenRoutineError.ErrorUpdatingScreenRoutine)
+            isVisible?.let { existing.isVisible = it }
+            displayOrder?.let { existing.displayOrder = it }
+            label?.let { existing.label = it }
+            existing.updatedAt = clock.instant().epochSecond
+
+            val result = screenRoutines.save(existing).toDomain()
 
             val routine =
-                repoEnduranceRoutine.findById(result.routineId)
-                    ?: return@run failure(ScreenRoutineError.RoutineNotFound)
+                routines.findByIdOrNull(result.routineId)?.toDomain()
+                    ?: return@run failure(ApiError.ROUTINE_NOT_FOUND)
 
             val routineOverview =
-                repoEnduranceRoutine
+                exercises
                     .findExercisesByRoutineId(routine.id)
+                    .map(ExerciseEntity::toDomain)
                     .sortedBy(Exercise::exerciseOrder)
                     .let { exercises -> RoutineOverview(routine.name, routine.timeCapSeconds, routine.createdAt, exercises) }
 
@@ -114,15 +125,17 @@ class ScreenRoutineService(
     fun delete(
         tournamentId: Int,
         id: Int,
-    ): Either<ScreenRoutineError, Unit> =
+    ): Either<ApiError, Unit> =
         trx.run {
             val existing =
-                repoScreenRoutine.findById(id)
-                    ?: return@run failure(ScreenRoutineError.ScreenRoutineNotFound)
+                screenRoutines.findByIdOrNull(id)
+                    ?: return@run failure(ApiError.SCREEN_ROUTINE_NOT_FOUND)
+
             if (existing.tournamentId != tournamentId) {
-                return@run failure(ScreenRoutineError.TournamentMismatch)
+                return@run failure(ApiError.TOURNAMENT_MISMATCH)
             }
-            repoScreenRoutine.deleteById(id)
+
+            screenRoutines.deleteById(id)
 
             publisher.publish(
                 ScreenRoutineDeletedEvent(

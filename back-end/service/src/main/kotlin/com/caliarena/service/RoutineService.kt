@@ -1,21 +1,17 @@
 package com.caliarena.service
 
-import com.caliarena.TransactionManager
 import com.caliarena.domain.routine.EnduranceRoutine
 import com.caliarena.domain.routine.Exercise
 import com.caliarena.domain.routine.ExerciseType
 import com.caliarena.domain.routine.RoutineOverview
+import com.caliarena.repo.entities.routine.EnduranceRoutineEntity
+import com.caliarena.repo.entities.routine.ExerciseEntity
+import com.caliarena.repo.trx.TransactionManager
+import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Service
 import java.math.BigDecimal
 import java.time.Clock
-
-sealed class RoutineError {
-    data object RoutineAlreadyExists : RoutineError()
-
-    data object RoutineNotFound : RoutineError()
-
-    data object ExerciseTypeNotFound : RoutineError()
-}
+import java.time.Instant
 
 @Service
 class RoutineService(
@@ -25,20 +21,22 @@ class RoutineService(
     fun createRoutine(
         name: String,
         timeCapSeconds: Int?,
-    ): Either<RoutineError, EnduranceRoutine> =
+    ): Either<ApiError, EnduranceRoutine> =
         trx.run {
-            repoEnduranceRoutine
+            routines
                 .findByName(name)
-                ?.let { return@run failure(RoutineError.RoutineAlreadyExists) }
+                ?.let { return@run failure(ApiError.ROUTINE_ALREADY_EXISTS) }
 
             val enduranceRoutine =
-                repoEnduranceRoutine.createRoutine(
-                    name,
-                    timeCapSeconds,
-                    clock.instant(),
+                routines.save(
+                    EnduranceRoutineEntity(
+                        name = name,
+                        timeCapSeconds = timeCapSeconds,
+                        createdAt = clock.instant().epochSecond,
+                    ),
                 )
 
-            success(enduranceRoutine)
+            success(enduranceRoutine.toDomain())
         }
 
     /**
@@ -62,52 +60,58 @@ class RoutineService(
         exerciseOrder: Int,
         supersetOrder: Int?,
         type: String, // ExerciseType
-    ): Either<RoutineError, Exercise> =
+    ): Either<ApiError, Exercise> =
         trx.run {
-            repoEnduranceRoutine.findById(routineId)
-                ?: return@run failure(RoutineError.RoutineNotFound)
+            val routine =
+                routines.findByIdOrNull(routineId)
+                    ?: return@run failure(ApiError.ROUTINE_NOT_FOUND)
 
             val exerciseType =
                 ExerciseType.entries.find { it.name == type }
-                    ?: return@run failure(RoutineError.ExerciseTypeNotFound)
+                    ?: return@run failure(ApiError.EXERCISE_TYPE_NOT_FOUND)
 
-            val exists = repoEnduranceRoutine.existsByRoutineIdAndExerciseOrder(routineId, exerciseOrder)
+            val exists = exercises.existsByRoutineIdAndExerciseOrder(routineId, exerciseOrder)
 
             if (exists && exerciseType != ExerciseType.SUPERSET) {
-                repoEnduranceRoutine.shiftExerciseOrders(routineId, exerciseOrder)
+                exercises.shiftExerciseOrders(routineId, exerciseOrder)
             }
 
             val exercise =
-                repoEnduranceRoutine.createExercise(
-                    routineId,
-                    name,
-                    targetReps,
-                    addedWeight,
-                    exerciseOrder,
-                    supersetOrder,
-                    exerciseType,
-                ) ?: return@run failure(RoutineError.RoutineNotFound)
+                exercises.save(
+                    ExerciseEntity(
+                        routine = routine,
+                        name = name,
+                        targetReps = targetReps,
+                        addedWeight = addedWeight,
+                        exerciseOrder = exerciseOrder,
+                        supersetOrder = supersetOrder,
+                        type = exerciseType,
+                    ),
+                )
 
-            success(exercise)
+            success(exercise.toDomain())
         }
 
-    fun getRoutineOverview(routineName: String): Either<RoutineError, RoutineOverview> =
+    fun getRoutineOverview(routineName: String): Either<ApiError, RoutineOverview> =
         trx.run {
             val routine =
-                repoEnduranceRoutine.findByName(routineName)
-                    ?: return@run failure(RoutineError.RoutineNotFound)
+                routines.findByName(routineName)
+                    ?: return@run failure(ApiError.ROUTINE_NOT_FOUND)
 
-            val exercises = repoEnduranceRoutine.findExercisesByRoutineId(routine.id)
+            val exercises = exercises.findExercisesByRoutineId(routine.id).map(ExerciseEntity::toDomain)
 
             success(
                 RoutineOverview(
                     name = routine.name,
                     timeCapSeconds = routine.timeCapSeconds,
-                    createdAt = routine.createdAt,
+                    createdAt = Instant.ofEpochSecond(routine.createdAt),
                     exercises = exercises.sortedBy(Exercise::exerciseOrder),
                 ),
             )
         }
 
-    fun getRoutines(): List<EnduranceRoutine> = trx.run { repoEnduranceRoutine.findAll() }
+    fun getRoutines(): List<EnduranceRoutine> =
+        trx.run {
+            routines.findAll().map(EnduranceRoutineEntity::toDomain)
+        }
 }
