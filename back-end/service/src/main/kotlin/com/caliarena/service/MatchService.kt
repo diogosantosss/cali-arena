@@ -121,10 +121,11 @@ class MatchService(
                     .minWithOrNull(compareBy({ it.exerciseOrder }, { it.supersetOrder ?: 0 }))
                     ?: return@run failure(MatchError.RoutineNotFound)
 
-            val now = clock.instant().epochSecond
+            val nowMillis = clock.instant().toEpochMilli()
+            val nowSeconds = clock.instant().epochSecond
 
             match.status = MatchStatus.RUNNING
-            match.startedAt = now
+            match.startedAt = nowMillis
             matches.save(match)
 
             val progress =
@@ -133,8 +134,8 @@ class MatchService(
                         match = match,
                         redCurrentExercise = firstExercise,
                         blueCurrentExercise = firstExercise,
-                        timerStartedAt = now,
-                        updatedAt = now,
+                        timerStartedAt = nowMillis,
+                        updatedAt = nowSeconds,
                     ),
                 )
 
@@ -252,7 +253,7 @@ class MatchService(
             // o lado forçado nunca é vencedor: o outro atleta ganha e a partida acaba já
             match.status = MatchStatus.FINISHED
             match.winnerAthlete = (if (isRed) match.athleteBlue else match.athleteRed)
-            match.finishedAt = now.epochSecond
+            match.finishedAt = now.toEpochMilli()
             matches.save(match)
 
             val tournamentId =
@@ -294,7 +295,7 @@ class MatchService(
             if (redWon) match.athleteRed else match.athleteBlue
         match.finishedAt =
             if (matchFinished) {
-                (if (redWon) blueFinishedAt else redFinishedAt).epochSecond
+                (if (redWon) blueFinishedAt else redFinishedAt).toEpochMilli()
             } else {
                 null
             }

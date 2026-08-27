@@ -3,6 +3,7 @@ package com.caliarena.service
 import com.caliarena.domain.routine.Exercise
 import com.caliarena.domain.routine.RoutineOverview
 import com.caliarena.domain.routine.ScreenRoutine
+import com.caliarena.repo.entities.routine.ExerciseEntity
 import com.caliarena.repo.entities.routine.ScreenRoutineEntity
 import com.caliarena.repo.trx.TransactionManager
 import com.caliarena.service.sse.ScreenRoutineDeletedEvent
@@ -46,7 +47,7 @@ class ScreenRoutineService(
         label: String?,
     ): Either<ScreenRoutineError, ScreenRoutine> =
         trx.run {
-            tournaments.findByIdOrNull(tournamentId)?.toDomain()
+            tournaments.findByIdOrNull(tournamentId)
                 ?: return@run failure(ScreenRoutineError.TournamentNotFound)
 
             val routine =
@@ -72,7 +73,7 @@ class ScreenRoutineService(
             val routineOverview: RoutineOverview =
                 exercises
                     .findExercisesByRoutineId(routine.id)
-                    .map { it.toDomain() }
+                    .map(ExerciseEntity::toDomain)
                     .sortedBy(Exercise::exerciseOrder)
                     .let { RoutineOverview(routine.name, routine.timeCapSeconds, routine.createdAt, it) }
 
@@ -118,7 +119,7 @@ class ScreenRoutineService(
             val routineOverview =
                 exercises
                     .findExercisesByRoutineId(routine.id)
-                    .map { it.toDomain() }
+                    .map(ExerciseEntity::toDomain)
                     .sortedBy(Exercise::exerciseOrder)
                     .let { exercises -> RoutineOverview(routine.name, routine.timeCapSeconds, routine.createdAt, exercises) }
 

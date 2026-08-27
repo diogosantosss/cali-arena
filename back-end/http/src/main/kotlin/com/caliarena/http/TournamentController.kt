@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 import java.time.Instant
 import java.time.LocalDate
@@ -165,6 +166,35 @@ class TournamentController(
                 onError = { it.toResponseEntity() },
             )
 
+    @GetMapping("/bracket/{bracketId}/leaderboard")
+    fun getBracketLeaderboard(
+        @PathVariable bracketId: Int,
+    ): ResponseEntity<Any> =
+        tournamentService
+            .getBracketLeaderboard(bracketId)
+            .toResponse(
+                onSuccess = {
+                    ResponseEntity
+                        .status(HttpStatus.OK)
+                        .body(it)
+                },
+                onError = { it.toResponseEntity() },
+            )
+
+    @GetMapping("/{tournamentId}/brackets/summary")
+    fun getBracketsSummary(
+        @PathVariable tournamentId: Int,
+        @RequestParam gender: String,
+    ): ResponseEntity<Any> =
+        tournamentService
+            .getTournamentBracketsSummary(tournamentId, gender)
+            .toResponse(
+                onSuccess = { summary ->
+                    ResponseEntity.ok(summary)
+                },
+                onError = { it.toResponseEntity() },
+            )
+
     private fun String.convertDate(): Instant = LocalDate.parse(this).atStartOfDay().toInstant(ZoneOffset.UTC)
 
     private fun TournamentError.toResponseEntity(): ResponseEntity<Any> =
@@ -187,6 +217,8 @@ class TournamentController(
                 Problem.BracketAlreadyExists.response(HttpStatus.CONFLICT)
             TournamentError.TournamentAlreadyExists ->
                 Problem.TournamentAlreadyExists.response(HttpStatus.CONFLICT)
+            TournamentError.MatchNotFinished ->
+                Problem.MatchNotFinished.response(HttpStatus.CONFLICT)
             TournamentError.TournamentStateAlreadyExists ->
                 Problem.TournamentStateAlreadyExists.response(HttpStatus.CONFLICT)
         }

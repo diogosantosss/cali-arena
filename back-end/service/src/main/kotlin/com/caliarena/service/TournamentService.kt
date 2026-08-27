@@ -2,8 +2,14 @@ package com.caliarena.service
 
 import com.caliarena.domain.athlete.GenderType
 import com.caliarena.domain.bracket.Bracket
+import com.caliarena.domain.bracket.BracketLeaderboard
+import com.caliarena.domain.bracket.BracketMatchSummary
 import com.caliarena.domain.bracket.BracketOverview
 import com.caliarena.domain.bracket.BracketStage
+import com.caliarena.domain.bracket.BracketSummary
+import com.caliarena.domain.bracket.LeaderboardEntry
+import com.caliarena.domain.bracket.TournamentBracketsResponse
+import com.caliarena.domain.match.MatchStatus
 import com.caliarena.domain.tournament.ScreenState
 import com.caliarena.domain.tournament.Tournament
 import com.caliarena.domain.tournament.TournamentState
@@ -18,6 +24,7 @@ import com.caliarena.service.sse.TournamentStateUpdatedEvent
 import jakarta.inject.Named
 import org.springframework.data.repository.findByIdOrNull
 import java.time.Clock
+import java.time.Duration
 import java.time.Instant
 
 sealed class TournamentError {
@@ -40,6 +47,8 @@ sealed class TournamentError {
     data object InvalidGender : TournamentError()
 
     data object InvalidScreenState : TournamentError()
+
+    data object MatchNotFinished : TournamentError()
 }
 
 @Named
@@ -249,4 +258,118 @@ class TournamentService(
 
             success(updated)
         }
+
+    fun getBracketLeaderboard(bracketId: Int): Either<TournamentError, BracketLeaderboard> =
+        trx.run {
+            val bracket =
+                brackets.findByIdOrNull(bracketId)
+                    ?: return@run failure(TournamentError.BracketNotFound)
+
+            val bracketMatches = matches.findByBracketId(bracketId)
+
+            if (bracketMatches.isEmpty()) {
+                return@run success(BracketLeaderboard(bracket.id, bracket.gender, bracket.stage, emptyList()))
+            }
+
+            if (bracketMatches.any { it.status != MatchStatus.FINISHED }) {
+                return@run failure(TournamentError.MatchNotFinished)
+            }
+
+            val entries = mutableListOf<LeaderboardEntry>()
+
+            for (match in bracketMatches) {
+                val progress = matchProgresses.findByMatchId(match.id)
+
+                match.athleteRed?.let {
+                    entries +=
+                        LeaderboardEntry(
+                            athleteName = it.name,
+                            duration =
+                                formatMatchTime(
+                                    match.startedAt!!,
+                                    progress?.redFinishedAt!!,
+                                ),
+                            matchId = match.id,
+                        )
+                }
+
+                match.athleteBlue?.let {
+                    entries +=
+                        LeaderboardEntry(
+                            athleteName = it.name,
+                            duration =
+                                formatMatchTime(
+                                    match.startedAt!!,
+                                    progress?.blueFinishedAt!!,
+                                ),
+                            matchId = match.id,
+                        )
+                }
+            }
+
+            entries.sortBy(LeaderboardEntry::duration)
+
+            success(
+                BracketLeaderboard(bracket.id, bracket.gender, bracket.stage, entries),
+            )
+        }
+
+    fun getTournamentBracketsSummary(
+        tournamentId: Int,
+        gender: String,
+    ): Either<TournamentError, TournamentBracketsResponse> =
+        trx.run {
+            val validGender =
+                GenderType.entries.find { it.name.equals(gender, true) }
+                    ?: return@run failure(TournamentError.InvalidGender)
+
+            tournaments.findByIdOrNull(tournamentId)
+                ?: return@run failure(TournamentError.TournamentNotFound)
+
+            val tournamentBrackets = brackets.findByTournamentIdAndGender(tournamentId, validGender)
+
+            if (tournamentBrackets.isEmpty()) {
+                return@run success(TournamentBracketsResponse(tournamentId, validGender, emptyList()))
+            }
+
+            val summaries =
+                tournamentBrackets.map { bracket: BracketEntity ->
+                    val bracketMatches: List<MatchEntity> =
+                        matches
+                            .findByBracketId(bracket.id)
+                    // .filter { it.status == MatchStatus.FINISHED && it.startedAt != null }
+
+                    val matchSummaries =
+                        bracketMatches.map { match ->
+                            val startedAt = match.startedAt?.let { Instant.ofEpochMilli(it) }
+                            val red = match.athleteRed?.name ?: "Unknown"
+                            val blue = match.athleteBlue?.name ?: "Unknown"
+                            val winner = match.winnerAthlete?.name ?: "—"
+
+                            BracketMatchSummary(match.id, startedAt, red, blue, winner)
+                        }
+
+                    BracketSummary(stage = bracket.stage, matches = matchSummaries)
+                }
+
+            success(TournamentBracketsResponse(tournamentId, validGender, summaries))
+        }
+
+    private fun formatMatchTime(
+        startedAt: Long,
+        finishedAt: Long,
+    ): String {
+        val totalMs =
+            Duration
+                .between(
+                    Instant.ofEpochMilli(startedAt),
+                    Instant.ofEpochMilli(finishedAt),
+                ).toMillis()
+
+        val minutes = totalMs / 60000
+        val seconds = (totalMs % 60000) / 1000
+        val ms = totalMs % 1000
+
+        return "%d:%02d.%03d".format(minutes, seconds, ms)
+    }
 }

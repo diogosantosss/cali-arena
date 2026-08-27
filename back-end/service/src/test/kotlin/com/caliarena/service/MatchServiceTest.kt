@@ -307,7 +307,7 @@ class MatchServiceTest : ServiceTest() {
                     match = match,
                     redCurrentExercise = firstExercise,
                     blueCurrentExercise = firstExercise,
-                    timerStartedAt = now.epochSecond,
+                    timerStartedAt = now.toEpochMilli(),
                     updatedAt = now.epochSecond,
                 ).also { it.id = 1 }
 
@@ -324,7 +324,7 @@ class MatchServiceTest : ServiceTest() {
             val captor = argumentCaptor<MatchEntity>()
             verify(matches).save(captor.capture())
             assertEquals(MatchStatus.RUNNING, captor.firstValue.status)
-            assertEquals(now.epochSecond, captor.firstValue.startedAt)
+            assertEquals(now.toEpochMilli(), captor.firstValue.startedAt)
         }
     }
 
@@ -394,7 +394,7 @@ class MatchServiceTest : ServiceTest() {
             val updated =
                 progOn(running, redEx = null, blueEx = 1, redReps = 10)
                     .apply {
-                        redFinishedAt = now.epochSecond
+                        redFinishedAt = now.toEpochMilli()
                         updatedAt = now.epochSecond
                     }
 
@@ -419,8 +419,8 @@ class MatchServiceTest : ServiceTest() {
             val updated =
                 progOn(running, redEx = null, blueEx = null, redReps = 10, blueReps = 10)
                     .apply {
-                        redFinishedAt = now.epochSecond
-                        blueFinishedAt = now.epochSecond
+                        redFinishedAt = now.toEpochMilli()
+                        blueFinishedAt = now.toEpochMilli()
                         updatedAt = now.epochSecond
                     }
 
@@ -437,17 +437,17 @@ class MatchServiceTest : ServiceTest() {
             verify(matches, atLeastOnce()).save(captor.capture())
             assertEquals(MatchStatus.FINISHED, captor.firstValue.status)
             assertEquals(running.athleteRed, captor.firstValue.winnerAthlete)
-            assertEquals(now.epochSecond, captor.firstValue.finishedAt)
+            assertEquals(now.toEpochMilli(), captor.firstValue.finishedAt)
         }
 
         @Test
         fun `should still advance the other athlete after the first one finishes`() {
             val progRedDone =
                 progOn(running, redEx = null, blueEx = 3, redReps = 10)
-                    .apply { redFinishedAt = now.epochSecond }
+                    .apply { redFinishedAt = now.toEpochMilli() }
             val updated =
                 progOn(running, redEx = null, blueEx = 3, redReps = 10, blueReps = 5)
-                    .apply { redFinishedAt = now.epochSecond }
+                    .apply { redFinishedAt = now.toEpochMilli() }
             whenever(matches.findById(1)).thenReturn(Optional.of(running))
             whenever(matchProgresses.findByMatchId(1)).thenReturn(progRedDone)
             whenever(exercises.findExercisesByRoutineId(2)).thenReturn(exsEntities)
@@ -499,7 +499,7 @@ class MatchServiceTest : ServiceTest() {
         fun `should force finish red and blue wins when blue already finished`() {
             val progBlueDone =
                 progOn(running, redEx = 1, blueEx = null, blueReps = 10)
-                    .apply { blueFinishedAt = now.minusSeconds(10).epochSecond }
+                    .apply { blueFinishedAt = now.minusSeconds(10).toEpochMilli() }
             whenever(matches.findById(1)).thenReturn(Optional.of(running))
             whenever(matchProgresses.findByMatchId(1)).thenReturn(progBlueDone)
             stubBracketExists()
@@ -512,14 +512,14 @@ class MatchServiceTest : ServiceTest() {
             val saved = captor.firstValue
             assertEquals(MatchStatus.FINISHED, saved.status)
             assertEquals(running.athleteBlue, saved.winnerAthlete)
-            assertEquals(now.epochSecond, saved.finishedAt)
+            assertEquals(now.toEpochMilli(), saved.finishedAt)
         }
 
         @Test
         fun `should force finish blue and red wins when red already finished`() {
             val progRedDone =
                 progOn(running, redEx = null, blueEx = 1, redReps = 10)
-                    .apply { redFinishedAt = now.minusSeconds(10).epochSecond }
+                    .apply { redFinishedAt = now.minusSeconds(10).toEpochMilli() }
             whenever(matches.findById(1)).thenReturn(Optional.of(running))
             whenever(matchProgresses.findByMatchId(1)).thenReturn(progRedDone)
             stubBracketExists()
