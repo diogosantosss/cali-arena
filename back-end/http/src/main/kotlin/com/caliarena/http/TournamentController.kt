@@ -1,10 +1,9 @@
 package com.caliarena.http
 
-import com.caliarena.http.model.Problem
+import com.caliarena.http.model.toResponseEntity
 import com.caliarena.http.model.tournament.CreateTournamentInput
 import com.caliarena.http.model.tournament.UpdateScreenInput
 import com.caliarena.http.utils.toResponse
-import com.caliarena.service.TournamentError
 import com.caliarena.service.TournamentService
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
@@ -99,20 +98,4 @@ class TournamentController(
             )
 
     private fun String.convertDate(): Instant = LocalDate.parse(this).atStartOfDay().toInstant(ZoneOffset.UTC)
-
-    private fun TournamentError.toResponseEntity(): ResponseEntity<Any> =
-        when (this) {
-            TournamentError.InvalidTournamentStatus ->
-                Problem.InvalidTournamentStatus.response(HttpStatus.BAD_REQUEST)
-            TournamentError.InvalidScreenState ->
-                Problem.InvalidScreenState.response(HttpStatus.BAD_REQUEST)
-            TournamentError.TournamentStateNotFound ->
-                Problem.TournamentStateNotFound.response(HttpStatus.NOT_FOUND)
-            TournamentError.TournamentNotFound ->
-                Problem.TournamentNotFound.response(HttpStatus.NOT_FOUND)
-            TournamentError.TournamentAlreadyExists ->
-                Problem.TournamentAlreadyExists.response(HttpStatus.CONFLICT)
-            TournamentError.TournamentStateAlreadyExists ->
-                Problem.TournamentStateAlreadyExists.response(HttpStatus.CONFLICT)
-        }
 }

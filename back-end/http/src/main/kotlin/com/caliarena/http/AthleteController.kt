@@ -1,11 +1,10 @@
 package com.caliarena.http
 
 import com.caliarena.domain.athlete.Athlete
-import com.caliarena.http.model.Problem
 import com.caliarena.http.model.athlete.CreateAthleteInput
 import com.caliarena.http.model.athlete.UpdateAthleteInput
+import com.caliarena.http.model.toResponseEntity
 import com.caliarena.http.utils.toResponse
-import com.caliarena.service.AthleteError
 import com.caliarena.service.AthleteService
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
@@ -29,7 +28,7 @@ class AthleteController(
     ): ResponseEntity<Any> =
         athleteService
             .createAthlete(input.name, input.gender, input.clubId)
-            .toResponse<AthleteError, Athlete>(
+            .toResponse(
                 onSuccess = { athlete ->
                     ResponseEntity
                         .status(HttpStatus.CREATED)
@@ -46,7 +45,7 @@ class AthleteController(
     ): ResponseEntity<Any> =
         athleteService
             .updateAthlete(id, input.name, input.gender, input.clubId)
-            .toResponse<AthleteError, Athlete>(
+            .toResponse(
                 onSuccess = { athlete ->
                     ResponseEntity
                         .status(HttpStatus.OK)
@@ -61,7 +60,7 @@ class AthleteController(
     ): ResponseEntity<Any> =
         athleteService
             .getAthleteById(id)
-            .toResponse<AthleteError, Athlete>(
+            .toResponse(
                 onSuccess = { athlete ->
                     ResponseEntity
                         .status(HttpStatus.OK)
@@ -82,7 +81,7 @@ class AthleteController(
     ): ResponseEntity<Any> =
         athleteService
             .getAthletesByClub(clubId)
-            .toResponse<AthleteError, List<Athlete>>(
+            .toResponse(
                 onSuccess = { athletes ->
                     ResponseEntity
                         .status(HttpStatus.OK)
@@ -97,7 +96,7 @@ class AthleteController(
     ): ResponseEntity<Any> =
         athleteService
             .getAthletesByGender(gender)
-            .toResponse<AthleteError, List<Athlete>>(
+            .toResponse(
                 onSuccess = { athletes ->
                     ResponseEntity
                         .status(HttpStatus.OK)
@@ -105,22 +104,4 @@ class AthleteController(
                 },
                 onError = { it.toResponseEntity() },
             )
-
-    private fun AthleteError.toResponseEntity(): ResponseEntity<Any> =
-        when (this) {
-            AthleteError.AthleteNotFound ->
-                Problem.AthleteNotFound.response(HttpStatus.NOT_FOUND)
-
-            AthleteError.ClubNotFound ->
-                Problem.ClubNotFound.response(HttpStatus.NOT_FOUND)
-
-            AthleteError.CreatingAthlete ->
-                Problem.ErrorCreatingAthlete.response(HttpStatus.BAD_REQUEST)
-
-            AthleteError.InvalidGender ->
-                Problem.InvalidGender.response(HttpStatus.BAD_REQUEST)
-
-            AthleteError.UpdatingAthlete ->
-                Problem.UpdatingAthlete.response(HttpStatus.BAD_REQUEST)
-        }
 }

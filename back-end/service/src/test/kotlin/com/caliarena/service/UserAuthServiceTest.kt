@@ -152,7 +152,7 @@ class UserAuthServiceTest : ServiceTest() {
                 )
 
             assertEquals(
-                failure(UserError.AlreadyUsedUsername),
+                failure(ApiError.ALREADY_USED_USERNAME),
                 result,
             )
 
@@ -168,7 +168,7 @@ class UserAuthServiceTest : ServiceTest() {
                 )
 
             assertEquals(
-                failure(UserError.InsecurePassword),
+                failure(ApiError.INSECURE_PASSWORD),
                 result,
             )
 
@@ -207,7 +207,7 @@ class UserAuthServiceTest : ServiceTest() {
             val result = service.createToken("", "Password1")
 
             assertEquals(
-                failure(UserError.UserOrPasswordAreInvalid),
+                failure(ApiError.USER_OR_PASSWORD_ARE_INVALID),
                 result,
             )
 
@@ -219,7 +219,7 @@ class UserAuthServiceTest : ServiceTest() {
             val result = service.createToken("diogo", "")
 
             assertEquals(
-                failure(UserError.UserOrPasswordAreInvalid),
+                failure(ApiError.USER_OR_PASSWORD_ARE_INVALID),
                 result,
             )
 
@@ -238,7 +238,7 @@ class UserAuthServiceTest : ServiceTest() {
                 )
 
             assertEquals(
-                failure(UserError.UserOrPasswordAreInvalid),
+                failure(ApiError.USER_OR_PASSWORD_ARE_INVALID),
                 result,
             )
 
@@ -265,7 +265,7 @@ class UserAuthServiceTest : ServiceTest() {
                 )
 
             assertEquals(
-                failure(UserError.UserOrPasswordAreInvalid),
+                failure(ApiError.USER_OR_PASSWORD_ARE_INVALID),
                 result,
             )
 
@@ -453,7 +453,7 @@ class UserAuthServiceTest : ServiceTest() {
                 )
 
             assertEquals(
-                failure(UserError.UserNotFound),
+                failure(ApiError.USER_NOT_FOUND),
                 result,
             )
         }
@@ -474,7 +474,7 @@ class UserAuthServiceTest : ServiceTest() {
                 )
 
             assertEquals(
-                failure(UserError.NotAuthorized),
+                failure(ApiError.NOT_AUTHORIZED),
                 result,
             )
 
@@ -497,7 +497,7 @@ class UserAuthServiceTest : ServiceTest() {
                 )
 
             assertEquals(
-                failure(UserError.InvalidRole),
+                failure(ApiError.INVALID_ROLE),
                 result,
             )
 
@@ -523,7 +523,7 @@ class UserAuthServiceTest : ServiceTest() {
                 )
 
             assertEquals(
-                failure(UserError.UserNotFound),
+                failure(ApiError.USER_NOT_FOUND),
                 result,
             )
 

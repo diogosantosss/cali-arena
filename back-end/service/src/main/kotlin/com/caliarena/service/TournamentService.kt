@@ -14,20 +14,6 @@ import org.springframework.data.repository.findByIdOrNull
 import java.time.Clock
 import java.time.Instant
 
-sealed class TournamentError {
-    data object TournamentNotFound : TournamentError()
-
-    data object TournamentAlreadyExists : TournamentError()
-
-    data object InvalidTournamentStatus : TournamentError()
-
-    data object TournamentStateNotFound : TournamentError()
-
-    data object TournamentStateAlreadyExists : TournamentError()
-
-    data object InvalidScreenState : TournamentError()
-}
-
 @Named
 class TournamentService(
     private val trx: TransactionManager,
@@ -39,10 +25,10 @@ class TournamentService(
         location: String?,
         startDate: Instant?,
         endDate: Instant?,
-    ): Either<TournamentError, Tournament> =
+    ): Either<ApiError, Tournament> =
         trx.run {
             if (tournaments.findByName(name) != null) {
-                return@run failure(TournamentError.TournamentAlreadyExists)
+                return@run failure(ApiError.TOURNAMENT_ALREADY_EXISTS)
             }
 
             val tournament =
@@ -60,7 +46,7 @@ class TournamentService(
 
             val tournamentEntity =
                 tournaments.findByIdOrNull(tournament.id)
-                    ?: return@run failure(TournamentError.TournamentNotFound)
+                    ?: return@run failure(ApiError.TOURNAMENT_NOT_FOUND)
 
             tournamentStates.save(
                 TournamentStateEntity(
@@ -73,11 +59,11 @@ class TournamentService(
             success(tournament)
         }
 
-    fun getTournamentById(id: Int): Either<TournamentError, Tournament> =
+    fun getTournamentById(id: Int): Either<ApiError, Tournament> =
         trx.run {
             val tournament =
                 tournaments.findByIdOrNull(id)?.toDomain()
-                    ?: return@run failure(TournamentError.TournamentNotFound)
+                    ?: return@run failure(ApiError.TOURNAMENT_NOT_FOUND)
 
             success(tournament)
         }
@@ -95,29 +81,29 @@ class TournamentService(
     fun updateTournamentStatus(
         id: Int,
         newStatus: String,
-    ): Either<TournamentError, Tournament> =
+    ): Either<ApiError, Tournament> =
         trx.run {
             val existing =
                 tournaments.findByIdOrNull(id)
-                    ?: return@run failure(TournamentError.TournamentNotFound)
+                    ?: return@run failure(ApiError.TOURNAMENT_NOT_FOUND)
 
             val status =
                 TournamentStatus.entries.find { it.name.equals(newStatus, true) }
-                    ?: return@run failure(TournamentError.InvalidTournamentStatus)
+                    ?: return@run failure(ApiError.INVALID_TOURNAMENT_STATUS)
 
             existing.status = status
 
             success(tournaments.save(existing).toDomain())
         }
 
-    fun getTournamentState(tournamentId: Int): Either<TournamentError, TournamentState> =
+    fun getTournamentState(tournamentId: Int): Either<ApiError, TournamentState> =
         trx.run {
             tournaments.findByIdOrNull(tournamentId)?.toDomain()
-                ?: return@run failure(TournamentError.TournamentNotFound)
+                ?: return@run failure(ApiError.TOURNAMENT_NOT_FOUND)
 
             val state =
                 tournamentStates.findByTournamentId(tournamentId)?.toDomain()
-                    ?: return@run failure(TournamentError.TournamentStateNotFound)
+                    ?: return@run failure(ApiError.TOURNAMENT_STATE_NOT_FOUND)
 
             success(state)
         }
@@ -126,18 +112,18 @@ class TournamentService(
         tournamentId: Int,
         screen: String,
         currentMatchId: Int?,
-    ): Either<TournamentError, TournamentState> =
+    ): Either<ApiError, TournamentState> =
         trx.run {
             tournaments.findByIdOrNull(tournamentId)?.toDomain()
-                ?: return@run failure(TournamentError.TournamentNotFound)
+                ?: return@run failure(ApiError.TOURNAMENT_NOT_FOUND)
 
             val screenState =
                 ScreenState.entries.find { it.name.equals(screen, true) }
-                    ?: return@run failure(TournamentError.InvalidScreenState)
+                    ?: return@run failure(ApiError.INVALID_SCREEN_STATE)
 
             val state =
                 tournamentStates.findByTournamentId(tournamentId)
-                    ?: return@run failure(TournamentError.TournamentStateNotFound)
+                    ?: return@run failure(ApiError.TOURNAMENT_STATE_NOT_FOUND)
 
             state.currentScreen = screenState
             state.currentMatch = currentMatchId?.let { matches.findByIdOrNull(it) }

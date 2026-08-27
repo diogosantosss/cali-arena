@@ -167,7 +167,7 @@ class MatchServiceTest : ServiceTest() {
 
             val result = service.createMatch(1, 2, 3, 10, 20)
 
-            assertEquals(failure(MatchError.BracketNotFound), result)
+            assertEquals(failure(ApiError.BRACKET_NOT_FOUND), result)
             verify(matches, never()).save(any())
         }
 
@@ -178,7 +178,7 @@ class MatchServiceTest : ServiceTest() {
 
             val result = service.createMatch(1, 2, 3, 10, 20)
 
-            assertEquals(failure(MatchError.RoutineNotFound), result)
+            assertEquals(failure(ApiError.ROUTINE_NOT_FOUND), result)
             verify(matches, never()).save(any())
         }
 
@@ -190,7 +190,7 @@ class MatchServiceTest : ServiceTest() {
 
             val result = service.createMatch(1, 2, 3, 10, 20)
 
-            assertEquals(failure(MatchError.JudgeNotFound), result)
+            assertEquals(failure(ApiError.JUDGE_NOT_FOUND), result)
         }
 
         @Test
@@ -202,7 +202,7 @@ class MatchServiceTest : ServiceTest() {
 
             val result = service.createMatch(1, 2, 3, 10, 20)
 
-            assertEquals(failure(MatchError.AthleteNotFound), result)
+            assertEquals(failure(ApiError.ATHLETE_NOT_FOUND), result)
         }
 
         @Test
@@ -215,7 +215,7 @@ class MatchServiceTest : ServiceTest() {
 
             val result = service.createMatch(1, 2, 3, 10, 20)
 
-            assertEquals(failure(MatchError.AthleteNotFound), result)
+            assertEquals(failure(ApiError.ATHLETE_NOT_FOUND), result)
         }
 
         @Test
@@ -246,7 +246,7 @@ class MatchServiceTest : ServiceTest() {
 
             val result = service.startMatch(1)
 
-            assertEquals(failure(MatchError.MatchNotFound), result)
+            assertEquals(failure(ApiError.MATCH_NOT_FOUND), result)
         }
 
         @Test
@@ -257,7 +257,7 @@ class MatchServiceTest : ServiceTest() {
 
             val result = service.startMatch(1)
 
-            assertEquals(failure(MatchError.ProgressAlreadyExists), result)
+            assertEquals(failure(ApiError.PROGRESS_ALREADY_EXISTS), result)
             verify(matches, never()).save(any())
         }
 
@@ -271,7 +271,7 @@ class MatchServiceTest : ServiceTest() {
 
             val result = service.startMatch(1)
 
-            assertEquals(failure(MatchError.AthletesNotAssigned), result)
+            assertEquals(failure(ApiError.ATHLETES_NOT_ASSIGNED), result)
             verify(matches, never()).save(any())
         }
 
@@ -283,7 +283,7 @@ class MatchServiceTest : ServiceTest() {
 
             val result = service.startMatch(1)
 
-            assertEquals(failure(MatchError.MatchAlreadyStarted), result)
+            assertEquals(failure(ApiError.MATCH_ALREADY_STARTED), result)
         }
 
         @Test
@@ -295,7 +295,7 @@ class MatchServiceTest : ServiceTest() {
 
             val result = service.startMatch(1)
 
-            assertEquals(failure(MatchError.RoutineNotFound), result)
+            assertEquals(failure(ApiError.ROUTINE_NOT_FOUND), result)
         }
 
         @Test
@@ -338,7 +338,7 @@ class MatchServiceTest : ServiceTest() {
 
             val result = service.updateAthletesReps(1, 5, 3)
 
-            assertEquals(failure(MatchError.MatchNotFound), result)
+            assertEquals(failure(ApiError.MATCH_NOT_FOUND), result)
         }
 
         @Test
@@ -347,7 +347,7 @@ class MatchServiceTest : ServiceTest() {
 
             val result = service.updateAthletesReps(1, 5, 3)
 
-            assertEquals(failure(MatchError.MatchNotRunning), result)
+            assertEquals(failure(ApiError.MATCH_NOT_RUNNING), result)
             verify(matchProgresses, never()).findByMatchId(any())
         }
 
@@ -358,7 +358,7 @@ class MatchServiceTest : ServiceTest() {
 
             val result = service.updateAthletesReps(1, 5, 3)
 
-            assertEquals(failure(MatchError.ProgressNotFound), result)
+            assertEquals(failure(ApiError.PROGRESS_NOT_FOUND), result)
         }
 
         @Test
@@ -370,7 +370,7 @@ class MatchServiceTest : ServiceTest() {
 
             val result = service.updateAthletesReps(1, 5, 3)
 
-            assertEquals(failure(MatchError.ExerciseNotFound), result)
+            assertEquals(failure(ApiError.EXERCISE_NOT_FOUND), result)
         }
 
         @Test
@@ -470,7 +470,7 @@ class MatchServiceTest : ServiceTest() {
 
             val result = service.forceFinishSide(1, RepSide.RED)
 
-            assertEquals(failure(MatchError.MatchNotFound), result)
+            assertEquals(failure(ApiError.MATCH_NOT_FOUND), result)
         }
 
         @Test
@@ -479,7 +479,7 @@ class MatchServiceTest : ServiceTest() {
 
             val result = service.forceFinishSide(1, RepSide.RED)
 
-            assertEquals(failure(MatchError.MatchNotRunning), result)
+            assertEquals(failure(ApiError.MATCH_NOT_RUNNING), result)
             verify(matchProgresses, never()).findByMatchId(any())
             verify(matches, never()).save(any())
         }
@@ -491,7 +491,7 @@ class MatchServiceTest : ServiceTest() {
 
             val result = service.forceFinishSide(1, RepSide.RED)
 
-            assertEquals(failure(MatchError.OpponentNotFinished), result)
+            assertEquals(failure(ApiError.OPPONENT_NOT_FINISHED), result)
             verify(matches, never()).save(any())
         }
 
@@ -600,7 +600,7 @@ class MatchServiceTest : ServiceTest() {
             assertEquals(running.athleteRed, captor.firstValue.winnerAthlete)
         }
 
-        private fun expectSuccess(result: Either<MatchError, MatchProgress>): MatchProgress =
+        private fun expectSuccess(result: Either<ApiError, MatchProgress>): MatchProgress =
             when (result) {
                 is Either.Right -> result.value
                 is Either.Left -> throw AssertionError("Expected success but got ${result.value}")
@@ -615,7 +615,7 @@ class MatchServiceTest : ServiceTest() {
 
             val result = service.getMatchById(1)
 
-            assertEquals(failure(MatchError.MatchNotFound), result)
+            assertEquals(failure(ApiError.MATCH_NOT_FOUND), result)
         }
 
         @Test
@@ -634,7 +634,7 @@ class MatchServiceTest : ServiceTest() {
 
             val result = service.getMatchesByBracket(1)
 
-            assertEquals(failure(MatchError.BracketNotFound), result)
+            assertEquals(failure(ApiError.BRACKET_NOT_FOUND), result)
         }
 
         @Test
@@ -657,7 +657,7 @@ class MatchServiceTest : ServiceTest() {
 
             val result = service.getMatchProgress(1)
 
-            assertEquals(failure(MatchError.MatchNotFound), result)
+            assertEquals(failure(ApiError.MATCH_NOT_FOUND), result)
         }
 
         @Test
@@ -667,7 +667,7 @@ class MatchServiceTest : ServiceTest() {
 
             val result = service.getMatchProgress(1)
 
-            assertEquals(failure(MatchError.ProgressNotFound), result)
+            assertEquals(failure(ApiError.PROGRESS_NOT_FOUND), result)
         }
 
         @Test

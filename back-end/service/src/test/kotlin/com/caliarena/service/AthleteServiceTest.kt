@@ -72,7 +72,7 @@ class AthleteServiceTest : ServiceTest() {
 
             val result = service.createAthlete("João Silva", "MALE", 1)
 
-            assertEquals(failure(AthleteError.ClubNotFound), result)
+            assertEquals(failure(ApiError.CLUB_NOT_FOUND), result)
 
             verify(athletes, never()).save(any())
         }
@@ -83,7 +83,7 @@ class AthleteServiceTest : ServiceTest() {
 
             val result = service.createAthlete("João Silva", "INVALID", 1)
 
-            assertEquals(failure(AthleteError.InvalidGender), result)
+            assertEquals(failure(ApiError.INVALID_GENDER), result)
 
             verify(athletes, never()).save(any())
         }
@@ -106,7 +106,7 @@ class AthleteServiceTest : ServiceTest() {
 
             val result = service.getAthleteById(1)
 
-            assertEquals(failure(AthleteError.AthleteNotFound), result)
+            assertEquals(failure(ApiError.ATHLETE_NOT_FOUND), result)
         }
     }
 
@@ -155,7 +155,7 @@ class AthleteServiceTest : ServiceTest() {
 
             val result = service.getAthletesByClub(1)
 
-            assertEquals(failure(AthleteError.ClubNotFound), result)
+            assertEquals(failure(ApiError.CLUB_NOT_FOUND), result)
         }
     }
 
@@ -175,7 +175,7 @@ class AthleteServiceTest : ServiceTest() {
         fun `should fail when gender is invalid`() {
             val result = service.getAthletesByGender("INVALID")
 
-            assertEquals(failure(AthleteError.InvalidGender), result)
+            assertEquals(failure(ApiError.INVALID_GENDER), result)
         }
     }
 
@@ -202,7 +202,7 @@ class AthleteServiceTest : ServiceTest() {
 
             val result = service.updateAthlete(1, "new-name", "MALE", 2)
 
-            assertEquals(failure(AthleteError.AthleteNotFound), result)
+            assertEquals(failure(ApiError.ATHLETE_NOT_FOUND), result)
         }
 
         @Test
@@ -211,7 +211,7 @@ class AthleteServiceTest : ServiceTest() {
 
             val result = service.updateAthlete(1, "new-name", "INVALID", 2)
 
-            assertEquals(failure(AthleteError.InvalidGender), result)
+            assertEquals(failure(ApiError.INVALID_GENDER), result)
         }
 
         @Test
@@ -221,7 +221,7 @@ class AthleteServiceTest : ServiceTest() {
 
             val result = service.updateAthlete(1, "new-name", "MALE", 2)
 
-            assertEquals(failure(AthleteError.ClubNotFound), result)
+            assertEquals(failure(ApiError.CLUB_NOT_FOUND), result)
         }
     }
 }

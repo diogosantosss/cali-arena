@@ -7,14 +7,6 @@ import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Service
 import java.time.Clock
 
-sealed class ClubError {
-    data object ClubAlreadyExists : ClubError()
-
-    data object ClubNotFound : ClubError()
-
-    data object UpdatingClub : ClubError()
-}
-
 @Service
 class ClubService(
     private val trx: TransactionManager,
@@ -23,10 +15,10 @@ class ClubService(
     fun createClub(
         name: String,
         shortName: String?,
-    ): Either<ClubError, Club> =
+    ): Either<ApiError, Club> =
         trx.run {
             if (clubs.findByName(name) != null) {
-                return@run failure(ClubError.ClubAlreadyExists)
+                return@run failure(ApiError.CLUB_ALREADY_EXISTS)
             }
 
             val club =
@@ -41,11 +33,11 @@ class ClubService(
             success(club.toDomain())
         }
 
-    fun getClubById(id: Int): Either<ClubError, Club> =
+    fun getClubById(id: Int): Either<ApiError, Club> =
         trx.run {
             val club =
                 clubs.findByIdOrNull(id)
-                    ?: return@run failure(ClubError.ClubNotFound)
+                    ?: return@run failure(ApiError.CLUB_NOT_FOUND)
 
             success(club.toDomain())
         }
@@ -59,15 +51,15 @@ class ClubService(
         id: Int,
         name: String,
         shortName: String?,
-    ): Either<ClubError, Club> =
+    ): Either<ApiError, Club> =
         trx.run {
             val existing =
                 clubs.findByIdOrNull(id)
-                    ?: return@run failure(ClubError.ClubNotFound)
+                    ?: return@run failure(ApiError.CLUB_NOT_FOUND)
 
             val nameConflict = clubs.findByName(name)
             if (nameConflict != null && nameConflict.id != id) {
-                return@run failure(ClubError.ClubAlreadyExists)
+                return@run failure(ApiError.CLUB_ALREADY_EXISTS)
             }
 
             existing.name = name

@@ -8,9 +8,9 @@ import com.caliarena.domain.match.JudgeRepsEvent
 import com.caliarena.domain.match.MatchProgress
 import com.caliarena.domain.match.RepSide.BLUE
 import com.caliarena.domain.match.RepSide.RED
+import com.caliarena.service.ApiError
 import com.caliarena.service.Either
 import com.caliarena.service.Failure
-import com.caliarena.service.MatchError
 import com.caliarena.service.MatchService
 import com.caliarena.service.Success
 import org.springframework.messaging.handler.annotation.DestinationVariable
@@ -40,7 +40,7 @@ class JudgeActionsWsController(
         @DestinationVariable matchId: Int,
         input: JudgeActionInput,
     ) {
-        val result: Either<MatchError, MatchProgress> =
+        val result: Either<ApiError, MatchProgress> =
             if (input.action == JudgeActionType.ADJUST) {
                 when (input.side) {
                     // Red Athlete reps update
@@ -79,7 +79,7 @@ class JudgeActionsWsController(
             }
 
             is Failure -> {
-                messaging.convertAndSend(url, JudgeErrorEvent(message = result.value::class.simpleName ?: "Error"))
+                messaging.convertAndSend(url, JudgeErrorEvent(message = result.value.problemType))
             }
         }
     }

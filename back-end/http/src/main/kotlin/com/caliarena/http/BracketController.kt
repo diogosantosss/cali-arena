@@ -1,9 +1,8 @@
 package com.caliarena.http
 
-import com.caliarena.http.model.Problem
+import com.caliarena.http.model.toResponseEntity
 import com.caliarena.http.model.tournament.CreateBracketInput
 import com.caliarena.http.utils.toResponse
-import com.caliarena.service.BracketError
 import com.caliarena.service.BracketService
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
@@ -115,22 +114,4 @@ class BracketController(
                 },
                 onError = { it.toResponseEntity() },
             )
-
-    private fun BracketError.toResponseEntity(): ResponseEntity<Any> =
-        when (this) {
-            BracketError.InvalidBracketStage ->
-                Problem.InvalidBracketStage.response(HttpStatus.BAD_REQUEST)
-            BracketError.InvalidGender ->
-                Problem.InvalidGender.response(HttpStatus.BAD_REQUEST)
-            BracketError.InvalidTournamentStatus ->
-                Problem.InvalidTournamentStatus.response(HttpStatus.BAD_REQUEST)
-            BracketError.TournamentNotFound ->
-                Problem.TournamentNotFound.response(HttpStatus.NOT_FOUND)
-            BracketError.BracketNotFound ->
-                Problem.BracketNotFound.response(HttpStatus.NOT_FOUND)
-            BracketError.BracketAlreadyExists ->
-                Problem.BracketAlreadyExists.response(HttpStatus.CONFLICT)
-            BracketError.MatchNotFinished ->
-                Problem.MatchNotFinished.response(HttpStatus.CONFLICT)
-        }
 }

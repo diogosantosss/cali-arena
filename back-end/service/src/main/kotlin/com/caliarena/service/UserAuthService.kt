@@ -19,22 +19,6 @@ import org.springframework.data.repository.findByIdOrNull
 import org.springframework.security.crypto.password.PasswordEncoder
 import java.time.Clock
 
-sealed class UserError {
-    data object AlreadyUsedUsername : UserError()
-
-    data object InsecurePassword : UserError()
-
-    data object UserNotFound : UserError()
-
-    data object InvalidRole : UserError()
-
-    data object ErrorUpdatingUserRole : UserError()
-
-    data object UserOrPasswordAreInvalid : UserError()
-
-    data object NotAuthorized : UserError()
-}
-
 @Named
 class UserAuthService(
     private val passwordEncoder: PasswordEncoder,
@@ -63,16 +47,16 @@ class UserAuthService(
     fun createUser(
         username: String,
         password: String,
-    ): Either<UserError, User> {
+    ): Either<ApiError, User> {
         if (!PasswordValidationInfo.isSafePassword(password)) {
-            return failure(UserError.InsecurePassword)
+            return failure(ApiError.INSECURE_PASSWORD)
         }
 
         val passwordValidationInfo = createPasswordValidationInformation(password)
 
         return trxManager.run {
             if (users.findByUsername(username) != null) {
-                return@run failure(UserError.AlreadyUsedUsername)
+                return@run failure(ApiError.ALREADY_USED_USERNAME)
             }
 
             val userEntity =
@@ -92,20 +76,20 @@ class UserAuthService(
     fun createToken(
         username: String,
         password: String,
-    ): Either<UserError, TokenExternalInfo> {
+    ): Either<ApiError, TokenExternalInfo> {
         if (username.isBlank() || password.isBlank()) {
-            return failure(UserError.UserOrPasswordAreInvalid)
+            return failure(ApiError.USER_OR_PASSWORD_ARE_INVALID)
         }
 
         return trxManager.run {
             val userEntity =
                 users.findByUsername(username)
-                    ?: return@run failure(UserError.UserOrPasswordAreInvalid)
+                    ?: return@run failure(ApiError.USER_OR_PASSWORD_ARE_INVALID)
 
             val user = userEntity.toDomain()
 
             if (!validatePassword(password, user.password)) {
-                return@run failure(UserError.UserOrPasswordAreInvalid)
+                return@run failure(ApiError.USER_OR_PASSWORD_ARE_INVALID)
             }
 
             val tokenValue = generateTokenValue(config)
@@ -172,7 +156,7 @@ class UserAuthService(
         token: String,
         userToUpdateId: Int,
         role: String,
-    ): Either<UserError, User> =
+    ): Either<ApiError, User> =
         trxManager.run {
             val validationInfo =
                 tokenEncoder.createValidationInformation(token).validationInfo
@@ -180,19 +164,19 @@ class UserAuthService(
             val requester =
                 tokens
                     .findByIdOrNull(validationInfo)
-                    ?.user ?: return@run failure(UserError.UserNotFound)
+                    ?.user ?: return@run failure(ApiError.USER_NOT_FOUND)
 
             if (requester.role != UserRole.ADMIN) {
-                return@run failure(UserError.NotAuthorized)
+                return@run failure(ApiError.NOT_AUTHORIZED)
             }
 
             val role =
                 UserRole.entries.find { it.name.equals(role, true) }
-                    ?: return@run failure(UserError.InvalidRole)
+                    ?: return@run failure(ApiError.INVALID_ROLE)
 
             val target =
                 users.findByIdOrNull(userToUpdateId)
-                    ?: return@run failure(UserError.UserNotFound)
+                    ?: return@run failure(ApiError.USER_NOT_FOUND)
 
             target.role = role
 

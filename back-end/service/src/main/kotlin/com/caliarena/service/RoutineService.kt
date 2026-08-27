@@ -13,14 +13,6 @@ import java.math.BigDecimal
 import java.time.Clock
 import java.time.Instant
 
-sealed class RoutineError {
-    data object RoutineAlreadyExists : RoutineError()
-
-    data object RoutineNotFound : RoutineError()
-
-    data object ExerciseTypeNotFound : RoutineError()
-}
-
 @Service
 class RoutineService(
     private val trx: TransactionManager,
@@ -29,11 +21,11 @@ class RoutineService(
     fun createRoutine(
         name: String,
         timeCapSeconds: Int?,
-    ): Either<RoutineError, EnduranceRoutine> =
+    ): Either<ApiError, EnduranceRoutine> =
         trx.run {
             routines
                 .findByName(name)
-                ?.let { return@run failure(RoutineError.RoutineAlreadyExists) }
+                ?.let { return@run failure(ApiError.ROUTINE_ALREADY_EXISTS) }
 
             val enduranceRoutine =
                 routines.save(
@@ -68,15 +60,15 @@ class RoutineService(
         exerciseOrder: Int,
         supersetOrder: Int?,
         type: String, // ExerciseType
-    ): Either<RoutineError, Exercise> =
+    ): Either<ApiError, Exercise> =
         trx.run {
             val routine =
                 routines.findByIdOrNull(routineId)
-                    ?: return@run failure(RoutineError.RoutineNotFound)
+                    ?: return@run failure(ApiError.ROUTINE_NOT_FOUND)
 
             val exerciseType =
                 ExerciseType.entries.find { it.name == type }
-                    ?: return@run failure(RoutineError.ExerciseTypeNotFound)
+                    ?: return@run failure(ApiError.EXERCISE_TYPE_NOT_FOUND)
 
             val exists = exercises.existsByRoutineIdAndExerciseOrder(routineId, exerciseOrder)
 
@@ -100,11 +92,11 @@ class RoutineService(
             success(exercise.toDomain())
         }
 
-    fun getRoutineOverview(routineName: String): Either<RoutineError, RoutineOverview> =
+    fun getRoutineOverview(routineName: String): Either<ApiError, RoutineOverview> =
         trx.run {
             val routine =
                 routines.findByName(routineName)
-                    ?: return@run failure(RoutineError.RoutineNotFound)
+                    ?: return@run failure(ApiError.ROUTINE_NOT_FOUND)
 
             val exercises = exercises.findExercisesByRoutineId(routine.id).map(ExerciseEntity::toDomain)
 

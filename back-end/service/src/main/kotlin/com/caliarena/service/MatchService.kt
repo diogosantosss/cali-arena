@@ -16,38 +16,6 @@ import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Service
 import java.time.Clock
 
-sealed class MatchError {
-    data object MatchNotFound : MatchError()
-
-    data object BracketNotFound : MatchError()
-
-    data object RoutineNotFound : MatchError()
-
-    data object AthleteNotInMatch : MatchError()
-
-    data object MatchNotRunning : MatchError()
-
-    data object ProgressNotFound : MatchError()
-
-    data object ProgressAlreadyExists : MatchError()
-
-    data object AthleteNotFound : MatchError()
-
-    data object AthletesNotAssigned : MatchError()
-
-    data object JudgeNotFound : MatchError()
-
-    data object SameAthleteOnBothSides : MatchError()
-
-    data object ErrorCreatingMatchProg : MatchError()
-
-    data object ExerciseNotFound : MatchError()
-
-    data object MatchAlreadyStarted : MatchError()
-
-    data object OpponentNotFinished : MatchError()
-}
-
 @Service
 class MatchService(
     private val trxManager: TransactionManager,
@@ -60,26 +28,26 @@ class MatchService(
         judgeId: Int,
         athleteRedId: Int,
         athleteBlueId: Int,
-    ): Either<MatchError, Match> =
+    ): Either<ApiError, Match> =
         trxManager.run {
             val bracket =
                 brackets.findByIdOrNull(bracketId)
-                    ?: return@run failure(MatchError.BracketNotFound)
+                    ?: return@run failure(ApiError.BRACKET_NOT_FOUND)
 
             routines.findByIdOrNull(routineId)
-                ?: return@run failure(MatchError.RoutineNotFound)
+                ?: return@run failure(ApiError.ROUTINE_NOT_FOUND)
 
             val judge =
                 users.findByIdOrNull(judgeId)
-                    ?: return@run failure(MatchError.JudgeNotFound)
+                    ?: return@run failure(ApiError.JUDGE_NOT_FOUND)
 
             val red =
                 athletes.findByIdOrNull(athleteRedId)
-                    ?: return@run failure(MatchError.AthleteNotFound)
+                    ?: return@run failure(ApiError.ATHLETE_NOT_FOUND)
 
             val blue =
                 athletes.findByIdOrNull(athleteBlueId)
-                    ?: return@run failure(MatchError.AthleteNotFound)
+                    ?: return@run failure(ApiError.ATHLETE_NOT_FOUND)
 
             val match =
                 matches.save(
@@ -97,29 +65,29 @@ class MatchService(
             success(match.toDomain())
         }
 
-    fun startMatch(matchId: Int): Either<MatchError, MatchProgress> =
+    fun startMatch(matchId: Int): Either<ApiError, MatchProgress> =
         trxManager.run {
             val match =
                 matches.findByIdOrNull(matchId)
-                    ?: return@run failure(MatchError.MatchNotFound)
+                    ?: return@run failure(ApiError.MATCH_NOT_FOUND)
 
             if (matchProgresses.findByMatchId(matchId) != null) {
-                return@run failure(MatchError.ProgressAlreadyExists)
+                return@run failure(ApiError.PROGRESS_ALREADY_EXISTS)
             }
 
             if (match.athleteRed == null || match.athleteBlue == null) {
-                return@run failure(MatchError.AthletesNotAssigned)
+                return@run failure(ApiError.ATHLETES_NOT_ASSIGNED)
             }
 
             if (match.status == MatchStatus.RUNNING || match.status == MatchStatus.FINISHED) {
-                return@run failure(MatchError.MatchAlreadyStarted)
+                return@run failure(ApiError.MATCH_ALREADY_STARTED)
             }
 
             val firstExercise =
                 exercises
                     .findExercisesByRoutineId(match.routineId)
                     .minWithOrNull(compareBy({ it.exerciseOrder }, { it.supersetOrder ?: 0 }))
-                    ?: return@run failure(MatchError.RoutineNotFound)
+                    ?: return@run failure(ApiError.ROUTINE_NOT_FOUND)
 
             val nowMillis = clock.instant().toEpochMilli()
             val nowSeconds = clock.instant().epochSecond
@@ -141,7 +109,7 @@ class MatchService(
 
             val tournamentId =
                 brackets.findByIdOrNull(match.bracket.id)?.tournament?.id
-                    ?: return@run failure(MatchError.BracketNotFound)
+                    ?: return@run failure(ApiError.BRACKET_NOT_FOUND)
 
             MatchUpdatedEvent(
                 tournamentId = tournamentId,
@@ -155,19 +123,19 @@ class MatchService(
         matchId: Int,
         redReps: Int? = null,
         blueReps: Int? = null,
-    ): Either<MatchError, MatchProgress> =
+    ): Either<ApiError, MatchProgress> =
         trxManager.run {
             val match =
                 matches.findByIdOrNull(matchId)
-                    ?: return@run failure(MatchError.MatchNotFound)
+                    ?: return@run failure(ApiError.MATCH_NOT_FOUND)
 
             if (match.status != MatchStatus.RUNNING) {
-                return@run failure(MatchError.MatchNotRunning)
+                return@run failure(ApiError.MATCH_NOT_RUNNING)
             }
 
             val prog =
                 matchProgresses.findByMatchId(matchId)
-                    ?: return@run failure(MatchError.ProgressNotFound)
+                    ?: return@run failure(ApiError.PROGRESS_NOT_FOUND)
 
             val progDomain = prog.toDomain()
 
@@ -175,13 +143,13 @@ class MatchService(
                 exercises.findExercisesByRoutineId(match.routineId).map(ExerciseEntity::toDomain)
 
             if (redReps != null && progDomain.redFinishedAt == null && exerciseDomains.none { it.id == progDomain.redCurrentExerciseId }) {
-                return@run failure(MatchError.ExerciseNotFound)
+                return@run failure(ApiError.EXERCISE_NOT_FOUND)
             }
             if (blueReps != null &&
                 progDomain.blueFinishedAt == null &&
                 exerciseDomains.none { it.id == progDomain.blueCurrentExerciseId }
             ) {
-                return@run failure(MatchError.ExerciseNotFound)
+                return@run failure(ApiError.EXERCISE_NOT_FOUND)
             }
 
             val now = clock.instant()
@@ -197,7 +165,7 @@ class MatchService(
 
             val tournamentId =
                 brackets.findByIdOrNull(match.bracket.id)?.tournament?.id
-                    ?: return@run failure(MatchError.BracketNotFound)
+                    ?: return@run failure(ApiError.BRACKET_NOT_FOUND)
 
             MatchUpdatedEvent(
                 tournamentId = tournamentId,
@@ -210,19 +178,19 @@ class MatchService(
     fun forceFinishSide(
         matchId: Int,
         side: com.caliarena.domain.match.RepSide,
-    ): Either<MatchError, MatchProgress> =
+    ): Either<ApiError, MatchProgress> =
         trxManager.run {
             val match =
                 matches.findByIdOrNull(matchId)
-                    ?: return@run failure(MatchError.MatchNotFound)
+                    ?: return@run failure(ApiError.MATCH_NOT_FOUND)
 
             if (match.status != MatchStatus.RUNNING) {
-                return@run failure(MatchError.MatchNotRunning)
+                return@run failure(ApiError.MATCH_NOT_RUNNING)
             }
 
             val prog =
                 matchProgresses.findByMatchId(matchId)
-                    ?: return@run failure(MatchError.ProgressNotFound)
+                    ?: return@run failure(ApiError.PROGRESS_NOT_FOUND)
 
             val progDomain = prog.toDomain()
 
@@ -230,7 +198,7 @@ class MatchService(
 
             val opponentFinishedAt = if (isRed) progDomain.blueFinishedAt else progDomain.redFinishedAt
             if (opponentFinishedAt == null) {
-                return@run failure(MatchError.OpponentNotFinished)
+                return@run failure(ApiError.OPPONENT_NOT_FINISHED)
             }
 
             val now = clock.instant()
@@ -258,7 +226,7 @@ class MatchService(
 
             val tournamentId =
                 brackets.findByIdOrNull(match.bracket.id)?.tournament?.id
-                    ?: return@run failure(MatchError.BracketNotFound)
+                    ?: return@run failure(ApiError.BRACKET_NOT_FOUND)
 
             MatchUpdatedEvent(
                 tournamentId = tournamentId,
@@ -302,31 +270,31 @@ class MatchService(
         matches.save(match)
     }
 
-    fun getMatchById(id: Int): Either<MatchError, Match> =
+    fun getMatchById(id: Int): Either<ApiError, Match> =
         trxManager.run {
             val match =
                 matches.findByIdOrNull(id)
-                    ?: return@run failure(MatchError.MatchNotFound)
+                    ?: return@run failure(ApiError.MATCH_NOT_FOUND)
 
             success(match.toDomain())
         }
 
-    fun getMatchesByBracket(bracketId: Int): Either<MatchError, List<Match>> =
+    fun getMatchesByBracket(bracketId: Int): Either<ApiError, List<Match>> =
         trxManager.run {
             brackets.findByIdOrNull(bracketId)
-                ?: return@run failure(MatchError.BracketNotFound)
+                ?: return@run failure(ApiError.BRACKET_NOT_FOUND)
 
             success(matches.findByBracketId(bracketId).map(MatchEntity::toDomain))
         }
 
-    fun getMatchProgress(matchId: Int): Either<MatchError, MatchProgress> =
+    fun getMatchProgress(matchId: Int): Either<ApiError, MatchProgress> =
         trxManager.run {
             matches.findByIdOrNull(matchId)
-                ?: return@run failure(MatchError.MatchNotFound)
+                ?: return@run failure(ApiError.MATCH_NOT_FOUND)
 
             val progress =
                 matchProgresses.findByMatchId(matchId)
-                    ?: return@run failure(MatchError.ProgressNotFound)
+                    ?: return@run failure(ApiError.PROGRESS_NOT_FOUND)
 
             success(progress.toDomain())
         }

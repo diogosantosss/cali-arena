@@ -19,22 +19,6 @@ import java.time.Clock
 import java.time.Duration
 import java.time.Instant
 
-sealed class BracketError {
-    data object BracketNotFound : BracketError()
-
-    data object BracketAlreadyExists : BracketError()
-
-    data object InvalidBracketStage : BracketError()
-
-    data object InvalidGender : BracketError()
-
-    data object TournamentNotFound : BracketError()
-
-    data object MatchNotFinished : BracketError()
-
-    data object InvalidTournamentStatus : BracketError()
-}
-
 @Named
 class BracketService(
     private val trx: TransactionManager,
@@ -44,23 +28,23 @@ class BracketService(
         tournamentId: Int,
         gender: String,
         stage: String,
-    ): Either<BracketError, Bracket> =
+    ): Either<ApiError, Bracket> =
         trx.run {
             val tournament =
                 tournaments.findByIdOrNull(tournamentId)
-                    ?: return@run failure(BracketError.TournamentNotFound)
+                    ?: return@run failure(ApiError.TOURNAMENT_NOT_FOUND)
 
             val genderType =
                 GenderType.entries.find { it.name.equals(gender, true) }
-                    ?: return@run failure(BracketError.InvalidGender)
+                    ?: return@run failure(ApiError.INVALID_GENDER)
 
             val bracketStage =
                 BracketStage.entries.find { it.name.equals(stage, true) }
-                    ?: return@run failure(BracketError.InvalidBracketStage)
+                    ?: return@run failure(ApiError.INVALID_BRACKET_STAGE)
 
             val existing = brackets.findByTournamentIdAndGender(tournamentId, genderType)
             if (existing.any { it.stage == bracketStage }) {
-                return@run failure(BracketError.BracketAlreadyExists)
+                return@run failure(ApiError.BRACKET_ALREADY_EXISTS)
             }
 
             val now = clock.instant()
@@ -79,10 +63,10 @@ class BracketService(
             success(bracket)
         }
 
-    fun getBracketsByTournament(tournamentId: Int): Either<BracketError, List<Bracket>> =
+    fun getBracketsByTournament(tournamentId: Int): Either<ApiError, List<Bracket>> =
         trx.run {
             tournaments.findByIdOrNull(tournamentId)?.toDomain()
-                ?: return@run failure(BracketError.TournamentNotFound)
+                ?: return@run failure(ApiError.TOURNAMENT_NOT_FOUND)
 
             success(brackets.findByTournamentId(tournamentId).map(BracketEntity::toDomain))
         }
@@ -90,14 +74,14 @@ class BracketService(
     fun getBracketsByTournamentAndGender(
         tournamentId: Int,
         gender: String,
-    ): Either<BracketError, List<Bracket>> =
+    ): Either<ApiError, List<Bracket>> =
         trx.run {
             tournaments.findByIdOrNull(tournamentId)?.toDomain()
-                ?: return@run failure(BracketError.TournamentNotFound)
+                ?: return@run failure(ApiError.TOURNAMENT_NOT_FOUND)
 
             val genderType =
                 GenderType.entries.find { it.name.equals(gender, true) }
-                    ?: return@run failure(BracketError.InvalidGender)
+                    ?: return@run failure(ApiError.INVALID_GENDER)
 
             success(brackets.findByTournamentIdAndGender(tournamentId, genderType).map(BracketEntity::toDomain))
         }
@@ -105,14 +89,14 @@ class BracketService(
     fun getBracketOverview(
         tournamentId: Int,
         gender: String,
-    ): Either<BracketError, List<BracketOverview>> =
+    ): Either<ApiError, List<BracketOverview>> =
         trx.run {
             tournaments.findByIdOrNull(tournamentId)?.toDomain()
-                ?: return@run failure(BracketError.TournamentNotFound)
+                ?: return@run failure(ApiError.TOURNAMENT_NOT_FOUND)
 
             val genderType =
                 GenderType.entries.find { it.name.equals(gender, true) }
-                    ?: return@run failure(BracketError.InvalidGender)
+                    ?: return@run failure(ApiError.INVALID_GENDER)
 
             val bracketList = brackets.findByTournamentIdAndGender(tournamentId, genderType)
 
@@ -125,11 +109,11 @@ class BracketService(
             success(overview)
         }
 
-    fun getBracketLeaderboard(bracketId: Int): Either<BracketError, BracketLeaderboard> =
+    fun getBracketLeaderboard(bracketId: Int): Either<ApiError, BracketLeaderboard> =
         trx.run {
             val bracket =
                 brackets.findByIdOrNull(bracketId)
-                    ?: return@run failure(BracketError.BracketNotFound)
+                    ?: return@run failure(ApiError.BRACKET_NOT_FOUND)
 
             val bracketMatches = matches.findByBracketId(bracketId)
 
@@ -138,7 +122,7 @@ class BracketService(
             }
 
             if (bracketMatches.any { it.status != MatchStatus.FINISHED }) {
-                return@run failure(BracketError.MatchNotFinished)
+                return@run failure(ApiError.MATCH_NOT_FINISHED)
             }
 
             val entries = mutableListOf<LeaderboardEntry>()
@@ -183,14 +167,14 @@ class BracketService(
     fun getTournamentBracketsSummary(
         tournamentId: Int,
         gender: String,
-    ): Either<BracketError, TournamentBracketsResponse> =
+    ): Either<ApiError, TournamentBracketsResponse> =
         trx.run {
             val validGender =
                 GenderType.entries.find { it.name.equals(gender, true) }
-                    ?: return@run failure(BracketError.InvalidGender)
+                    ?: return@run failure(ApiError.INVALID_GENDER)
 
             tournaments.findByIdOrNull(tournamentId)
-                ?: return@run failure(BracketError.TournamentNotFound)
+                ?: return@run failure(ApiError.TOURNAMENT_NOT_FOUND)
 
             val tournamentBrackets = brackets.findByTournamentIdAndGender(tournamentId, validGender)
 

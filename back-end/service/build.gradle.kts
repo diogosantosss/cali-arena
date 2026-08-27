@@ -29,6 +29,9 @@ dependencies {
     // To use SLF4J
     implementation("org.slf4j:slf4j-api:2.0.16")
 
+    // To use HttpStatus in the shared ApiError enum
+    implementation("org.springframework:spring-web:7.0.7")
+
     testImplementation("org.mockito.kotlin:mockito-kotlin:5.4.0")
     testImplementation("org.mockito:mockito-junit-jupiter:5.18.0")
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.0")

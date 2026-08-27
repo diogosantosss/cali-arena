@@ -66,7 +66,7 @@ class RoutineServiceTest : ServiceTest() {
 
             val result = service.createRoutine("Murph", 3600)
 
-            assertEquals(failure(RoutineError.RoutineAlreadyExists), result)
+            assertEquals(failure(ApiError.ROUTINE_ALREADY_EXISTS), result)
 
             verify(routines, never()).save(any())
         }
@@ -113,7 +113,7 @@ class RoutineServiceTest : ServiceTest() {
                     type = "NORMAL",
                 )
 
-            assertEquals(failure(RoutineError.RoutineNotFound), result)
+            assertEquals(failure(ApiError.ROUTINE_NOT_FOUND), result)
         }
 
         @Test
@@ -131,7 +131,7 @@ class RoutineServiceTest : ServiceTest() {
                     type = "INVALID",
                 )
 
-            assertEquals(failure(RoutineError.ExerciseTypeNotFound), result)
+            assertEquals(failure(ApiError.EXERCISE_TYPE_NOT_FOUND), result)
 
             verify(exercises, never()).save(any())
         }
@@ -190,7 +190,7 @@ class RoutineServiceTest : ServiceTest() {
 
             val result = service.getRoutineOverview("Murph")
 
-            assertEquals(failure(RoutineError.RoutineNotFound), result)
+            assertEquals(failure(ApiError.ROUTINE_NOT_FOUND), result)
         }
     }
 }

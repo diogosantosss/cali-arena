@@ -111,7 +111,7 @@ class BracketServiceTest : ServiceTest() {
 
             val result = service.createBracket(1, "MALE", "QUALIFIERS")
 
-            assertEquals(failure(BracketError.TournamentNotFound), result)
+            assertEquals(failure(ApiError.TOURNAMENT_NOT_FOUND), result)
         }
 
         @Test
@@ -120,7 +120,7 @@ class BracketServiceTest : ServiceTest() {
 
             val result = service.createBracket(1, "INVALID", "QUALIFIERS")
 
-            assertEquals(failure(BracketError.InvalidGender), result)
+            assertEquals(failure(ApiError.INVALID_GENDER), result)
         }
 
         @Test
@@ -129,7 +129,7 @@ class BracketServiceTest : ServiceTest() {
 
             val result = service.createBracket(1, "MALE", "INVALID")
 
-            assertEquals(failure(BracketError.InvalidBracketStage), result)
+            assertEquals(failure(ApiError.INVALID_BRACKET_STAGE), result)
         }
 
         @Test
@@ -141,7 +141,7 @@ class BracketServiceTest : ServiceTest() {
 
             val result = service.createBracket(1, "MALE", "QUALIFIERS")
 
-            assertEquals(failure(BracketError.BracketAlreadyExists), result)
+            assertEquals(failure(ApiError.BRACKET_ALREADY_EXISTS), result)
 
             verify(brackets, never()).save(any())
         }
@@ -166,7 +166,7 @@ class BracketServiceTest : ServiceTest() {
 
             val result = service.getBracketsByTournament(1)
 
-            assertEquals(failure(BracketError.TournamentNotFound), result)
+            assertEquals(failure(ApiError.TOURNAMENT_NOT_FOUND), result)
         }
     }
 
@@ -189,7 +189,7 @@ class BracketServiceTest : ServiceTest() {
 
             val result = service.getBracketsByTournamentAndGender(1, "MALE")
 
-            assertEquals(failure(BracketError.TournamentNotFound), result)
+            assertEquals(failure(ApiError.TOURNAMENT_NOT_FOUND), result)
         }
 
         @Test
@@ -198,7 +198,7 @@ class BracketServiceTest : ServiceTest() {
 
             val result = service.getBracketsByTournamentAndGender(1, "INVALID")
 
-            assertEquals(failure(BracketError.InvalidGender), result)
+            assertEquals(failure(ApiError.INVALID_GENDER), result)
         }
     }
 
@@ -228,7 +228,7 @@ class BracketServiceTest : ServiceTest() {
 
             val result = service.getBracketOverview(1, "INVALID")
 
-            assertEquals(failure(BracketError.InvalidGender), result)
+            assertEquals(failure(ApiError.INVALID_GENDER), result)
         }
     }
 
@@ -257,7 +257,7 @@ class BracketServiceTest : ServiceTest() {
 
             val result = service.getBracketLeaderboard(1)
 
-            assertEquals(failure(BracketError.MatchNotFinished), result)
+            assertEquals(failure(ApiError.MATCH_NOT_FINISHED), result)
         }
     }
 
@@ -302,7 +302,7 @@ class BracketServiceTest : ServiceTest() {
 
             val result = service.getTournamentBracketsSummary(1, "INVALID")
 
-            assertEquals(failure(BracketError.InvalidGender), result)
+            assertEquals(failure(ApiError.INVALID_GENDER), result)
         }
     }
 }

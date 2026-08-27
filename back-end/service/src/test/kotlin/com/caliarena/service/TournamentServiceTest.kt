@@ -99,7 +99,7 @@ class TournamentServiceTest : ServiceTest() {
 
             val result = service.createTournament("Existing", "Loc", now, now.plusSeconds(3600))
 
-            assertEquals(failure(TournamentError.TournamentAlreadyExists), result)
+            assertEquals(failure(ApiError.TOURNAMENT_ALREADY_EXISTS), result)
         }
     }
 
@@ -120,7 +120,7 @@ class TournamentServiceTest : ServiceTest() {
 
             val result = service.getTournamentById(99)
 
-            assertEquals(failure(TournamentError.TournamentNotFound), result)
+            assertEquals(failure(ApiError.TOURNAMENT_NOT_FOUND), result)
         }
     }
 
@@ -144,7 +144,7 @@ class TournamentServiceTest : ServiceTest() {
 
             val result = service.updateTournamentStatus(99, "LIVE")
 
-            assertEquals(failure(TournamentError.TournamentNotFound), result)
+            assertEquals(failure(ApiError.TOURNAMENT_NOT_FOUND), result)
         }
 
         @Test
@@ -153,7 +153,7 @@ class TournamentServiceTest : ServiceTest() {
 
             val result = service.updateTournamentStatus(1, "INVALID")
 
-            assertEquals(failure(TournamentError.InvalidTournamentStatus), result)
+            assertEquals(failure(ApiError.INVALID_TOURNAMENT_STATUS), result)
         }
     }
 
@@ -183,7 +183,7 @@ class TournamentServiceTest : ServiceTest() {
 
             val result = service.getTournamentState(1)
 
-            assertEquals(failure(TournamentError.TournamentStateNotFound), result)
+            assertEquals(failure(ApiError.TOURNAMENT_STATE_NOT_FOUND), result)
         }
     }
 
@@ -234,7 +234,7 @@ class TournamentServiceTest : ServiceTest() {
 
             val result = service.updateScreen(1, "INVALID", null)
 
-            assertEquals(failure(TournamentError.InvalidScreenState), result)
+            assertEquals(failure(ApiError.INVALID_SCREEN_STATE), result)
         }
 
         @Test
@@ -244,7 +244,7 @@ class TournamentServiceTest : ServiceTest() {
 
             val result = service.updateScreen(1, "BATTLE", null)
 
-            assertEquals(failure(TournamentError.TournamentStateNotFound), result)
+            assertEquals(failure(ApiError.TOURNAMENT_STATE_NOT_FOUND), result)
         }
     }
 }

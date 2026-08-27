@@ -75,7 +75,7 @@ class ClubServiceTest : ServiceTest() {
 
             val result = service.createClub("Sporting CP", "SCP")
 
-            assertEquals(failure(ClubError.ClubAlreadyExists), result)
+            assertEquals(failure(ApiError.CLUB_ALREADY_EXISTS), result)
 
             verify(clubs, never()).save(any())
         }
@@ -100,7 +100,7 @@ class ClubServiceTest : ServiceTest() {
 
             val result = service.getClubById(1)
 
-            assertEquals(failure(ClubError.ClubNotFound), result)
+            assertEquals(failure(ApiError.CLUB_NOT_FOUND), result)
         }
     }
 
@@ -176,7 +176,7 @@ class ClubServiceTest : ServiceTest() {
 
             val result = service.updateClub(1, "Sporting Clube de Portugal", "SCP")
 
-            assertEquals(failure(ClubError.ClubNotFound), result)
+            assertEquals(failure(ApiError.CLUB_NOT_FOUND), result)
 
             verify(clubs, never()).findByName(any())
             verify(clubs, never()).save(any())
@@ -191,7 +191,7 @@ class ClubServiceTest : ServiceTest() {
 
             val result = service.updateClub(1, "Benfica", "SLB")
 
-            assertEquals(failure(ClubError.ClubAlreadyExists), result)
+            assertEquals(failure(ApiError.CLUB_ALREADY_EXISTS), result)
 
             verify(clubs, never()).save(any())
         }
