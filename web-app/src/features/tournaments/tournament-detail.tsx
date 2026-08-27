@@ -311,6 +311,7 @@ export function TournamentDetailPage() {
         athletes={athletes}
         routines={routines}
         overviews={overviews}
+        brackets={brackets}
         onUpdated={(updated) => dispatch({ type: "stateUpdated", state: updated })}
       />
 

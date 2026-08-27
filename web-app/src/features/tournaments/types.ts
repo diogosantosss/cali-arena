@@ -27,12 +27,14 @@ export interface TournamentState {
   tournamentId: number;
   currentScreen: ScreenState;
   currentMatchId: number | null;
+  currentBracketId: number | null;
   updatedAt: string;
 }
 
 export interface UpdateScreenInput {
   screen: ScreenState;
   currentMatchId: number | null;
+  currentBracketId: number | null;
 }
 
 export type BracketStage = "QUALIFIERS" | "QUARTERFINALS" | "SEMIFINALS" | "FINALS";
@@ -54,6 +56,19 @@ export interface Bracket {
 export interface BracketOverview {
   bracket: Bracket;
   matches: Match[];
+}
+
+export interface LeaderboardEntry {
+  athleteName: string;
+  duration: string;
+  matchId: number;
+}
+
+export interface BracketLeaderboard {
+  bracketId: number;
+  gender: Gender;
+  stage: BracketStage;
+  entries: LeaderboardEntry[];
 }
 
 // ========== Screen Routines ==========

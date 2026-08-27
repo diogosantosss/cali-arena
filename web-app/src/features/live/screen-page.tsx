@@ -9,7 +9,7 @@ import {
   type ExerciseProgress,
 } from "@/features/routines/lib/exercise-labels";
 import { tournamentsService } from "@/features/tournaments/services/tournaments.service";
-import type { ScreenRoutine, Tournament, TournamentState } from "@/features/tournaments/types";
+import type { BracketLeaderboard, ScreenRoutine, ScreenState, Tournament, TournamentState } from "@/features/tournaments/types";
 import { routinesService } from "@/features/routines/services/routines.service";
 import type { Exercise, Routine, RoutineOverview } from "@/features/routines/types";
 import type { Athlete } from "@/features/athletes/types";
@@ -27,6 +27,7 @@ interface State {
   matches: Match[];
   currentMatch: Match | null;
   matchProgress: MatchProgress | null;
+  leaderboard: BracketLeaderboard | null;
   athletes: Athlete[];
   error: string | null;
 }
@@ -42,6 +43,7 @@ type Action =
   | { type: "setMatches"; matches: Match[] }
   | { type: "setCurrentMatch"; match: Match }
   | { type: "setMatchProgress"; progress: MatchProgress | null }
+  | { type: "setLeaderboard"; leaderboard: BracketLeaderboard | null }
   | { type: "resetMatchData" }
   | { type: "setAthletes"; athletes: Athlete[] }
   | { type: "setError"; message: string };
@@ -55,6 +57,7 @@ const initialState: State = {
   matches: [],
   currentMatch: null,
   matchProgress: null,
+  leaderboard: null,
   athletes: [],
   error: null,
 };
@@ -80,6 +83,7 @@ function reducer(state: State, action: Action): State {
     case "setMatches": return { ...state, matches: action.matches };
     case "setCurrentMatch": return { ...state, currentMatch: action.match };
     case "setMatchProgress": return { ...state, matchProgress: action.progress };
+    case "setLeaderboard": return { ...state, leaderboard: action.leaderboard };
     case "resetMatchData": return { ...state, currentMatch: null, matchProgress: null };
     case "setAthletes": return { ...state, athletes: action.athletes };
     case "setError": return { ...state, error: action.message };
@@ -121,10 +125,26 @@ export function ScreenPage() {
   const id = Number(tournamentId);
   const [state, dispatch] = useReducer(reducer, initialState);
   const currentMatchIdRef = useRef<number | null>(null);
+  const screenRef = useRef<ScreenState | null>(null);
+  const bracketIdRef = useRef<number | null>(null);
 
   useEffect(() => {
     currentMatchIdRef.current = state.currentMatch?.id ?? null;
   }, [state.currentMatch]);
+
+  useEffect(() => {
+    screenRef.current = state.tournamentState?.currentScreen ?? null;
+    bracketIdRef.current = state.tournamentState?.currentBracketId ?? null;
+  }, [state.tournamentState]);
+
+  const refreshLeaderboard = useCallback(async (bracketId: number) => {
+    try {
+      const leaderboard = await tournamentsService.getBracketLeaderboard(bracketId);
+      dispatch({ type: "setLeaderboard", leaderboard });
+    } catch {
+      // keep previous leaderboard if refresh fails
+    }
+  }, []);
 
   useEffect(() => {
     async function loadBase() {
@@ -156,6 +176,10 @@ export function ScreenPage() {
         const tournamentState = await tournamentsService.getTournamentState(id);
         dispatch({ type: "setTournamentState", state: tournamentState });
 
+        if (tournamentState.currentScreen === "LEADERBOARD" && tournamentState.currentBracketId) {
+          void refreshLeaderboard(tournamentState.currentBracketId);
+        }
+
         if (tournamentState.currentMatchId) {
           const [match, progress] = await Promise.all([
             matchesService.getMatchById(tournamentState.currentMatchId),
@@ -169,12 +193,17 @@ export function ScreenPage() {
       }
     }
     loadBase();
-  }, [id]);
+  }, [id, refreshLeaderboard]);
 
   const handleSSEEvent = useCallback(async (event: SpectatorEvent) => {
     switch (event.action) {
       case "TOURNAMENT_STATE_UPDATED": {
         dispatch({ type: "setTournamentState", state: event.state });
+        if (event.state.currentScreen === "LEADERBOARD" && event.state.currentBracketId) {
+          void refreshLeaderboard(event.state.currentBracketId);
+        } else if (event.state.currentScreen !== "LEADERBOARD") {
+          dispatch({ type: "setLeaderboard", leaderboard: null });
+        }
         if (event.state.currentMatchId && event.state.currentMatchId !== currentMatchIdRef.current) {
           // limpa os dados do match anterior enquanto o novo carrega
           dispatch({ type: "resetMatchData" });
@@ -197,12 +226,15 @@ export function ScreenPage() {
         break;
       }
       case "MATCH_UPDATED": {
+        if (screenRef.current === "LEADERBOARD" && bracketIdRef.current) {
+          void refreshLeaderboard(bracketIdRef.current);
+        }
         if (event.matchProgress.matchId !== currentMatchIdRef.current) break;
         dispatch({ type: "setMatchProgress", progress: event.matchProgress });
         break;
       }
     }
-  }, []);
+  }, [refreshLeaderboard]);
 
   useSpectatorSSE(id, handleSSEEvent);
 
@@ -283,6 +315,84 @@ export function ScreenPage() {
       );
     }
     return <BattleScreen state={state} match={state.currentMatch} progress={state.matchProgress} athletes={state.athletes} />;
+  }
+
+  if (screen === "LEADERBOARD") {
+    if (!state.leaderboard) {
+      return (
+        <div className="min-h-screen flex items-center justify-center" style={screenBackground}>
+          <p className="text-white/30 uppercase tracking-widest">Loading leaderboard...</p>
+        </div>
+      );
+    }
+
+    const entries = state.leaderboard.entries;
+
+    return (
+      <div className="min-h-screen flex flex-col" style={{ ...screenBackground, color: "white" }}>
+        <div className="text-center pt-16 px-16">
+          <p className="font-cairo text-6xl font-semibold leading-tight uppercase bg-gradient-to-r from-[#e8a020] to-[#f0ede8] bg-clip-text text-transparent">
+            {state.tournament?.name ?? "Cali Arena"}
+          </p>
+          <p className="mt-4 font-cairo text-[2rem] font-semibold uppercase tracking-widest text-white/60">
+            Best times — {state.leaderboard.stage} · {state.leaderboard.gender}
+          </p>
+        </div>
+
+        {entries.length === 0 ? (
+          <div className="flex-1 flex items-center justify-center">
+            <p className="font-cairo text-white/25 uppercase tracking-widest text-lg">
+              No finished attempts yet
+            </p>
+          </div>
+        ) : (
+          <div className="flex-1 flex items-start justify-center pt-14 px-16">
+            <div className="w-full max-w-3xl">
+              <div className="grid grid-cols-[64px_1fr_170px] gap-4 px-6 pb-3 font-cairo text-[1.1rem] uppercase tracking-widest text-white/40">
+                <span>#</span>
+                <span>Athlete</span>
+                <span className="text-right">Time</span>
+              </div>
+
+              <div className="space-y-1.5">
+                {entries.map((entry, index) => {
+                  const position = index + 1;
+                  const isPodium = position <= 3;
+                  const medalColor = ["#f5c453", "#c9c9cf", "#cd8b4c"][position - 1];
+
+                  return (
+                    <div
+                      key={entry.matchId}
+                      className="grid grid-cols-[64px_1fr_170px] items-center gap-4 px-6 py-4 rounded-lg"
+                      style={{
+                        background: isPodium ? `${medalColor}1a` : "rgba(255,255,255,0.04)",
+                        border: isPodium ? `1px solid ${medalColor}55` : "1px solid transparent",
+                      }}
+                    >
+                      <span
+                        className="font-cairo text-[1.75rem] font-bold leading-none"
+                        style={{ color: isPodium ? medalColor : "rgba(255,255,255,0.4)" }}
+                      >
+                        {position}
+                      </span>
+                      <span className="font-cairo text-[1.75rem] font-semibold leading-none text-white">
+                        {entry.athleteName}
+                      </span>
+                      <span
+                        className="font-cairo text-[1.75rem] font-bold leading-none tabular-nums text-right"
+                        style={{ color: isPodium ? medalColor : "#a09a92" }}
+                      >
+                        {entry.duration}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
   }
 
   return (

@@ -3,7 +3,7 @@ import { ApiError } from "@/lib/api/client";
 import type { Athlete } from "@/features/athletes/types";
 import type { Routine, RoutineOverview } from "@/features/routines/types";
 import { tournamentsService } from "../services/tournaments.service";
-import type { ScreenState, TournamentState } from "../types";
+import type { Bracket, ScreenState, TournamentState } from "../types";
 import { BattlePanel } from "@/features/matches/components/battle-panel";
 import type { Match } from "@/features/matches/types";
 import { ScreenRoutinesPanel } from "./screen-routines-panel";
@@ -25,12 +25,14 @@ interface ScreenControlProps {
   athletes: Athlete[];
   routines: Routine[];
   overviews: Record<string, RoutineOverview>;
+  brackets: Bracket[];
   onUpdated: (state: TournamentState) => void;
 }
 
 interface ScreenControlState {
   screen: ScreenState;
   matchId: number | null;
+  bracketId: number | null;
   loading: boolean;
   error: string | null;
 }
@@ -38,6 +40,7 @@ interface ScreenControlState {
 type Action =
   | { type: "setScreen"; screen: ScreenState }
   | { type: "setMatchId"; id: number }
+  | { type: "setBracketId"; id: number }
   | { type: "updateStart" }
   | { type: "updateDone" }
   | { type: "updateError"; message: string }
@@ -47,6 +50,7 @@ function createInitialState(state: TournamentState | null): ScreenControlState {
   return {
     screen: state?.currentScreen ?? "WAITING",
     matchId: state?.currentMatchId ?? null,
+    bracketId: state?.currentBracketId ?? null,
     loading: false,
     error: null,
   };
@@ -59,10 +63,13 @@ function reducer(state: ScreenControlState, action: Action): ScreenControlState 
         ...state,
         screen: action.screen,
         matchId: action.screen === "BATTLE" ? state.matchId : null,
+        bracketId: action.screen === "LEADERBOARD" ? state.bracketId : null,
         error: null,
       };
     case "setMatchId":
       return { ...state, matchId: action.id, error: null };
+    case "setBracketId":
+      return { ...state, bracketId: action.id, error: null };
     case "updateStart":
       return { ...state, loading: true, error: null };
     case "updateDone":
@@ -81,6 +88,7 @@ export function ScreenControl({
   athletes,
   routines,
   overviews,
+  brackets,
   onUpdated,
 }: ScreenControlProps) {
   const [ui, dispatch] = useReducer(reducer, tournamentState, createInitialState);
@@ -91,6 +99,7 @@ export function ScreenControl({
       const updated = await tournamentsService.updateScreen(tournamentId, {
         screen: ui.screen,
         currentMatchId: ui.screen === "BATTLE" ? ui.matchId : null,
+        currentBracketId: ui.screen === "LEADERBOARD" ? ui.bracketId : null,
       });
       onUpdated(updated);
       dispatch({ type: "updateDone" });
@@ -183,9 +192,30 @@ export function ScreenControl({
             </div>
           )}
 
+          {ui.screen === "LEADERBOARD" && (
+            <div className="space-y-1.5">
+              <p className="text-[10px] uppercase tracking-widest" style={{ color: "#6b6560" }}>Bracket</p>
+              <Select
+                value={ui.bracketId ? String(ui.bracketId) : ""}
+                onValueChange={(value) => dispatch({ type: "setBracketId", id: Number(value) })}
+              >
+                <SelectTrigger className="h-8 text-xs w-64 border-[#252528] focus:ring-[#e8a020]/40" style={{ background: "#0f0f11", color: "#a09a92" }}>
+                  <SelectValue placeholder="Select bracket" />
+                </SelectTrigger>
+                <SelectContent style={{ background: "#17171a", border: "1px solid #252528" }}>
+                  {brackets.map((b) => (
+                    <SelectItem key={b.id} value={String(b.id)} className="text-xs" style={{ color: "#a09a92" }}>
+                      {b.stage} · {b.gender}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
           <button
             onClick={() => void handleUpdateScreen()}
-            disabled={ui.loading || (ui.screen === "BATTLE" && !ui.matchId)}
+            disabled={ui.loading || (ui.screen === "BATTLE" && !ui.matchId) || (ui.screen === "LEADERBOARD" && !ui.bracketId)}
             className="px-4 py-2 rounded text-sm font-medium transition-opacity disabled:opacity-50"
             style={{ background: "#e8a020", color: "#0f0f11" }}
           >
