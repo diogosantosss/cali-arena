@@ -34,15 +34,15 @@ export const tournamentsService = {
   },
 
   createBracket(input: CreateBracketInput): Promise<Bracket> {
-    return apiClient.post("/tournaments/bracket", input);
+    return apiClient.post("/brackets", input);
   },
 
   getBracketsByTournamentId(tournamentId: number): Promise<Bracket[]> {
-    return apiClient.get(`/tournaments/${tournamentId}/brackets`);
+    return apiClient.get(`/brackets/tournament/${tournamentId}`);
   },
 
   getBracketOverview(tournamentId: number, gender: Gender): Promise<BracketOverview> {
-    return apiClient.get(`/tournaments/${tournamentId}/bracket/${gender}/overview`);
+    return apiClient.get(`/brackets/tournament/${tournamentId}/gender/${gender}/overview`);
   },
 
   createScreenRoutine(tournamentId: number, input: CreateScreenRoutineInput): Promise<ScreenRoutine> {

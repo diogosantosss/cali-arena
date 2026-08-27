@@ -1,7 +1,6 @@
 package com.caliarena.http
 
 import com.caliarena.http.model.Problem
-import com.caliarena.http.model.tournament.CreateBracketInput
 import com.caliarena.http.model.tournament.CreateTournamentInput
 import com.caliarena.http.model.tournament.UpdateScreenInput
 import com.caliarena.http.utils.toResponse
@@ -16,7 +15,6 @@ import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
-import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 import java.time.Instant
 import java.time.LocalDate
@@ -66,72 +64,6 @@ class TournamentController(
                 onError = { it.toResponseEntity() },
             )
 
-    @PostMapping("/bracket")
-    fun createBracket(
-        @RequestBody input: CreateBracketInput,
-    ): ResponseEntity<Any> =
-        tournamentService
-            .createBracket(
-                tournamentId = input.tournamentId,
-                gender = input.gender,
-                stage = input.stage,
-            ).toResponse(
-                onSuccess = { bracket ->
-                    ResponseEntity
-                        .status(HttpStatus.CREATED)
-                        .header(HttpHeaders.LOCATION, "/api/tournaments/bracket/${bracket.id}")
-                        .body(bracket)
-                },
-                onError = { it.toResponseEntity() },
-            )
-
-    @GetMapping("{id}/brackets")
-    fun getBracketsByTournamentId(
-        @PathVariable id: Int,
-    ): ResponseEntity<Any> =
-        tournamentService
-            .getBracketsByTournament(id)
-            .toResponse(
-                onSuccess = { brackets ->
-                    ResponseEntity
-                        .status(HttpStatus.OK)
-                        .body(brackets)
-                },
-                onError = { it.toResponseEntity() },
-            )
-
-    @GetMapping("{id}/brackets/gender/{gender}")
-    fun getBracketsByTournamentAndGender(
-        @PathVariable id: Int,
-        @PathVariable gender: String,
-    ): ResponseEntity<Any> =
-        tournamentService
-            .getBracketsByTournamentAndGender(id, gender)
-            .toResponse(
-                onSuccess = { brackets ->
-                    ResponseEntity
-                        .status(HttpStatus.OK)
-                        .body(brackets)
-                },
-                onError = { it.toResponseEntity() },
-            )
-
-    @GetMapping("/{tournamentId}/bracket/{gender}/overview")
-    fun getBracketOverview(
-        @PathVariable tournamentId: Int,
-        @PathVariable gender: String,
-    ): ResponseEntity<Any> =
-        tournamentService
-            .getBracketOverview(tournamentId, gender)
-            .toResponse(
-                onSuccess = { overview ->
-                    ResponseEntity
-                        .status(HttpStatus.OK)
-                        .body(overview)
-                },
-                onError = { it.toResponseEntity() },
-            )
-
     @GetMapping("/{tournamentId}/state")
     fun getTournamentState(
         @PathVariable tournamentId: Int,
@@ -166,59 +98,20 @@ class TournamentController(
                 onError = { it.toResponseEntity() },
             )
 
-    @GetMapping("/bracket/{bracketId}/leaderboard")
-    fun getBracketLeaderboard(
-        @PathVariable bracketId: Int,
-    ): ResponseEntity<Any> =
-        tournamentService
-            .getBracketLeaderboard(bracketId)
-            .toResponse(
-                onSuccess = {
-                    ResponseEntity
-                        .status(HttpStatus.OK)
-                        .body(it)
-                },
-                onError = { it.toResponseEntity() },
-            )
-
-    @GetMapping("/{tournamentId}/brackets/summary")
-    fun getBracketsSummary(
-        @PathVariable tournamentId: Int,
-        @RequestParam gender: String,
-    ): ResponseEntity<Any> =
-        tournamentService
-            .getTournamentBracketsSummary(tournamentId, gender)
-            .toResponse(
-                onSuccess = { summary ->
-                    ResponseEntity.ok(summary)
-                },
-                onError = { it.toResponseEntity() },
-            )
-
     private fun String.convertDate(): Instant = LocalDate.parse(this).atStartOfDay().toInstant(ZoneOffset.UTC)
 
     private fun TournamentError.toResponseEntity(): ResponseEntity<Any> =
         when (this) {
-            TournamentError.InvalidBracketStage ->
-                Problem.InvalidBracketStage.response(HttpStatus.BAD_REQUEST)
-            TournamentError.InvalidGender ->
-                Problem.InvalidGender.response(HttpStatus.BAD_REQUEST)
             TournamentError.InvalidTournamentStatus ->
                 Problem.InvalidTournamentStatus.response(HttpStatus.BAD_REQUEST)
             TournamentError.InvalidScreenState ->
                 Problem.InvalidScreenState.response(HttpStatus.BAD_REQUEST)
             TournamentError.TournamentStateNotFound ->
                 Problem.TournamentStateNotFound.response(HttpStatus.NOT_FOUND)
-            TournamentError.BracketNotFound ->
-                Problem.BracketNotFound.response(HttpStatus.NOT_FOUND)
             TournamentError.TournamentNotFound ->
                 Problem.TournamentNotFound.response(HttpStatus.NOT_FOUND)
-            TournamentError.BracketAlreadyExists ->
-                Problem.BracketAlreadyExists.response(HttpStatus.CONFLICT)
             TournamentError.TournamentAlreadyExists ->
                 Problem.TournamentAlreadyExists.response(HttpStatus.CONFLICT)
-            TournamentError.MatchNotFinished ->
-                Problem.MatchNotFinished.response(HttpStatus.CONFLICT)
             TournamentError.TournamentStateAlreadyExists ->
                 Problem.TournamentStateAlreadyExists.response(HttpStatus.CONFLICT)
         }

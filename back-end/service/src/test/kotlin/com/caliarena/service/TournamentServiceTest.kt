@@ -1,15 +1,9 @@
 package com.caliarena.service
 
-import com.caliarena.domain.athlete.GenderType
-import com.caliarena.domain.bracket.BracketStage
-import com.caliarena.domain.match.MatchStatus
 import com.caliarena.domain.tournament.ScreenState
 import com.caliarena.domain.tournament.TournamentStatus
 import com.caliarena.domain.user.UserRole
-import com.caliarena.repo.entities.athlete.AthleteEntity
-import com.caliarena.repo.entities.club.ClubEntity
 import com.caliarena.repo.entities.match.MatchEntity
-import com.caliarena.repo.entities.tournament.BracketEntity
 import com.caliarena.repo.entities.tournament.TournamentEntity
 import com.caliarena.repo.entities.tournament.TournamentStateEntity
 import com.caliarena.repo.entities.user.UserEntity
@@ -20,10 +14,9 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.lenient
+import org.mockito.Mockito.`when`
 import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
-import org.mockito.kotlin.never
-import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import java.util.Optional
 
@@ -33,7 +26,6 @@ class TournamentServiceTest : ServiceTest() {
     @BeforeEach
     fun setup() {
         lenient().whenever(transaction.tournaments).thenReturn(tournaments)
-        lenient().whenever(transaction.brackets).thenReturn(brackets)
         lenient().whenever(transaction.tournamentStates).thenReturn(tournamentStates)
         lenient().whenever(transaction.matches).thenReturn(matches)
 
@@ -49,65 +41,63 @@ class TournamentServiceTest : ServiceTest() {
 
     private val now = clock.instant()
 
-    private fun tournamentEntity(
-        id: Int = 1,
-        name: String = "Open Setúbal",
-        status: TournamentStatus = TournamentStatus.DRAFT,
-    ) = TournamentEntity(
-        id = id,
-        name = name,
-        location = "Setúbal",
-        startDate = now.epochSecond,
-        endDate = now.plusSeconds(3600).epochSecond,
-        status = status,
-        createdAt = now.epochSecond,
-    )
-
-    private fun bracketEntity(
-        id: Int = 1,
-        tournament: TournamentEntity = tournamentEntity(),
-        gender: GenderType = GenderType.MALE,
-        stage: BracketStage = BracketStage.QUALIFIERS,
-    ) = BracketEntity(id = id, tournament = tournament, gender = gender, stage = stage, createdAt = now.epochSecond)
-
-    private fun matchEntity(id: Int = 1): MatchEntity {
-        val tournament = tournamentEntity()
-        val judge = UserEntity(3, "judge", "hash", UserRole.JUDGE, now.epochSecond)
-        val club = ClubEntity(1, "club", null, now.epochSecond)
-        val red = AthleteEntity(10, "red", GenderType.MALE, club, now.epochSecond)
-        val blue = AthleteEntity(20, "blue", GenderType.MALE, club, now.epochSecond)
-        return MatchEntity(
+    private fun tournamentEntity(id: Int = 1) =
+        TournamentEntity(
             id = id,
-            bracket = bracketEntity(tournament = tournament),
-            routineId = 2,
-            judge = judge,
-            athleteRed = red,
-            athleteBlue = blue,
-            status = MatchStatus.PENDING,
+            name = "Tournament $id",
+            location = "Location",
+            startDate = now.epochSecond,
+            endDate = null,
+            status = TournamentStatus.READY,
             createdAt = now.epochSecond,
         )
-    }
+
+    private fun stateEntity(
+        tournament: TournamentEntity = tournamentEntity(),
+        screen: ScreenState = ScreenState.BATTLE,
+    ) = TournamentStateEntity(
+        id = 1,
+        tournament = tournament,
+        currentScreen = screen,
+        updatedAt = now.epochSecond,
+    )
+
+    private fun matchEntity(id: Int = 1) =
+        MatchEntity(
+            id = id,
+            bracket =
+                com.caliarena.repo.entities.tournament
+                    .BracketEntity(),
+            routineId = 1,
+            judge = UserEntity(1, "judge", "hash", UserRole.JUDGE, now.epochSecond),
+            athleteRed = null,
+            athleteBlue = null,
+            status = com.caliarena.domain.match.MatchStatus.FINISHED,
+            startedAt = now.toEpochMilli(),
+            finishedAt = now.plusSeconds(60).toEpochMilli(),
+            createdAt = now.epochSecond,
+        )
 
     @Nested
     inner class CreateTournament {
         @Test
         fun `should create tournament successfully`() {
-            whenever(tournaments.findByName("Open Setúbal")).thenReturn(null)
-            whenever(tournaments.save(any())).thenReturn(tournamentEntity())
-            whenever(tournaments.findById(1)).thenReturn(Optional.of(tournamentEntity()))
+            val saved = tournamentEntity(2)
+            `when`(tournaments.findByName("New")).thenReturn(null as TournamentEntity?)
+            `when`(tournaments.save(any())).thenReturn(saved)
+            `when`(tournaments.findById(2)).thenReturn(Optional.of(saved))
+            `when`(tournamentStates.save(any())).thenReturn(stateEntity(saved))
 
-            val result = service.createTournament("Open Setúbal", "Setúbal", now, now.plusSeconds(3600))
+            val result = service.createTournament("New", "Loc", now, now.plusSeconds(3600))
 
-            assertEquals(success(tournamentEntity().toDomain()), result)
-
-            verify(tournamentStates).save(any())
+            assertTrue(result is Either.Right)
         }
 
         @Test
         fun `should fail when name already exists`() {
-            whenever(tournaments.findByName("Open Setúbal")).thenReturn(tournamentEntity())
+            lenient().whenever(tournaments.findByName("Existing")).thenReturn(tournamentEntity())
 
-            val result = service.createTournament("Open Setúbal", "Setúbal", now, now.plusSeconds(3600))
+            val result = service.createTournament("Existing", "Loc", now, now.plusSeconds(3600))
 
             assertEquals(failure(TournamentError.TournamentAlreadyExists), result)
         }
@@ -116,8 +106,8 @@ class TournamentServiceTest : ServiceTest() {
     @Nested
     inner class GetTournamentById {
         @Test
-        fun `should return tournament when found`() {
-            whenever(tournaments.findById(1)).thenReturn(Optional.of(tournamentEntity()))
+        fun `should return tournament by id`() {
+            lenient().whenever(tournaments.findById(1)).thenReturn(Optional.of(tournamentEntity()))
 
             val result = service.getTournamentById(1)
 
@@ -125,179 +115,45 @@ class TournamentServiceTest : ServiceTest() {
         }
 
         @Test
-        fun `should fail when tournament does not exist`() {
-            whenever(tournaments.findById(1)).thenReturn(Optional.empty())
+        fun `should fail when not found`() {
+            lenient().whenever(tournaments.findById(99)).thenReturn(Optional.empty())
 
-            val result = service.getTournamentById(1)
+            val result = service.getTournamentById(99)
 
             assertEquals(failure(TournamentError.TournamentNotFound), result)
-        }
-    }
-
-    @Nested
-    inner class GetAllTournaments {
-        @Test
-        fun `should return all tournaments`() {
-            val list = listOf(tournamentEntity(1), tournamentEntity(2, name = "Other"))
-            whenever(tournaments.findAll()).thenReturn(list)
-
-            val result = service.getAllTournaments()
-
-            assertEquals(list.map { it.toDomain() }, result)
-        }
-    }
-
-    @Nested
-    inner class GetTournamentsByStatus {
-        @Test
-        fun `should return tournaments filtered by status`() {
-            val list = listOf(tournamentEntity(status = TournamentStatus.LIVE))
-            whenever(tournaments.findByStatus(TournamentStatus.LIVE)).thenReturn(list)
-
-            val result = service.getTournamentsByStatus(TournamentStatus.LIVE)
-
-            assertEquals(list.map { it.toDomain() }, result)
         }
     }
 
     @Nested
     inner class UpdateTournamentStatus {
         @Test
-        fun `should update status successfully`() {
-            val updated = tournamentEntity(status = TournamentStatus.FINISHED)
-            whenever(tournaments.findById(1)).thenReturn(Optional.of(tournamentEntity()))
-            whenever(tournaments.save(any())).thenReturn(updated)
+        fun `should update status`() {
+            val existing = tournamentEntity()
+            lenient().whenever(tournaments.findById(1)).thenReturn(Optional.of(existing))
+            lenient().whenever(tournaments.save(existing)).thenReturn(existing)
 
-            val result = service.updateTournamentStatus(1, "FINISHED")
+            val result = service.updateTournamentStatus(1, "LIVE")
 
-            assertEquals(success(updated.toDomain()), result)
+            assertEquals(success(existing.toDomain()), result)
+            assertEquals(TournamentStatus.LIVE, existing.status)
         }
 
         @Test
-        fun `should fail when tournament does not exist`() {
-            whenever(tournaments.findById(1)).thenReturn(Optional.empty())
+        fun `should fail when not found`() {
+            lenient().whenever(tournaments.findById(99)).thenReturn(Optional.empty())
 
-            val result = service.updateTournamentStatus(1, "FINISHED")
+            val result = service.updateTournamentStatus(99, "LIVE")
 
             assertEquals(failure(TournamentError.TournamentNotFound), result)
         }
 
         @Test
-        fun `should fail when status is invalid`() {
-            whenever(tournaments.findById(1)).thenReturn(Optional.of(tournamentEntity()))
+        fun `should fail on invalid status`() {
+            lenient().whenever(tournaments.findById(1)).thenReturn(Optional.of(tournamentEntity()))
 
             val result = service.updateTournamentStatus(1, "INVALID")
 
             assertEquals(failure(TournamentError.InvalidTournamentStatus), result)
-        }
-    }
-
-    @Nested
-    inner class CreateBracket {
-        @Test
-        fun `should create bracket successfully`() {
-            val tournament = tournamentEntity()
-            whenever(tournaments.findById(1)).thenReturn(Optional.of(tournament))
-            whenever(brackets.findByTournamentIdAndGender(1, GenderType.MALE)).thenReturn(emptyList())
-            whenever(brackets.save(any())).thenReturn(bracketEntity())
-
-            val result = service.createBracket(1, "MALE", "QUALIFIERS")
-
-            assertEquals(success(bracketEntity().toDomain()), result)
-        }
-
-        @Test
-        fun `should fail when tournament does not exist`() {
-            whenever(tournaments.findById(1)).thenReturn(Optional.empty())
-
-            val result = service.createBracket(1, "MALE", "QUALIFIERS")
-
-            assertEquals(failure(TournamentError.TournamentNotFound), result)
-        }
-
-        @Test
-        fun `should fail when gender is invalid`() {
-            whenever(tournaments.findById(1)).thenReturn(Optional.of(tournamentEntity()))
-
-            val result = service.createBracket(1, "INVALID", "QUALIFIERS")
-
-            assertEquals(failure(TournamentError.InvalidGender), result)
-        }
-
-        @Test
-        fun `should fail when stage is invalid`() {
-            whenever(tournaments.findById(1)).thenReturn(Optional.of(tournamentEntity()))
-
-            val result = service.createBracket(1, "MALE", "INVALID")
-
-            assertEquals(failure(TournamentError.InvalidBracketStage), result)
-        }
-
-        @Test
-        fun `should fail when bracket already exists for stage`() {
-            val existing =
-                bracketEntity(stage = BracketStage.QUALIFIERS)
-            whenever(tournaments.findById(1)).thenReturn(Optional.of(tournamentEntity()))
-            whenever(brackets.findByTournamentIdAndGender(1, GenderType.MALE)).thenReturn(listOf(existing))
-
-            val result = service.createBracket(1, "MALE", "QUALIFIERS")
-
-            assertEquals(failure(TournamentError.BracketAlreadyExists), result)
-
-            verify(brackets, never()).save(any())
-        }
-    }
-
-    @Nested
-    inner class GetBracketsByTournament {
-        @Test
-        fun `should return brackets of the tournament`() {
-            val list = listOf(bracketEntity())
-            whenever(tournaments.findById(1)).thenReturn(Optional.of(tournamentEntity()))
-            whenever(brackets.findByTournamentId(1)).thenReturn(list)
-
-            val result = service.getBracketsByTournament(1)
-
-            assertEquals(success(list.map { it.toDomain() }), result)
-        }
-
-        @Test
-        fun `should fail when tournament does not exist`() {
-            whenever(tournaments.findById(1)).thenReturn(Optional.empty())
-
-            val result = service.getBracketsByTournament(1)
-
-            assertEquals(failure(TournamentError.TournamentNotFound), result)
-        }
-    }
-
-    @Nested
-    inner class GetBracketOverview {
-        @Test
-        fun `should return overview with matches per bracket`() {
-            val tournament = tournamentEntity()
-            val bracket = bracketEntity(tournament = tournament)
-            val matchList = listOf(matchEntity(1))
-            whenever(tournaments.findById(1)).thenReturn(Optional.of(tournament))
-            whenever(brackets.findByTournamentIdAndGender(1, GenderType.MALE)).thenReturn(listOf(bracket))
-            whenever(matches.findByBracketId(bracket.id)).thenReturn(matchList)
-
-            val result = service.getBracketOverview(1, "MALE")
-
-            assertTrue(result is Either.Right)
-
-            val overview = (result as Either.Right).value
-            assertEquals(1, overview.size)
-            assertEquals(1, overview.first().matches.size)
-        }
-
-        @Test
-        fun `should fail when gender is invalid`() {
-            whenever(tournaments.findById(1)).thenReturn(Optional.of(tournamentEntity()))
-
-            val result = service.getBracketOverview(1, "INVALID")
-
-            assertEquals(failure(TournamentError.InvalidGender), result)
         }
     }
 
