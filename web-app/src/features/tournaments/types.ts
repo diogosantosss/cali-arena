@@ -1,4 +1,3 @@
-import type { Gender } from "@/types/gender";
 import type { Match } from "@/features/matches/types";
 
 export interface CreateTournamentInput {
@@ -28,7 +27,7 @@ export interface TournamentState {
   currentScreen: ScreenState;
   currentMatchId: number | null;
   currentBracketId: number | null;
-  currentGender: Gender | null;
+  currentDivision: string | null;
   updatedAt: string;
 }
 
@@ -36,21 +35,21 @@ export interface UpdateScreenInput {
   screen: ScreenState;
   currentMatchId: number | null;
   currentBracketId: number | null;
-  gender: Gender | null;
+  currentDivision: string | null;
 }
 
 export type BracketStage = "QUALIFIERS" | "QUARTERFINALS" | "SEMIFINALS" | "FINALS";
 
 export interface CreateBracketInput {
   tournamentId: number;
-  gender: Gender;
+  division: string;
   stage: BracketStage;
 }
 
 export interface Bracket {
   id: number;
   tournamentId: number;
-  gender: Gender;
+  division: string;
   stage: BracketStage;
   createdAt: string;
 }
@@ -68,7 +67,7 @@ export interface LeaderboardEntry {
 
 export interface BracketLeaderboard {
   bracketId: number;
-  gender: Gender;
+  division: string;
   stage: BracketStage;
   entries: LeaderboardEntry[];
 }
@@ -88,7 +87,7 @@ export interface BracketSummary {
 
 export interface TournamentBracketsSummary {
   tournamentId: number;
-  gender: Gender;
+  division: string;
   brackets: BracketSummary[];
 }
 

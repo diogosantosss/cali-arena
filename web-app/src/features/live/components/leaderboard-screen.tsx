@@ -17,7 +17,7 @@ export function LeaderboardScreen({
           {tournamentName}
         </p>
         <p className="mt-4 font-cairo text-[2rem] font-semibold uppercase tracking-widest text-white/60">
-          Best times — {leaderboard.stage} · {leaderboard.gender}
+          Best times — {leaderboard.stage} · {leaderboard.division}
         </p>
       </div>
 

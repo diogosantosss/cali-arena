@@ -55,6 +55,8 @@ export const errorDescriptions: Record<string, string> = {
     "The tournament state already exists. Please try again later.",
   "invalid-bracket-stage":
     "The bracket stage is invalid for the current tournament state.",
+  "invalid-bracket-division":
+    "The bracket division is invalid or has no brackets. Please choose a valid division.",
   "invalid-screen-state":
     "The screen state is invalid for the current tournament flow.",
   "invalid-tournament-status":

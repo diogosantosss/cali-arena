@@ -7,7 +7,6 @@ import type { BracketLeaderboard, ScreenRoutine, ScreenState, Tournament, Tourna
 import { routinesService } from "@/features/routines/services/routines.service";
 import type { Routine, RoutineOverview } from "@/features/routines/types";
 import type { Athlete } from "@/features/athletes/types";
-import type { Gender } from "@/types/gender";
 import { athletesService } from "@/features/athletes/services/athletes.service";
 import { matchesService } from "@/features/matches/services/matches.service";
 import type { Match, MatchProgress } from "@/features/matches/types";
@@ -104,7 +103,7 @@ export function ScreenPage() {
   const currentMatchIdRef = useRef<number | null>(null);
   const screenRef = useRef<ScreenState | null>(null);
   const bracketIdRef = useRef<number | null>(null);
-  const genderRef = useRef<Gender | null>(null);
+  const divisionRef = useRef<string | null>(null);
 
   useEffect(() => {
     currentMatchIdRef.current = state.currentMatch?.id ?? null;
@@ -113,7 +112,7 @@ export function ScreenPage() {
   useEffect(() => {
     screenRef.current = state.tournamentState?.currentScreen ?? null;
     bracketIdRef.current = state.tournamentState?.currentBracketId ?? null;
-    genderRef.current = state.tournamentState?.currentGender ?? null;
+    divisionRef.current = state.tournamentState?.currentDivision ?? null;
   }, [state.tournamentState]);
 
   const refreshLeaderboard = useCallback(async (bracketId: number) => {
@@ -125,9 +124,9 @@ export function ScreenPage() {
     }
   }, []);
 
-  const refreshBrackets = useCallback(async (gender: Gender) => {
+  const refreshBrackets = useCallback(async (division: string) => {
     try {
-      const summary = await tournamentsService.getBracketSummary(id, gender);
+      const summary = await tournamentsService.getBracketSummary(id, division);
       dispatch({ type: "setBracketSummary", summary });
     } catch {
       // keep previous summary if refresh fails
@@ -168,8 +167,8 @@ export function ScreenPage() {
           void refreshLeaderboard(tournamentState.currentBracketId);
         }
 
-        if (tournamentState.currentScreen === "BRACKETS" && tournamentState.currentGender) {
-          void refreshBrackets(tournamentState.currentGender);
+        if (tournamentState.currentScreen === "BRACKETS" && tournamentState.currentDivision) {
+          void refreshBrackets(tournamentState.currentDivision);
         }
 
         if (tournamentState.currentMatchId) {
@@ -196,8 +195,8 @@ export function ScreenPage() {
         } else if (event.state.currentScreen !== "LEADERBOARD") {
           dispatch({ type: "setLeaderboard", leaderboard: null });
         }
-        if (event.state.currentScreen === "BRACKETS" && event.state.currentGender) {
-          void refreshBrackets(event.state.currentGender);
+        if (event.state.currentScreen === "BRACKETS" && event.state.currentDivision) {
+          void refreshBrackets(event.state.currentDivision);
         } else if (event.state.currentScreen !== "BRACKETS") {
           dispatch({ type: "setBracketSummary", summary: null });
         }
@@ -226,8 +225,8 @@ export function ScreenPage() {
         if (screenRef.current === "LEADERBOARD" && bracketIdRef.current) {
           void refreshLeaderboard(bracketIdRef.current);
         }
-        if (screenRef.current === "BRACKETS" && genderRef.current) {
-          void refreshBrackets(genderRef.current);
+        if (screenRef.current === "BRACKETS" && divisionRef.current) {
+          void refreshBrackets(divisionRef.current);
         }
         if (event.matchProgress.matchId !== currentMatchIdRef.current) break;
         dispatch({ type: "setMatchProgress", progress: event.matchProgress });

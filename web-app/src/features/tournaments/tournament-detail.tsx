@@ -3,7 +3,6 @@ import { useParams, useNavigate } from "react-router-dom";
 import { ApiError } from "@/lib/api/client";
 import { tournamentsService } from "./services/tournaments.service";
 import type { Bracket, BracketStage, Tournament, TournamentState } from "./types";
-import type { Gender } from "@/types/gender";
 import { athletesService } from "@/features/athletes/services/athletes.service";
 import type { Athlete } from "@/features/athletes/types";
 import { routinesService } from "@/features/routines/services/routines.service";
@@ -208,9 +207,9 @@ export function TournamentDetailPage() {
     return () => clearTimeout(handle);
   }, [loadTournament]);
 
-  async function handleCreateBracket(gender: Gender, stage: BracketStage) {
+  async function handleCreateBracket(division: string, stage: BracketStage) {
     try {
-      const bracket = await tournamentsService.createBracket({ tournamentId, gender, stage });
+      const bracket = await tournamentsService.createBracket({ tournamentId, division, stage });
       dispatch({ type: "bracketCreated", bracket });
     } catch (err) {
       console.error(err);

@@ -4,7 +4,6 @@ import type { Routine } from "@/features/routines/types";
 import type { User } from "@/features/users/types";
 import type { Bracket, BracketStage } from "@/features/tournaments/types";
 import type { Match, MatchProgress } from "../types";
-import type { Gender } from "@/types/gender";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge as ShadcnBadge } from "@/components/ui/badge";
@@ -21,7 +20,7 @@ interface BracketViewProps {
   routines: Routine[];
   judges: User[];
   onRefresh: () => void;
-  onCreateBracket: (gender: Gender, stage: BracketStage) => void;
+  onCreateBracket: (division: string, stage: BracketStage) => void;
   onMatchCreated: (match: Match) => void;
   onMatchUpdated: (match: Match) => void;
   onStartMatch: (match: Match) => void;
@@ -51,18 +50,25 @@ export function BracketView({
 }: BracketViewProps) {
   const [createMatchFor, setCreateMatchFor] = useState<Bracket | null>(null);
   const [assignAthletesFor, setAssignAthletesFor] = useState<Match | null>(null);
+  const [addingDivision, setAddingDivision] = useState(false);
+  const [newDivision, setNewDivision] = useState("");
 
-  function getBracket(gender: Gender, stage: BracketStage) {
-    return brackets.find((b) => b.gender === gender && b.stage === stage);
+  const divisions = Array.from(new Set(brackets.map((b) => b.division)));
+  const [pickedDivision, setPickedDivision] = useState<string | null>(null);
+  const activeDivision =
+    pickedDivision && divisions.includes(pickedDivision) ? pickedDivision : (divisions[0] ?? "");
+
+  function getBracket(division: string, stage: BracketStage) {
+    return brackets.find((b) => b.division === division && b.stage === stage);
   }
 
   function getMatchesForBracket(bracketId: number) {
     return matches.filter((m) => m.bracketId === bracketId);
   }
 
-  function renderStages(gender: Gender) {
+  function renderStages(division: string) {
     return stages.map((stage) => {
-      const bracket = getBracket(gender, stage);
+      const bracket = getBracket(division, stage);
       const bracketMatches = bracket ? getMatchesForBracket(bracket.id) : [];
 
       return (
@@ -89,7 +95,7 @@ export function BracketView({
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => onCreateBracket(gender, stage)}
+                onClick={() => onCreateBracket(division, stage)}
               >
                 <Plus className="w-3.5 h-3.5 mr-1" />
                 Create bracket
@@ -130,32 +136,79 @@ export function BracketView({
 
   return (
     <>
-      <Tabs defaultValue="MALE">
-        <div className="flex items-center gap-2">
-          <TabsList>
-            <TabsTrigger value="MALE">Male</TabsTrigger>
-            <TabsTrigger value="FEMALE">Female</TabsTrigger>
-          </TabsList>
+      <div className="flex items-center gap-2">
+        {divisions.length > 0 && (
+          <Tabs value={activeDivision} onValueChange={setPickedDivision}>
+            <TabsList>
+              {divisions.map((division) => (
+                <TabsTrigger key={division} value={division}>{division}</TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
+        )}
+        {addingDivision ? (
+          <input
+            autoFocus
+            value={newDivision}
+            onChange={(e) => setNewDivision(e.target.value)}
+            placeholder="Division name"
+            className="h-8 px-2 w-40 rounded text-sm border bg-transparent"
+            style={{ border: "1px solid #252528", color: "#f0ede8" }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && newDivision.trim()) {
+                onCreateBracket(newDivision.trim(), "QUALIFIERS");
+                setNewDivision("");
+                setAddingDivision(false);
+              }
+              if (e.key === "Escape") {
+                setNewDivision("");
+                setAddingDivision(false);
+              }
+            }}
+            onBlur={() => {
+              setNewDivision("");
+              setAddingDivision(false);
+            }}
+          />
+        ) : (
           <button
-            onClick={onRefresh}
-            title="Refresh matches"
+            onClick={() => setAddingDivision(true)}
+            title="Add division"
             className="p-1.5 rounded transition-colors"
             style={{ color: "#6b6560", border: "1px solid #252528", background: "#1e1e22" }}
             onMouseEnter={(e) => (e.currentTarget.style.color = "#e8a020")}
             onMouseLeave={(e) => (e.currentTarget.style.color = "#6b6560")}
           >
-            <RefreshCw className="w-3.5 h-3.5" />
+            <Plus className="w-3.5 h-3.5" />
           </button>
+        )}
+        <button
+          onClick={onRefresh}
+          title="Refresh matches"
+          className="p-1.5 rounded transition-colors"
+          style={{ color: "#6b6560", border: "1px solid #252528", background: "#1e1e22" }}
+          onMouseEnter={(e) => (e.currentTarget.style.color = "#e8a020")}
+          onMouseLeave={(e) => (e.currentTarget.style.color = "#6b6560")}
+        >
+          <RefreshCw className="w-3.5 h-3.5" />
+        </button>
+      </div>
+
+      {divisions.length === 0 ? (
+        <div className="flex items-center justify-center h-20 border border-dashed rounded-lg mt-4">
+          <p className="text-sm text-muted-foreground">
+            No divisions yet — press + to add one and start building brackets
+          </p>
         </div>
-
-        <TabsContent value="MALE" className="space-y-6 mt-4">
-          {renderStages("MALE")}
-        </TabsContent>
-
-        <TabsContent value="FEMALE" className="space-y-6 mt-4">
-          {renderStages("FEMALE")}
-        </TabsContent>
-      </Tabs>
+      ) : (
+        <Tabs value={activeDivision} onValueChange={setPickedDivision} className="mt-4">
+          {divisions.map((division) => (
+            <TabsContent key={division} value={division} className="space-y-6">
+              {renderStages(division)}
+            </TabsContent>
+          ))}
+        </Tabs>
+      )}
 
       {createMatchFor && (
         <CreateMatchDialog

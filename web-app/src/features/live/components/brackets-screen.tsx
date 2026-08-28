@@ -35,7 +35,7 @@ export function BracketsScreen({ tournamentName, summary }: {
           {tournamentName}
         </p>
         <p className="mt-4 font-cairo text-[2rem] font-semibold uppercase tracking-widest text-white/60">
-          Brackets · {summary.gender}
+          Brackets · {summary.division}
         </p>
       </div>
 

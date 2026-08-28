@@ -1,5 +1,4 @@
 import { apiClient } from "@/lib/api/client";
-import type { Gender } from "@/types/gender";
 import type {
   Bracket,
   BracketLeaderboard,
@@ -43,16 +42,16 @@ export const tournamentsService = {
     return apiClient.get(`/brackets/tournament/${tournamentId}`);
   },
 
-  getBracketOverview(tournamentId: number, gender: Gender): Promise<BracketOverview> {
-    return apiClient.get(`/brackets/tournament/${tournamentId}/gender/${gender}/overview`);
+  getBracketOverview(tournamentId: number, division: string): Promise<BracketOverview> {
+    return apiClient.get(`/brackets/tournament/${tournamentId}/division/${division}/overview`);
   },
 
   getBracketLeaderboard(bracketId: number): Promise<BracketLeaderboard> {
     return apiClient.get(`/brackets/${bracketId}/leaderboard`);
   },
 
-  getBracketSummary(tournamentId: number, gender: Gender): Promise<TournamentBracketsSummary> {
-    return apiClient.get(`/brackets/tournament/${tournamentId}/summary?gender=${gender}`);
+  getBracketSummary(tournamentId: number, division: string): Promise<TournamentBracketsSummary> {
+    return apiClient.get(`/brackets/tournament/${tournamentId}/summary?division=${division}`);
   },
 
   createScreenRoutine(tournamentId: number, input: CreateScreenRoutineInput): Promise<ScreenRoutine> {
