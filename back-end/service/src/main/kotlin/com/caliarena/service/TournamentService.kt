@@ -1,6 +1,5 @@
 package com.caliarena.service
 
-import com.caliarena.domain.athlete.GenderType
 import com.caliarena.domain.tournament.ScreenState
 import com.caliarena.domain.tournament.Tournament
 import com.caliarena.domain.tournament.TournamentState
@@ -114,7 +113,7 @@ class TournamentService(
         screen: String,
         currentMatchId: Int?,
         currentBracketId: Int?,
-        gender: String?,
+        currentDivision: String?,
     ): Either<ApiError, TournamentState> =
         trx.run {
             tournaments.findByIdOrNull(tournamentId)?.toDomain()
@@ -131,10 +130,11 @@ class TournamentService(
                     found
                 }
 
-            val currentGender =
-                gender?.let {
-                    GenderType.entries.find { g -> g.name.equals(it, true) }
-                        ?: return@run failure(ApiError.INVALID_GENDER)
+            val division =
+                currentDivision?.trim()?.let { divisionName ->
+                    val hasBracket = brackets.findByTournamentIdAndDivision(tournamentId, divisionName).isNotEmpty()
+                    if (divisionName.isEmpty() || !hasBracket) return@run failure(ApiError.INVALID_BRACKET_DIVISION)
+                    divisionName
                 }
 
             val state =
@@ -144,7 +144,7 @@ class TournamentService(
             state.currentScreen = screenState
             state.currentMatch = currentMatchId?.let { matches.findByIdOrNull(it) }
             state.currentBracket = bracket
-            state.currentGender = currentGender
+            state.currentDivision = division
             state.updatedAt = clock.instant().epochSecond
 
             val updated = tournamentStates.save(state).toDomain()

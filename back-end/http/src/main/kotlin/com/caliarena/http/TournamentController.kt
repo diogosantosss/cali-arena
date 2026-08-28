@@ -89,7 +89,7 @@ class TournamentController(
                 screen = input.screen,
                 currentMatchId = input.currentMatchId,
                 currentBracketId = input.currentBracketId,
-                gender = input.gender,
+                currentDivision = input.currentDivision,
             ).toResponse(
                 onSuccess = { state ->
                     ResponseEntity

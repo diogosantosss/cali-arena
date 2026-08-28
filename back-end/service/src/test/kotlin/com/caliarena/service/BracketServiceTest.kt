@@ -69,7 +69,7 @@ class BracketServiceTest : ServiceTest() {
     ) = BracketEntity(
         id = id,
         tournament = tournament,
-        gender = GenderType.MALE,
+        division = "ELITE MALE",
         stage = stage,
         createdAt = now.epochSecond,
     )
@@ -109,10 +109,10 @@ class BracketServiceTest : ServiceTest() {
         fun `should create bracket successfully`() {
             val tournament = tournamentEntity()
             whenever(tournaments.findById(1)).thenReturn(Optional.of(tournament))
-            whenever(brackets.findByTournamentIdAndGender(1, GenderType.MALE)).thenReturn(emptyList())
+            whenever(brackets.findByTournamentIdAndDivision(1, "ELITE MALE")).thenReturn(emptyList())
             whenever(brackets.save(any())).thenReturn(bracketEntity())
 
-            val result = service.createBracket(1, "MALE", "QUALIFIERS")
+            val result = service.createBracket(1, "ELITE MALE", "QUALIFIERS")
 
             assertEquals(success(bracketEntity().toDomain()), result)
         }
@@ -121,25 +121,25 @@ class BracketServiceTest : ServiceTest() {
         fun `should fail when tournament does not exist`() {
             whenever(tournaments.findById(1)).thenReturn(Optional.empty())
 
-            val result = service.createBracket(1, "MALE", "QUALIFIERS")
+            val result = service.createBracket(1, "ELITE MALE", "QUALIFIERS")
 
             assertEquals(failure(ApiError.TOURNAMENT_NOT_FOUND), result)
         }
 
         @Test
-        fun `should fail when gender is invalid`() {
+        fun `should fail when division is blank`() {
             whenever(tournaments.findById(1)).thenReturn(Optional.of(tournamentEntity()))
 
-            val result = service.createBracket(1, "INVALID", "QUALIFIERS")
+            val result = service.createBracket(1, "   ", "QUALIFIERS")
 
-            assertEquals(failure(ApiError.INVALID_GENDER), result)
+            assertEquals(failure(ApiError.INVALID_BRACKET_DIVISION), result)
         }
 
         @Test
         fun `should fail when stage is invalid`() {
             whenever(tournaments.findById(1)).thenReturn(Optional.of(tournamentEntity()))
 
-            val result = service.createBracket(1, "MALE", "INVALID")
+            val result = service.createBracket(1, "ELITE MALE", "INVALID")
 
             assertEquals(failure(ApiError.INVALID_BRACKET_STAGE), result)
         }
@@ -149,9 +149,9 @@ class BracketServiceTest : ServiceTest() {
             val existing =
                 bracketEntity(stage = BracketStage.QUALIFIERS)
             whenever(tournaments.findById(1)).thenReturn(Optional.of(tournamentEntity()))
-            whenever(brackets.findByTournamentIdAndGender(1, GenderType.MALE)).thenReturn(listOf(existing))
+            whenever(brackets.findByTournamentIdAndDivision(1, "ELITE MALE")).thenReturn(listOf(existing))
 
-            val result = service.createBracket(1, "MALE", "QUALIFIERS")
+            val result = service.createBracket(1, "ELITE MALE", "QUALIFIERS")
 
             assertEquals(failure(ApiError.BRACKET_ALREADY_EXISTS), result)
 
@@ -183,14 +183,14 @@ class BracketServiceTest : ServiceTest() {
     }
 
     @Nested
-    inner class GetBracketsByTournamentAndGender {
+    inner class GetBracketsByTournamentAndDivision {
         @Test
-        fun `should return brackets of the tournament for gender`() {
+        fun `should return brackets of the tournament for division`() {
             val list = listOf(bracketEntity())
             whenever(tournaments.findById(1)).thenReturn(Optional.of(tournamentEntity()))
-            whenever(brackets.findByTournamentIdAndGender(1, GenderType.MALE)).thenReturn(list)
+            whenever(brackets.findByTournamentIdAndDivision(1, "ELITE MALE")).thenReturn(list)
 
-            val result = service.getBracketsByTournamentAndGender(1, "MALE")
+            val result = service.getBracketsByTournamentAndDivision(1, "ELITE MALE")
 
             assertEquals(success(list.map { it.toDomain() }), result)
         }
@@ -199,18 +199,18 @@ class BracketServiceTest : ServiceTest() {
         fun `should fail when tournament does not exist`() {
             whenever(tournaments.findById(1)).thenReturn(Optional.empty())
 
-            val result = service.getBracketsByTournamentAndGender(1, "MALE")
+            val result = service.getBracketsByTournamentAndDivision(1, "ELITE MALE")
 
             assertEquals(failure(ApiError.TOURNAMENT_NOT_FOUND), result)
         }
 
         @Test
-        fun `should fail when gender is invalid`() {
+        fun `should fail when division is blank`() {
             lenient().whenever(tournaments.findById(1)).thenReturn(Optional.of(tournamentEntity()))
 
-            val result = service.getBracketsByTournamentAndGender(1, "INVALID")
+            val result = service.getBracketsByTournamentAndDivision(1, "  ")
 
-            assertEquals(failure(ApiError.INVALID_GENDER), result)
+            assertEquals(failure(ApiError.INVALID_BRACKET_DIVISION), result)
         }
     }
 
@@ -222,10 +222,10 @@ class BracketServiceTest : ServiceTest() {
             val bracket = bracketEntity(tournament = tournament)
             val matchList = listOf(matchEntity(1))
             whenever(tournaments.findById(1)).thenReturn(Optional.of(tournament))
-            whenever(brackets.findByTournamentIdAndGender(1, GenderType.MALE)).thenReturn(listOf(bracket))
+            whenever(brackets.findByTournamentIdAndDivision(1, "ELITE MALE")).thenReturn(listOf(bracket))
             whenever(matches.findByBracketId(bracket.id)).thenReturn(matchList)
 
-            val result = service.getBracketOverview(1, "MALE")
+            val result = service.getBracketOverview(1, "ELITE MALE")
 
             assertTrue(result is Either.Right)
 
@@ -235,12 +235,12 @@ class BracketServiceTest : ServiceTest() {
         }
 
         @Test
-        fun `should fail when gender is invalid`() {
+        fun `should fail when division is blank`() {
             whenever(tournaments.findById(1)).thenReturn(Optional.of(tournamentEntity()))
 
-            val result = service.getBracketOverview(1, "INVALID")
+            val result = service.getBracketOverview(1, "  ")
 
-            assertEquals(failure(ApiError.INVALID_GENDER), result)
+            assertEquals(failure(ApiError.INVALID_BRACKET_DIVISION), result)
         }
     }
 
@@ -318,13 +318,14 @@ class BracketServiceTest : ServiceTest() {
             val bracket = bracketEntity(tournament = tournament)
             val finishedMatch = matchEntity()
             whenever(tournaments.findById(1)).thenReturn(Optional.of(tournament))
-            whenever(brackets.findByTournamentIdAndGender(1, GenderType.MALE)).thenReturn(listOf(bracket))
+            whenever(brackets.findByTournamentIdAndDivision(1, "ELITE MALE")).thenReturn(listOf(bracket))
             whenever(matches.findByBracketId(bracket.id)).thenReturn(listOf(finishedMatch))
 
-            val result = service.getTournamentBracketsSummary(1, "MALE")
+            val result = service.getTournamentBracketsSummary(1, "ELITE MALE")
 
             assertTrue(result is Either.Right<*>)
             val summary = (result as Either.Right<*>).value as TournamentBracketsResponse
+            assertEquals("ELITE MALE", summary.division)
             assertEquals(
                 1,
                 summary.brackets
@@ -336,9 +337,9 @@ class BracketServiceTest : ServiceTest() {
         @Test
         fun `should return empty when no brackets`() {
             whenever(tournaments.findById(1)).thenReturn(Optional.of(tournamentEntity()))
-            whenever(brackets.findByTournamentIdAndGender(1, GenderType.MALE)).thenReturn(emptyList())
+            whenever(brackets.findByTournamentIdAndDivision(1, "ELITE MALE")).thenReturn(emptyList())
 
-            val result = service.getTournamentBracketsSummary(1, "MALE")
+            val result = service.getTournamentBracketsSummary(1, "ELITE MALE")
 
             assertTrue(result is Either.Right<*>)
             val summary = (result as Either.Right<*>).value as TournamentBracketsResponse
@@ -346,12 +347,12 @@ class BracketServiceTest : ServiceTest() {
         }
 
         @Test
-        fun `should fail when gender is invalid`() {
+        fun `should fail when division is blank`() {
             lenient().whenever(tournaments.findById(1)).thenReturn(Optional.of(tournamentEntity()))
 
-            val result = service.getTournamentBracketsSummary(1, "INVALID")
+            val result = service.getTournamentBracketsSummary(1, "   ")
 
-            assertEquals(failure(ApiError.INVALID_GENDER), result)
+            assertEquals(failure(ApiError.INVALID_BRACKET_DIVISION), result)
         }
     }
 }

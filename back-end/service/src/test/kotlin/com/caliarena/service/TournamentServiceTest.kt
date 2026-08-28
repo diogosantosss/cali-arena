@@ -1,6 +1,5 @@
 package com.caliarena.service
 
-import com.caliarena.domain.athlete.GenderType
 import com.caliarena.domain.tournament.ScreenState
 import com.caliarena.domain.tournament.TournamentStatus
 import com.caliarena.domain.user.UserRole
@@ -87,7 +86,7 @@ class TournamentServiceTest : ServiceTest() {
     ) = BracketEntity(
         id = id,
         tournament = tournament,
-        gender = com.caliarena.domain.athlete.GenderType.MALE,
+        division = "FEMALE",
         stage = com.caliarena.domain.bracket.BracketStage.QUALIFIERS,
         createdAt = now.epochSecond,
     )
@@ -264,7 +263,7 @@ class TournamentServiceTest : ServiceTest() {
         }
 
         @Test
-        fun `should set current gender when provided`() {
+        fun `should set current division when provided`() {
             val tournament = tournamentEntity()
             val state =
                 TournamentStateEntity(
@@ -274,21 +273,32 @@ class TournamentServiceTest : ServiceTest() {
                 )
             whenever(tournaments.findById(1)).thenReturn(Optional.of(tournament))
             whenever(tournamentStates.findByTournamentId(1)).thenReturn(state)
+            whenever(brackets.findByTournamentIdAndDivision(1, "FEMALE")).thenReturn(listOf(bracketEntity(tournament = tournament)))
             whenever(tournamentStates.save(any())).thenReturn(state)
 
             val result = service.updateScreen(1, "BRACKETS", null, null, "FEMALE")
 
             assertTrue(result is Either.Right)
-            assertEquals(GenderType.FEMALE, (result as Either.Right).value.currentGender)
+            assertEquals("FEMALE", (result as Either.Right).value.currentDivision)
         }
 
         @Test
-        fun `should fail when gender is invalid`() {
+        fun `should fail when division has no brackets`() {
+            whenever(tournaments.findById(1)).thenReturn(Optional.of(tournamentEntity()))
+            whenever(brackets.findByTournamentIdAndDivision(1, "FEMALE")).thenReturn(emptyList())
+
+            val result = service.updateScreen(1, "BRACKETS", null, null, "FEMALE")
+
+            assertEquals(failure(ApiError.INVALID_BRACKET_DIVISION), result)
+        }
+
+        @Test
+        fun `should fail when division is blank`() {
             whenever(tournaments.findById(1)).thenReturn(Optional.of(tournamentEntity()))
 
-            val result = service.updateScreen(1, "BRACKETS", null, null, "INVALID")
+            val result = service.updateScreen(1, "BRACKETS", null, null, "   ")
 
-            assertEquals(failure(ApiError.INVALID_GENDER), result)
+            assertEquals(failure(ApiError.INVALID_BRACKET_DIVISION), result)
         }
 
         @Test

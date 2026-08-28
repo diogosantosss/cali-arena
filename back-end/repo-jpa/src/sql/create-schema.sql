@@ -66,7 +66,7 @@ CREATE TABLE brackets
 (
     id            SERIAL PRIMARY KEY,
     tournament_id INT REFERENCES tournaments (id),
-    gender        VARCHAR(20)   NOT NULL,
+    division      VARCHAR(40) NOT NULL,
     stage         VARCHAR(20) NOT NULL,
     created_at    BIGINT        NOT NULL
 );
@@ -122,7 +122,7 @@ CREATE TABLE tournament_state
     current_screen     VARCHAR(20) NOT NULL,
     current_match_id   INT REFERENCES matches (id),
     current_bracket_id INT REFERENCES brackets (id),
-    current_gender    VARCHAR(20),
+    current_division  VARCHAR(40),
     updated_at         BIGINT       NOT NULL
 );
 

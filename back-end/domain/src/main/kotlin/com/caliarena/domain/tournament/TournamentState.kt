@@ -1,6 +1,5 @@
 package com.caliarena.domain.tournament
 
-import com.caliarena.domain.athlete.GenderType
 import java.time.Instant
 
 data class TournamentState(
@@ -9,6 +8,6 @@ data class TournamentState(
     val currentScreen: ScreenState,
     val currentMatchId: Int?,
     val currentBracketId: Int?,
-    val currentGender: GenderType?,
+    val currentDivision: String?,
     val updatedAt: Instant,
 )

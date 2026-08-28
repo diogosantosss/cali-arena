@@ -1,7 +1,5 @@
 package com.caliarena.domain.bracket
 
-import com.caliarena.domain.athlete.GenderType
-
 data class LeaderboardEntry(
     val athleteName: String,
     val duration: String,
@@ -10,7 +8,7 @@ data class LeaderboardEntry(
 
 data class BracketLeaderboard(
     val bracketId: Int,
-    val gender: GenderType,
+    val division: String,
     val stage: BracketStage,
     val entries: List<LeaderboardEntry>,
 )

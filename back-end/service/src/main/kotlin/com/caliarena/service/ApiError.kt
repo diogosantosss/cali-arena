@@ -70,6 +70,8 @@ enum class ApiError(
 
     INVALID_BRACKET_STAGE("invalid-bracket-stage", HttpStatus.BAD_REQUEST),
 
+    INVALID_BRACKET_DIVISION("invalid-bracket-division", HttpStatus.BAD_REQUEST),
+
     // Match related
     MATCH_NOT_FOUND("match-not-found", HttpStatus.NOT_FOUND),
 

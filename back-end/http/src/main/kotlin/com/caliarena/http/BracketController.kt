@@ -27,7 +27,7 @@ class BracketController(
         bracketService
             .createBracket(
                 tournamentId = input.tournamentId,
-                gender = input.gender,
+                division = input.division,
                 stage = input.stage,
             ).toResponse(
                 onSuccess = { bracket ->
@@ -54,13 +54,13 @@ class BracketController(
                 onError = { it.toResponseEntity() },
             )
 
-    @GetMapping("/tournament/{tournamentId}/gender/{gender}")
-    fun getBracketsByTournamentAndGender(
+    @GetMapping("/tournament/{tournamentId}/division/{division}")
+    fun getBracketsByTournamentAndDivision(
         @PathVariable tournamentId: Int,
-        @PathVariable gender: String,
+        @PathVariable division: String,
     ): ResponseEntity<Any> =
         bracketService
-            .getBracketsByTournamentAndGender(tournamentId, gender)
+            .getBracketsByTournamentAndDivision(tournamentId, division)
             .toResponse(
                 onSuccess = { brackets ->
                     ResponseEntity
@@ -70,13 +70,13 @@ class BracketController(
                 onError = { it.toResponseEntity() },
             )
 
-    @GetMapping("/tournament/{tournamentId}/gender/{gender}/overview")
+    @GetMapping("/tournament/{tournamentId}/division/{division}/overview")
     fun getBracketOverview(
         @PathVariable tournamentId: Int,
-        @PathVariable gender: String,
+        @PathVariable division: String,
     ): ResponseEntity<Any> =
         bracketService
-            .getBracketOverview(tournamentId, gender)
+            .getBracketOverview(tournamentId, division)
             .toResponse(
                 onSuccess = { overview ->
                     ResponseEntity
@@ -104,10 +104,10 @@ class BracketController(
     @GetMapping("/tournament/{tournamentId}/summary")
     fun getBracketsSummary(
         @PathVariable tournamentId: Int,
-        @RequestParam gender: String,
+        @RequestParam division: String,
     ): ResponseEntity<Any> =
         bracketService
-            .getTournamentBracketsSummary(tournamentId, gender)
+            .getTournamentBracketsSummary(tournamentId, division)
             .toResponse(
                 onSuccess = { summary ->
                     ResponseEntity.ok(summary)

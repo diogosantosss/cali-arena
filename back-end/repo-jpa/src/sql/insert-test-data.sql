@@ -38,11 +38,11 @@ INSERT INTO tournament_state (tournament_id, current_screen, current_match_id, c
 VALUES (1, 'WAITING', NULL, NULL, 1787328276);
 
 -- brackets
-INSERT INTO brackets (tournament_id, gender, stage, created_at)
-VALUES (1, 'MALE', 'QUALIFIERS', 1787328276),
-       (1, 'MALE', 'QUARTERFINALS', 1787328276),
-       (1, 'MALE', 'SEMIFINALS', 1787328276),
-       (1, 'MALE', 'FINALS', 1787328276);
+INSERT INTO brackets (tournament_id, division, stage, created_at)
+VALUES (1, 'ELITE MALE', 'QUALIFIERS', 1787328276),
+       (1, 'ELITE MALE', 'QUARTERFINALS', 1787328276),
+       (1, 'ELITE MALE', 'SEMIFINALS', 1787328276),
+       (1, 'ELITE MALE', 'FINALS', 1787328276);
 -- routines
 INSERT INTO endurance_routines (name, time_cap_seconds, created_at)
 VALUES ('Qualifiers', 600, 1787328276),

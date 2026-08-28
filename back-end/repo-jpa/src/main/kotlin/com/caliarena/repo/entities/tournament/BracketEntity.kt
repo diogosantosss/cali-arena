@@ -1,6 +1,5 @@
 package com.caliarena.repo.entities.tournament
 
-import com.caliarena.domain.athlete.GenderType
 import com.caliarena.domain.bracket.Bracket
 import com.caliarena.domain.bracket.BracketStage
 import jakarta.persistence.Column
@@ -25,9 +24,8 @@ class BracketEntity(
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "tournament_id", nullable = false)
     var tournament: TournamentEntity = TournamentEntity(),
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
-    var gender: GenderType = GenderType.MALE,
+    @Column(nullable = false, length = 40)
+    var division: String = "MALE",
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     var stage: BracketStage = BracketStage.QUALIFIERS,
@@ -38,7 +36,7 @@ class BracketEntity(
         Bracket(
             id = id,
             tournamentId = tournament.id,
-            gender = gender,
+            division = division,
             stage = stage,
             createdAt = Instant.ofEpochSecond(createdAt),
         )
@@ -48,7 +46,7 @@ class BracketEntity(
             BracketEntity(
                 id = this.id,
                 tournament = tournament,
-                gender = this.gender,
+                division = this.division,
                 stage = this.stage,
                 createdAt = this.createdAt.epochSecond,
             )
