@@ -51,8 +51,22 @@ VALUES ('Qualifiers', 600, 1787328276),
        ('Final (MEN) ELITE', 1080, 1787328276);
 
 -- matches
-INSERT INTO matches (bracket_id, routine_id, judge_id, athlete_red_id, athlete_blue_id, winner_athlete_id, status, started_at, finished_at, created_at)
-VALUES (1, 1, 1, 1, 2, null, 'PENDING', null, null, 1787328276);
+-- qualifiers (pending) + quarterfinals -> semifinals -> final (finished, vencedor preenchido)
+INSERT INTO matches (bracket_id, routine_id, judge_id, athlete_red_id, athlete_blue_id, winner_athlete_id, status,
+                     started_at, finished_at, created_at)
+VALUES
+    -- QUALIFIERS
+    (1, 1, 1, 1, 2, null, 'PENDING', null, null, 1787328276),
+    -- QUARTERFINALS
+    (2, 2, 1, 1, 2, 1, 'FINISHED', 1787329000, 1787329120, 1787328276),
+    (2, 2, 1, 3, 4, 3, 'FINISHED', 1787329100, 1787329225, 1787328276),
+    (2, 2, 1, 5, 6, 5, 'FINISHED', 1787329200, 1787329330, 1787328276),
+    (2, 2, 1, 7, 8, 7, 'FINISHED', 1787329300, 1787329410, 1787328276),
+    -- SEMIFINALS
+    (3, 3, 1, 1, 3, 1, 'FINISHED', 1787330100, 1787330230, 1787328276),
+    (3, 3, 1, 5, 7, 5, 'FINISHED', 1787330200, 1787330335, 1787328276),
+    -- FINAL
+    (4, 4, 1, 1, 5, 1, 'FINISHED', 1787331000, 1787331140, 1787328276);
 
 -- exercises
 INSERT INTO exercises (routine_id, name, target_reps, added_weight, exercise_order, superset_order, type)

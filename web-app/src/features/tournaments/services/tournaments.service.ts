@@ -9,6 +9,7 @@ import type {
   CreateTournamentInput,
   ScreenRoutine,
   Tournament,
+  TournamentBracketsSummary,
   TournamentState,
   UpdateScreenInput,
 } from "../types";
@@ -48,6 +49,10 @@ export const tournamentsService = {
 
   getBracketLeaderboard(bracketId: number): Promise<BracketLeaderboard> {
     return apiClient.get(`/brackets/${bracketId}/leaderboard`);
+  },
+
+  getBracketSummary(tournamentId: number, gender: Gender): Promise<TournamentBracketsSummary> {
+    return apiClient.get(`/brackets/tournament/${tournamentId}/summary?gender=${gender}`);
   },
 
   createScreenRoutine(tournamentId: number, input: CreateScreenRoutineInput): Promise<ScreenRoutine> {

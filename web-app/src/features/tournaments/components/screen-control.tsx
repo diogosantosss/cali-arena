@@ -4,6 +4,7 @@ import type { Athlete } from "@/features/athletes/types";
 import type { Routine, RoutineOverview } from "@/features/routines/types";
 import { tournamentsService } from "../services/tournaments.service";
 import type { Bracket, ScreenState, TournamentState } from "../types";
+import type { Gender } from "@/types/gender";
 import { BattlePanel } from "@/features/matches/components/battle-panel";
 import type { Match } from "@/features/matches/types";
 import { ScreenRoutinesPanel } from "./screen-routines-panel";
@@ -16,6 +17,7 @@ const screenLabels: Record<ScreenState, string> = {
   BATTLE: "Battle",
   WINNER: "Winner",
   LEADERBOARD: "Leaderboard",
+  BRACKETS: "Brackets",
 };
 
 interface ScreenControlProps {
@@ -33,6 +35,7 @@ interface ScreenControlState {
   screen: ScreenState;
   matchId: number | null;
   bracketId: number | null;
+  gender: Gender | null;
   loading: boolean;
   error: string | null;
 }
@@ -41,6 +44,7 @@ type Action =
   | { type: "setScreen"; screen: ScreenState }
   | { type: "setMatchId"; id: number }
   | { type: "setBracketId"; id: number }
+  | { type: "setGender"; gender: Gender }
   | { type: "updateStart" }
   | { type: "updateDone" }
   | { type: "updateError"; message: string }
@@ -51,6 +55,7 @@ function createInitialState(state: TournamentState | null): ScreenControlState {
     screen: state?.currentScreen ?? "WAITING",
     matchId: state?.currentMatchId ?? null,
     bracketId: state?.currentBracketId ?? null,
+    gender: state?.currentGender ?? null,
     loading: false,
     error: null,
   };
@@ -64,12 +69,15 @@ function reducer(state: ScreenControlState, action: Action): ScreenControlState 
         screen: action.screen,
         matchId: action.screen === "BATTLE" ? state.matchId : null,
         bracketId: action.screen === "LEADERBOARD" ? state.bracketId : null,
+        gender: action.screen === "BRACKETS" ? state.gender : null,
         error: null,
       };
     case "setMatchId":
       return { ...state, matchId: action.id, error: null };
     case "setBracketId":
       return { ...state, bracketId: action.id, error: null };
+    case "setGender":
+      return { ...state, gender: action.gender, error: null };
     case "updateStart":
       return { ...state, loading: true, error: null };
     case "updateDone":
@@ -100,6 +108,7 @@ export function ScreenControl({
         screen: ui.screen,
         currentMatchId: ui.screen === "BATTLE" ? ui.matchId : null,
         currentBracketId: ui.screen === "LEADERBOARD" ? ui.bracketId : null,
+        gender: ui.screen === "BRACKETS" ? ui.gender : null,
       });
       onUpdated(updated);
       dispatch({ type: "updateDone" });
@@ -213,9 +222,28 @@ export function ScreenControl({
             </div>
           )}
 
+          {ui.screen === "BRACKETS" && (
+            <div className="space-y-1.5">
+              <p className="text-[10px] uppercase tracking-widest" style={{ color: "#6b6560" }}>Gender</p>
+              <Select
+                value={ui.gender ?? ""}
+                onValueChange={(value) => dispatch({ type: "setGender", gender: value as Gender })}
+              >
+                <SelectTrigger className="h-8 text-xs w-44 border-[#252528] focus:ring-[#e8a020]/40" style={{ background: "#0f0f11", color: "#a09a92" }}>
+                  <SelectValue placeholder="Select gender" />
+                </SelectTrigger>
+                <SelectContent style={{ background: "#17171a", border: "1px solid #252528" }}>
+                  {(["MALE", "FEMALE"] as Gender[]).map((g) => (
+                    <SelectItem key={g} value={g} className="text-xs" style={{ color: "#a09a92" }}>{g}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
           <button
             onClick={() => void handleUpdateScreen()}
-            disabled={ui.loading || (ui.screen === "BATTLE" && !ui.matchId) || (ui.screen === "LEADERBOARD" && !ui.bracketId)}
+            disabled={ui.loading || (ui.screen === "BATTLE" && !ui.matchId) || (ui.screen === "LEADERBOARD" && !ui.bracketId) || (ui.screen === "BRACKETS" && !ui.gender)}
             className="px-4 py-2 rounded text-sm font-medium transition-opacity disabled:opacity-50"
             style={{ background: "#e8a020", color: "#0f0f11" }}
           >

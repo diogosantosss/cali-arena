@@ -1,5 +1,6 @@
 package com.caliarena.repo.entities.tournament
 
+import com.caliarena.domain.athlete.GenderType
 import com.caliarena.domain.tournament.ScreenState
 import com.caliarena.domain.tournament.TournamentState
 import com.caliarena.repo.entities.match.MatchEntity
@@ -34,6 +35,9 @@ class TournamentStateEntity(
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "current_bracket_id")
     var currentBracket: BracketEntity? = null,
+    @Enumerated(EnumType.STRING)
+    @Column(name = "current_gender", length = 20)
+    var currentGender: GenderType? = null,
     @Column(name = "updated_at", nullable = false)
     var updatedAt: Long = 0L,
 ) {
@@ -44,6 +48,7 @@ class TournamentStateEntity(
             currentScreen = currentScreen,
             currentMatchId = currentMatch?.id,
             currentBracketId = currentBracket?.id,
+            currentGender = currentGender,
             updatedAt = Instant.ofEpochSecond(updatedAt),
         )
 
@@ -58,6 +63,7 @@ class TournamentStateEntity(
             currentScreen = this.currentScreen,
             currentMatch = currentMatch,
             currentBracket = currentBracket,
+            currentGender = this.currentGender,
             updatedAt = this.updatedAt.epochSecond,
         )
     }

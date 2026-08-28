@@ -122,6 +122,7 @@ CREATE TABLE tournament_state
     current_screen     VARCHAR(20) NOT NULL,
     current_match_id   INT REFERENCES matches (id),
     current_bracket_id INT REFERENCES brackets (id),
+    current_gender    VARCHAR(20),
     updated_at         BIGINT       NOT NULL
 );
 
