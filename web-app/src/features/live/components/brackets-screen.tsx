@@ -29,8 +29,8 @@ export function BracketsScreen({ tournamentName, summary }: {
     finalMatch && finalMatch.winner !== "—" ? finalMatch.winner : null;
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ ...screenBackground, color: "white" }}>
-      <div className="text-center pt-16 px-16">
+    <div className="h-screen flex flex-col overflow-hidden" style={{ ...screenBackground, color: "white" }}>
+      <div className="text-center pt-10 px-16 shrink-0">
         <p className="font-cairo text-6xl font-semibold leading-tight uppercase bg-gradient-to-r from-[#e8a020] to-[#f0ede8] bg-clip-text text-transparent">
           {tournamentName}
         </p>
@@ -44,8 +44,8 @@ export function BracketsScreen({ tournamentName, summary }: {
           <p className="font-cairo text-white/25 uppercase tracking-widest text-lg">No brackets yet</p>
         </div>
       ) : (
-        <div className="flex-1 flex items-center justify-center px-16 py-10">
-          <div className="flex w-full max-w-[80rem] min-h-[34rem] items-stretch gap-10">
+        <div className="flex-1 min-h-0 flex items-center justify-center px-16 py-8">
+          <div className="flex w-full max-w-[80rem] min-h-0 items-stretch gap-10">
             {columns.map((col) => {
               const variant: "qf" | "sf" | "final" =
                 col.stage === "FINALS" ? "final" : col.stage === "SEMIFINALS" ? "sf" : "qf";
@@ -54,7 +54,7 @@ export function BracketsScreen({ tournamentName, summary }: {
               return (
                 <div
                   key={col.stage}
-                  className="relative flex-1 flex flex-col rounded-2xl px-5 py-6"
+                  className="relative flex-1 min-h-0 flex flex-col rounded-2xl px-5 py-6"
                   style={{
                     background: "rgba(255,255,255,0.02)",
                     border: isFinal ? "1px solid rgba(232,160,32,0.22)" : "1px solid rgba(232,160,32,0.08)",
@@ -75,7 +75,7 @@ export function BracketsScreen({ tournamentName, summary }: {
                     <span className="h-px flex-1" style={{ background: "rgba(232,160,32,0.12)" }} />
                   </div>
 
-                  <div className="flex-1 w-full flex flex-col justify-around">
+                  <div className="flex-1 min-h-0 w-full flex flex-col justify-around gap-4">
                     {col.matches.length === 0 ? (
                       <p className="font-cairo text-white/20 uppercase tracking-widest text-center text-sm">
                         No matches yet
@@ -94,10 +94,10 @@ export function BracketsScreen({ tournamentName, summary }: {
       )}
 
       {champion && (
-        <div className="pb-12 pt-1 text-center">
-          <Trophy className="mx-auto mb-4 h-10 w-10" style={{ color: "#e8a020" }} strokeWidth={1.5} />
+        <div className="pb-8 pt-1 shrink-0 text-center">
+          <Trophy className="mx-auto mb-3 h-8 w-8" style={{ color: "#e8a020" }} strokeWidth={1.5} />
           <p className="font-cairo text-xs uppercase tracking-[0.4em] text-white/40">Champion</p>
-          <p className="mt-1 font-cairo text-[2.75rem] font-bold leading-none bg-gradient-to-r from-[#e8a020] to-[#f0ede8] bg-clip-text text-transparent">
+          <p className="mt-1 font-cairo text-[2rem] font-bold leading-none bg-gradient-to-r from-[#e8a020] to-[#f0ede8] bg-clip-text text-transparent">
             {champion}
           </p>
         </div>
@@ -128,9 +128,11 @@ function BracketMatchCard({ match, variant }: { match: BracketMatchSummary; vari
     >
       <BracketAthleteRow name={match.athleteRed} state={redWon ? "won" : blueWon ? "lost" : "pending"} />
       <BracketAthleteRow name={match.athleteBlue} state={blueWon ? "won" : redWon ? "lost" : "pending"} />
-      {!decided && (
-        <p className="pt-1 font-cairo text-sm uppercase tracking-widest text-white/30 text-center">TBD</p>
-      )}
+      <div className="flex items-center justify-center h-5">
+        {!decided && (
+          <p className="font-cairo text-sm uppercase tracking-widest text-white/30 text-center">TBD</p>
+        )}
+      </div>
     </div>
   );
 }

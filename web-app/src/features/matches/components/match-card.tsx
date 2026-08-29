@@ -11,7 +11,6 @@ interface MatchCardProps {
   athletes: Athlete[];
   routines: Routine[];
   judges: User[];
-  onAssignAthletes: (match: Match) => void;
   onStartMatch: (match: Match) => void;
 }
 
@@ -30,7 +29,7 @@ const matchStatusStyles: Record<Match["status"], { label: string; color: string;
   FINISHED: { label: "Finished", color: "#4a4a4e", bg: "rgba(74,74,78,0.12)" },
 };
 
-export function MatchCard({ match, progress, athletes, routines, judges, onAssignAthletes, onStartMatch }: MatchCardProps) {
+export function MatchCard({ match, progress, athletes, routines, judges, onStartMatch }: MatchCardProps) {
   const [expanded, setExpanded] = useState(false);
 
   const redAthlete = athletes.find((a) => a.id === match.athleteRedId);
@@ -177,15 +176,6 @@ export function MatchCard({ match, progress, athletes, routines, judges, onAssig
           </div>
 
           <div className="flex gap-2 pt-1">
-            {match.status === "PENDING" && !match.athleteRedId && !match.athleteBlueId && (
-              <button
-                onClick={() => onAssignAthletes(match)}
-                className="px-3 py-1.5 rounded text-xs transition-colors"
-                style={{ background: "rgba(232,160,32,0.1)", color: "#e8a020", border: "1px solid rgba(232,160,32,0.2)" }}
-              >
-                Assign athletes
-              </button>
-            )}
             {match.status === "READY" && (
               <button
                 onClick={() => onStartMatch(match)}

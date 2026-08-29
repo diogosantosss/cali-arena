@@ -329,7 +329,6 @@ export function TournamentDetailPage() {
         onRefresh={() => void refreshMatches()}
         onCreateBracket={handleCreateBracket}
         onMatchCreated={(match) => dispatch({ type: "matchCreated", match })}
-        onMatchUpdated={(match) => dispatch({ type: "matchUpdated", match })}
         onStartMatch={handleStartMatch}
       />
     </div>

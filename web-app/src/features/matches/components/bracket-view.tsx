@@ -10,7 +10,6 @@ import { Badge as ShadcnBadge } from "@/components/ui/badge";
 import { Plus, RefreshCw } from "lucide-react";
 import { MatchCard } from "./match-card";
 import { CreateMatchDialog } from "./create-match-dialog";
-import { AssignAthletesDialog } from "./assign-athletes-dialog";
 
 interface BracketViewProps {
   brackets: Bracket[];
@@ -22,7 +21,6 @@ interface BracketViewProps {
   onRefresh: () => void;
   onCreateBracket: (division: string, stage: BracketStage) => void;
   onMatchCreated: (match: Match) => void;
-  onMatchUpdated: (match: Match) => void;
   onStartMatch: (match: Match) => void;
 }
 
@@ -45,11 +43,9 @@ export function BracketView({
   onRefresh,
   onCreateBracket,
   onMatchCreated,
-  onMatchUpdated,
   onStartMatch,
 }: BracketViewProps) {
   const [createMatchFor, setCreateMatchFor] = useState<Bracket | null>(null);
-  const [assignAthletesFor, setAssignAthletesFor] = useState<Match | null>(null);
   const [addingDivision, setAddingDivision] = useState(false);
   const [newDivision, setNewDivision] = useState("");
 
@@ -118,7 +114,6 @@ export function BracketView({
                     athletes={athletes}
                     routines={routines}
                     judges={judges}
-                    onAssignAthletes={(m) => setAssignAthletesFor(m)}
                     onStartMatch={onStartMatch}
                   />
                 ))}
@@ -221,19 +216,6 @@ export function BracketView({
           onCreated={(match) => {
             onMatchCreated(match);
             setCreateMatchFor(null);
-          }}
-        />
-      )}
-
-      {assignAthletesFor && (
-        <AssignAthletesDialog
-          open={!!assignAthletesFor}
-          match={assignAthletesFor}
-          athletes={athletes}
-          onClose={() => setAssignAthletesFor(null)}
-          onAssigned={(match) => {
-            onMatchUpdated(match);
-            setAssignAthletesFor(null);
           }}
         />
       )}

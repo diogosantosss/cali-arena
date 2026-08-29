@@ -26,11 +26,6 @@ export interface CreateMatchInput {
   athleteBlueId: number;
 }
 
-export interface AssignAthletesInput {
-  athleteRedId: number;
-  athleteBlueId: number;
-}
-
 export interface UpdateRepsInput {
   redReps: number | null;
   blueReps: number | null;

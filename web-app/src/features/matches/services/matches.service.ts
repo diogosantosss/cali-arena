@@ -1,7 +1,6 @@
 import { apiClient } from "@/lib/api/client";
 
 import type {
-  AssignAthletesInput,
   CreateMatchInput,
   Match,
   MatchProgress,
@@ -11,12 +10,6 @@ import type {
 export const matchesService = {
   createMatch(input: CreateMatchInput): Promise<Match> {
     return apiClient.post("/matches", input);
-  },
-
-  // TODO: backend does not expose PUT /matches/{id}/athletes yet —
-  // this call fails at runtime until the endpoint ships.
-  assignAthletes(matchId: number, input: AssignAthletesInput): Promise<Match> {
-    return apiClient.put(`/matches/${matchId}/athletes`, input);
   },
 
   startMatch(matchId: number): Promise<MatchProgress> {
