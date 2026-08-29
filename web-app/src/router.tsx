@@ -1,6 +1,7 @@
 import { createBrowserRouter, redirect } from "react-router-dom";
 import { LoginPage } from "./features/auth/components/login-page";
 import { DashboardLayout } from "./components/layout/DashboardLayout.tsx";
+import { ProtectedRoute } from "./components/ProtectedRoute";
 import { TournamentsPage } from "./features/tournaments/tournaments-page";
 import { TournamentDetailPage } from "./features/tournaments/tournament-detail";
 import { AthletesPage } from "./features/athletes/athletes-page";
@@ -21,14 +22,19 @@ export const router = createBrowserRouter([
   },
   {
     path: "/dashboard",
-    element: <DashboardLayout />,
+    element: <ProtectedRoute />,
     children: [
-      { index: true, element: <TournamentsPage /> },
-      { path: "tournaments/:id", element: <TournamentDetailPage /> },
-      { path: "athletes", element: <AthletesPage /> },
-      { path: "clubs", element: <ClubsPage /> },
-      { path: "users", element: <UsersPage /> },
-      { path: "routines", element: <RoutinesPage /> },
+      {
+        element: <DashboardLayout />,
+        children: [
+          { index: true, element: <TournamentsPage /> },
+          { path: "tournaments/:id", element: <TournamentDetailPage /> },
+          { path: "athletes", element: <AthletesPage /> },
+          { path: "clubs", element: <ClubsPage /> },
+          { path: "users", element: <UsersPage /> },
+          { path: "routines", element: <RoutinesPage /> },
+        ],
+      },
     ],
   },
   { path: "/screen/:tournamentId", element: <ScreenPage /> },

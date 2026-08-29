@@ -19,16 +19,56 @@ export function getStoredToken(): string | null {
   return localStorage.getItem("token");
 }
 
+/**
+ * Clears the stored auth token. Called when the backend rejects the token
+ * with 401 so the app can send the user back to the login page.
+ */
+function clearStoredToken(): void {
+  localStorage.removeItem("token");
+}
+
+/**
+ * Forwards to the login page. Used when a request fails with 401 so an expired
+ * or invalidated token (e.g. after the backend restarts) does not leave the
+ * user stuck on a dashboard page.
+ */
+function redirectToLogin(): void {
+  if (window.location.pathname !== "/") {
+    window.location.href = "/";
+  }
+}
+
 async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+  const isLoginRequest = endpoint === "/users/token";
   const token = getStoredToken();
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...options.headers,
-    },
-  });
+
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      ...options,
+      headers: {
+        ...(options.body !== undefined ? { "Content-Type": "application/json" } : {}),
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...options.headers,
+      },
+    });
+  } catch {
+    // Network failure — the backend is unreachable (e.g. it went down).
+    // If we were authenticated, clear the session and go back to login.
+    if (!isLoginRequest) {
+      clearStoredToken();
+      redirectToLogin();
+    }
+    throw new ApiError(0, "The server is unreachable. Please try again later.");
+  }
+
+  if (response.status === 401) {
+    if (!isLoginRequest) {
+      // An authenticated request was rejected: the token is invalid or expired.
+      clearStoredToken();
+      redirectToLogin();
+    }
+  }
 
   if (!response.ok) {
     const problem = await response.json().catch(() => ({ title: "Unknown error" }));

@@ -87,6 +87,18 @@ export const errorDescriptions: Record<string, string> = {
     "The exercise could not be found. Please check the provided details and try again.",
   "opponent-not-finished":
     "You can only finish an athlete after the opponent has finished their routine.",
+  "match-already-started":
+    "The match has already started.",
+  "match-not-finished":
+    "The match has not finished yet.",
+
+  // Screen routine related errors
+  "screen-routine-not-found":
+    "The screen routine could not be found. Please check the provided details and try again.",
+  "tournament-mismatch":
+    "The screen routine does not belong to this tournament.",
+  "error-updating-screen-routine":
+    "There was an error updating the screen routine. Please try again later.",
 };
 
 export function getErrorDescription(errorType: string): string {
