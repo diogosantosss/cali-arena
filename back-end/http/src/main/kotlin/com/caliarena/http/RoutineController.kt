@@ -1,10 +1,14 @@
 package com.caliarena.http
 
 import com.caliarena.domain.routine.RoutineOverview
+import com.caliarena.domain.user.AuthenticatedUser
+import com.caliarena.domain.user.UserRole
 import com.caliarena.http.model.routine.CreateExerciseInput
 import com.caliarena.http.model.routine.CreateRoutineInput
 import com.caliarena.http.model.toResponseEntity
+import com.caliarena.http.utils.hasAnyRole
 import com.caliarena.http.utils.toResponse
+import com.caliarena.service.ApiError
 import com.caliarena.service.RoutineService
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
@@ -23,9 +27,13 @@ class RoutineController(
 ) {
     @PostMapping
     fun createRoutine(
+        user: AuthenticatedUser,
         @RequestBody input: CreateRoutineInput,
-    ): ResponseEntity<Any> =
-        routineService
+    ): ResponseEntity<Any> {
+        if (!user.hasAnyRole(UserRole.ADMIN)) {
+            return ApiError.NOT_AUTHORIZED.toResponseEntity()
+        }
+        return routineService
             .createRoutine(
                 input.name,
                 input.timeCapSeconds,
@@ -38,12 +46,17 @@ class RoutineController(
                 },
                 onError = { it.toResponseEntity() },
             )
+    }
 
     @PostMapping("/exercises")
     fun createExercise(
+        user: AuthenticatedUser,
         @RequestBody input: CreateExerciseInput,
-    ): ResponseEntity<Any> =
-        routineService
+    ): ResponseEntity<Any> {
+        if (!user.hasAnyRole(UserRole.ADMIN)) {
+            return ApiError.NOT_AUTHORIZED.toResponseEntity()
+        }
+        return routineService
             .createExercise(
                 input.routineId,
                 input.name,
@@ -61,6 +74,7 @@ class RoutineController(
                 },
                 onError = { it.toResponseEntity() },
             )
+    }
 
     @GetMapping("/{routineName}/overview")
     fun getRoutineOverview(

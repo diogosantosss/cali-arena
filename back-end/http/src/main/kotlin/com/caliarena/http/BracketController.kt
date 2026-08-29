@@ -1,8 +1,12 @@
 package com.caliarena.http
 
+import com.caliarena.domain.user.AuthenticatedUser
+import com.caliarena.domain.user.UserRole
 import com.caliarena.http.model.toResponseEntity
 import com.caliarena.http.model.tournament.CreateBracketInput
+import com.caliarena.http.utils.hasAnyRole
 import com.caliarena.http.utils.toResponse
+import com.caliarena.service.ApiError
 import com.caliarena.service.BracketService
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
@@ -22,9 +26,13 @@ class BracketController(
 ) {
     @PostMapping
     fun createBracket(
+        user: AuthenticatedUser,
         @RequestBody input: CreateBracketInput,
-    ): ResponseEntity<Any> =
-        bracketService
+    ): ResponseEntity<Any> {
+        if (!user.hasAnyRole(UserRole.ADMIN)) {
+            return ApiError.NOT_AUTHORIZED.toResponseEntity()
+        }
+        return bracketService
             .createBracket(
                 tournamentId = input.tournamentId,
                 division = input.division,
@@ -38,6 +46,7 @@ class BracketController(
                 },
                 onError = { it.toResponseEntity() },
             )
+    }
 
     @GetMapping("/tournament/{tournamentId}")
     fun getBracketsByTournamentId(

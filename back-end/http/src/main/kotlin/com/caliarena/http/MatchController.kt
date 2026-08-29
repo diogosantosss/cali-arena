@@ -2,10 +2,14 @@ package com.caliarena.http
 
 import com.caliarena.domain.match.Match
 import com.caliarena.domain.match.MatchProgress
+import com.caliarena.domain.user.AuthenticatedUser
+import com.caliarena.domain.user.UserRole
 import com.caliarena.http.model.match.CreateMatchInput
 import com.caliarena.http.model.match.UpdateRepsInput
 import com.caliarena.http.model.toResponseEntity
+import com.caliarena.http.utils.hasAnyRole
 import com.caliarena.http.utils.toResponse
+import com.caliarena.service.ApiError
 import com.caliarena.service.MatchService
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
@@ -25,9 +29,13 @@ class MatchController(
 ) {
     @PostMapping
     fun createMatch(
+        user: AuthenticatedUser,
         @RequestBody input: CreateMatchInput,
-    ): ResponseEntity<Any> =
-        matchService
+    ): ResponseEntity<Any> {
+        if (!user.hasAnyRole(UserRole.ADMIN)) {
+            return ApiError.NOT_AUTHORIZED.toResponseEntity()
+        }
+        return matchService
             .createMatch(input.bracketId, input.routineId, input.judgeId, input.athleteRedId, input.athleteBlueId)
             .toResponse(
                 onSuccess = { match: Match ->
@@ -38,12 +46,17 @@ class MatchController(
                 },
                 onError = { it.toResponseEntity() },
             )
+    }
 
     @PutMapping("/{id}/start")
     fun startMatch(
+        user: AuthenticatedUser,
         @PathVariable id: Int,
-    ): ResponseEntity<Any> =
-        matchService
+    ): ResponseEntity<Any> {
+        if (!user.hasAnyRole(UserRole.ADMIN, UserRole.JUDGE)) {
+            return ApiError.NOT_AUTHORIZED.toResponseEntity()
+        }
+        return matchService
             .startMatch(id)
             .toResponse(
                 onSuccess = { prog: MatchProgress ->
@@ -54,13 +67,18 @@ class MatchController(
                 },
                 onError = { it.toResponseEntity() },
             )
+    }
 
     @PutMapping("/{matchId}/reps")
     fun updateMatchReps(
+        user: AuthenticatedUser,
         @PathVariable matchId: Int,
         @RequestBody input: UpdateRepsInput,
-    ): ResponseEntity<Any> =
-        matchService
+    ): ResponseEntity<Any> {
+        if (!user.hasAnyRole(UserRole.ADMIN, UserRole.JUDGE)) {
+            return ApiError.NOT_AUTHORIZED.toResponseEntity()
+        }
+        return matchService
             .updateAthletesReps(matchId, input.redReps, input.blueReps)
             .toResponse(
                 onSuccess = { prog: MatchProgress ->
@@ -71,6 +89,7 @@ class MatchController(
                 },
                 onError = { it.toResponseEntity() },
             )
+    }
 
     @GetMapping("/{id}")
     fun getMatchById(

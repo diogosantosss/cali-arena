@@ -1,9 +1,13 @@
 package com.caliarena.http
 
+import com.caliarena.domain.user.AuthenticatedUser
+import com.caliarena.domain.user.UserRole
 import com.caliarena.http.model.toResponseEntity
 import com.caliarena.http.model.tournament.CreateTournamentInput
 import com.caliarena.http.model.tournament.UpdateScreenInput
+import com.caliarena.http.utils.hasAnyRole
 import com.caliarena.http.utils.toResponse
+import com.caliarena.service.ApiError
 import com.caliarena.service.TournamentService
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
@@ -26,9 +30,13 @@ class TournamentController(
 ) {
     @PostMapping
     fun createTournament(
+        user: AuthenticatedUser,
         @RequestBody input: CreateTournamentInput,
-    ): ResponseEntity<Any> =
-        tournamentService
+    ): ResponseEntity<Any> {
+        if (!user.hasAnyRole(UserRole.ADMIN)) {
+            return ApiError.NOT_AUTHORIZED.toResponseEntity()
+        }
+        return tournamentService
             .createTournament(
                 name = input.name,
                 location = input.location,
@@ -43,6 +51,7 @@ class TournamentController(
                 },
                 onError = { it.toResponseEntity() },
             )
+    }
 
     @GetMapping
     fun getTournaments(): ResponseEntity<Any> = ResponseEntity.ok(tournamentService.getAllTournaments())
@@ -80,10 +89,14 @@ class TournamentController(
 
     @PutMapping("/{tournamentId}/state/screen")
     fun updateScreen(
+        user: AuthenticatedUser,
         @PathVariable tournamentId: Int,
         @RequestBody input: UpdateScreenInput,
-    ): ResponseEntity<Any> =
-        tournamentService
+    ): ResponseEntity<Any> {
+        if (!user.hasAnyRole(UserRole.ADMIN)) {
+            return ApiError.NOT_AUTHORIZED.toResponseEntity()
+        }
+        return tournamentService
             .updateScreen(
                 tournamentId = tournamentId,
                 screen = input.screen,
@@ -98,6 +111,7 @@ class TournamentController(
                 },
                 onError = { it.toResponseEntity() },
             )
+    }
 
     private fun String.convertDate(): Instant = LocalDate.parse(this).atStartOfDay().toInstant(ZoneOffset.UTC)
 }
