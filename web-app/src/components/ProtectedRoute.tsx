@@ -12,7 +12,7 @@ export function ProtectedRoute() {
   const { isAuthenticated, isLoading } = useAuth();
 
   if (isLoading) {
-    return <div className="min-h-screen" style={{ background: "#0f0f11" }} />;
+    return <div className="min-h-screen" style={{ background: "var(--background)" }} />;
   }
 
   if (!isAuthenticated) {

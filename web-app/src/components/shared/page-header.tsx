@@ -18,7 +18,7 @@ export function PageHeader({ title, eyebrow = "Management", action }: PageHeader
         </p>
         <h1
           className="text-4xl leading-tight font-heading"
-          style={{ color: "#f0ede8" }}
+          style={{ color: "var(--foreground)" }}
         >
           {title}
         </h1>

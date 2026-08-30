@@ -1,5 +1,6 @@
 import { useReducer } from "react";
 import { useNavigate } from "react-router-dom";
+import { Sun, Moon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -7,6 +8,7 @@ import { ApiError } from "@/lib/api/client";
 import { authService } from "../services/auth.service";
 import type { LoginInput } from "../types";
 import { useAuth } from "../hooks/use-auth";
+import { useTheme } from "@/app/hooks/use-theme";
 
 interface LoginState {
   form: LoginInput;
@@ -44,6 +46,7 @@ function loginReducer(state: LoginState, action: LoginAction): LoginState {
 export function LoginPage() {
   const [state, dispatch] = useReducer(loginReducer, initialLoginState);
   const { login } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
 
   async function handleSubmit(e: React.FormEvent) {
@@ -65,24 +68,32 @@ export function LoginPage() {
 
   return (
     <div
-      className="min-h-screen flex"
+      className="relative min-h-screen flex"
       style={{
-        background: "#0f0f11",
+        background: "var(--background)",
         backgroundImage: `
           radial-gradient(ellipse 80% 50% at 20% 0%, rgba(232,160,32,0.07) 0%, transparent 60%),
           radial-gradient(ellipse 60% 40% at 80% 100%, rgba(232,160,32,0.04) 0%, transparent 50%)
         `,
       }}
     >
-      <div className="hidden lg:flex flex-col justify-between w-[45%] px-16 py-14 border-r border-[#252528]">
+      <button
+        onClick={toggleTheme}
+        aria-label="Toggle theme"
+        title={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
+        className="absolute top-6 right-7 w-8 h-8 flex items-center justify-center rounded transition-colors text-foreground opacity-80 hover:text-accent hover:opacity-100"
+      >
+        {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+      </button>
+      <div className="hidden lg:flex flex-col justify-between w-[45%] px-16 py-14 border-r border-border">
         <div className="flex items-center gap-2">
           <div
             className="w-6 h-6 rounded flex items-center justify-center text-[10px] font-bold"
-            style={{ background: "#e8a020", color: "#0f0f11" }}
+            style={{ background: "var(--accent)", color: "var(--accent-foreground)" }}
           >
             C
           </div>
-          <span className="text-sm tracking-widest uppercase text-[#6b6560]" style={{ fontFamily: "Geist Variable, sans-serif" }}>
+          <span className="text-sm tracking-widest uppercase text-muted-foreground" style={{ fontFamily: "Geist Variable, sans-serif" }}>
             Cali Arena
           </span>
         </div>
@@ -93,19 +104,19 @@ export function LoginPage() {
         >
           <div
             className="text-5xl leading-[1.1] tracking-tight"
-            style={{ fontFamily: "DM Serif Display, Georgia, serif", color: "#f0ede8" }}
+            style={{ fontFamily: "DM Serif Display, Georgia, serif", color: "var(--foreground)" }}
           >
             Where athletes<br />
-            <span style={{ color: "#e8a020" }}>compete.</span>
+            <span style={{ color: "var(--accent)" }}>compete.</span>
           </div>
-          <p className="text-sm leading-relaxed max-w-xs" style={{ color: "#6b6560" }}>
+          <p className="text-sm leading-relaxed max-w-xs" style={{ color: "var(--muted-foreground)" }}>
             Full competition management — brackets, live scoring, and spectator screens in one place.
           </p>
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="h-px flex-1" style={{ background: "#252528" }} />
-          <span className="text-xs" style={{ color: "#3a3a3d" }}>CALI ARENA © 2026</span>
+          <div className="h-px flex-1" style={{ background: "var(--border)" }} />
+          <span className="text-xs" style={{ color: "var(--faint)" }}>CALI ARENA © 2026</span>
         </div>
       </div>
 
@@ -117,22 +128,22 @@ export function LoginPage() {
           <div className="lg:hidden flex items-center gap-2 mb-4">
             <div
               className="w-6 h-6 rounded flex items-center justify-center text-[10px] font-bold"
-              style={{ background: "#e8a020", color: "#0f0f11" }}
+              style={{ background: "var(--accent)", color: "var(--accent-foreground)" }}
             >
               C
             </div>
-            <span className="text-sm tracking-widest uppercase" style={{ color: "#6b6560" }}>
+            <span className="text-sm tracking-widest uppercase" style={{ color: "var(--muted-foreground)" }}>
               Cali Arena
             </span>
           </div>
 
           <div>
-            <p className="text-xs tracking-widest uppercase mb-2" style={{ color: "#6b6560" }}>
+            <p className="text-xs tracking-widest uppercase mb-2" style={{ color: "var(--muted-foreground)" }}>
               Admin access
             </p>
             <h1
               className="text-3xl leading-tight"
-              style={{ fontFamily: "DM Serif Display, Georgia, serif", color: "#f0ede8" }}
+              style={{ fontFamily: "DM Serif Display, Georgia, serif", color: "var(--foreground)" }}
             >
               Sign in
             </h1>
@@ -143,7 +154,7 @@ export function LoginPage() {
               <Label
                 htmlFor="username"
                 className="text-xs tracking-wider uppercase"
-                style={{ color: "#6b6560" }}
+                style={{ color: "var(--muted-foreground)" }}
               >
                 Username
               </Label>
@@ -154,8 +165,8 @@ export function LoginPage() {
                 placeholder="your_username"
                 autoComplete="username"
                 required
-                className="border-[#252528] text-[#f0ede8] placeholder:text-[#3a3a3d] focus-visible:ring-[#e8a020]/40 focus-visible:border-[#e8a020]/60"
-                style={{ background: "#17171a" }}
+                className="border-border text-foreground placeholder:text-faint focus-visible:ring-accent/40 focus-visible:border-accent/60"
+                style={{ background: "var(--card)" }}
               />
             </div>
 
@@ -163,7 +174,7 @@ export function LoginPage() {
               <Label
                 htmlFor="password"
                 className="text-xs tracking-wider uppercase"
-                style={{ color: "#6b6560" }}
+                style={{ color: "var(--muted-foreground)" }}
               >
                 Password
               </Label>
@@ -175,8 +186,8 @@ export function LoginPage() {
                 placeholder="••••••••"
                 autoComplete="current-password"
                 required
-                className="border-[#252528] text-[#f0ede8] placeholder:text-[#3a3a3d] focus-visible:ring-[#e8a020]/40 focus-visible:border-[#e8a020]/60"
-                style={{ background: "#17171a" }}
+                className="border-border text-foreground placeholder:text-faint focus-visible:ring-accent/40 focus-visible:border-accent/60"
+                style={{ background: "var(--card)" }}
               />
             </div>
 
@@ -190,7 +201,7 @@ export function LoginPage() {
               type="submit"
               disabled={state.loading}
               className="w-full font-medium tracking-wide text-sm"
-              style={{ background: "#e8a020", color: "#0f0f11" }}
+              style={{ background: "var(--accent)", color: "var(--accent-foreground)" }}
             >
               {state.loading ? "Signing in…" : "Sign in"}
             </Button>

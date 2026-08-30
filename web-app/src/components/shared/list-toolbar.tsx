@@ -32,12 +32,12 @@ export function ListToolbar({
           value={search ?? ""}
           onChange={(e) => onSearchChange(e.target.value)}
           placeholder={placeholder}
-          className="h-8 w-64 border-[#252528] text-[#f0ede8] placeholder:text-[#3a3a3d] focus-visible:ring-[#e8a020]/40 focus-visible:border-[#e8a020]/60"
-          style={{ background: "#17171a" }}
+          className="h-8 w-64 border-border text-foreground placeholder:text-faint focus-visible:ring-accent/40 focus-visible:border-accent/60"
+          style={{ background: "var(--card)" }}
         />
       )}
       <div className="flex items-center gap-2">
-        <span className="text-sm tabular-nums" style={{ color: "#6b6560" }}>
+        <span className="text-sm tabular-nums" style={{ color: "var(--muted-foreground)" }}>
           {count} {count !== 1 ? plural : singular}
         </span>
         {onRefresh && (
@@ -45,7 +45,7 @@ export function ListToolbar({
             onClick={onRefresh}
             disabled={refreshing}
             className="p-1.5 rounded transition-colors"
-            style={{ color: "#6b6560" }}
+            style={{ color: "var(--muted-foreground)" }}
           >
             <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin" : ""}`} />
           </button>

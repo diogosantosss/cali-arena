@@ -14,7 +14,6 @@ const screenLabels: Record<ScreenState, string> = {
   WAITING: "Waiting",
   ROUTINES: "Routines",
   BATTLE: "Battle",
-  WINNER: "Winner",
   LEADERBOARD: "Leaderboard",
   BRACKETS: "Brackets",
 };
@@ -124,15 +123,15 @@ export function ScreenControl({
   const divisions = Array.from(new Set(brackets.map((b) => b.division)));
 
   return (
-    <div className="rounded-lg overflow-hidden" style={{ background: "#17171a", border: "1px solid #252528" }}>
+    <div className="rounded-lg overflow-hidden" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
       <div className="flex items-center justify-between px-5 py-4">
         <div>
-          <p className="text-xs tracking-widest uppercase" style={{ color: "#6b6560" }}>
+          <p className="text-xs tracking-widest uppercase" style={{ color: "var(--muted-foreground)" }}>
             Screen control
           </p>
           <h3
             className="text-xl leading-tight mt-1"
-            style={{ fontFamily: "DM Serif Display, Georgia, serif", color: "#f0ede8" }}
+            style={{ fontFamily: "DM Serif Display, Georgia, serif", color: "var(--foreground)" }}
           >
             Spectator screen
           </h3>
@@ -141,7 +140,7 @@ export function ScreenControl({
           {tournamentState && (
             <span
               className="text-[11px] px-2.5 py-1 rounded-full"
-              style={{ background: "rgba(232,160,32,0.12)", color: "#e8a020" }}
+              style={{ background: "rgba(232,160,32,0.12)", color: "var(--accent)" }}
             >
               Current: {screenLabels[tournamentState.currentScreen]}
             </span>
@@ -151,9 +150,9 @@ export function ScreenControl({
             target="_blank"
             rel="noreferrer"
             className="flex items-center gap-1.5 px-2.5 py-1 rounded text-[11px] font-medium transition-colors"
-            style={{ background: "#1e1e22", color: "#a09a92", border: "1px solid #252528" }}
-            onMouseEnter={(e) => (e.currentTarget.style.color = "#e8a020")}
-            onMouseLeave={(e) => (e.currentTarget.style.color = "#a09a92")}
+            style={{ background: "var(--secondary)", color: "var(--secondary-foreground)", border: "1px solid var(--border)" }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = "var(--accent)")}
+            onMouseLeave={(e) => (e.currentTarget.style.color = "var(--secondary-foreground)")}
           >
             <ExternalLink className="w-3 h-3" />
             Open screen
@@ -161,17 +160,17 @@ export function ScreenControl({
         </div>
       </div>
 
-      <div style={{ borderTop: "1px solid #252528" }} className="px-5 py-4 space-y-5">
+      <div style={{ borderTop: "1px solid var(--border)" }} className="px-5 py-4 space-y-5">
         <div className="flex items-end gap-3">
           <div className="space-y-1.5">
-            <p className="text-[10px] uppercase tracking-widest" style={{ color: "#6b6560" }}>Screen</p>
+            <p className="text-[10px] uppercase tracking-widest" style={{ color: "var(--muted-foreground)" }}>Screen</p>
             <Select value={ui.screen} onValueChange={(value) => dispatch({ type: "setScreen", screen: value as ScreenState })}>
-              <SelectTrigger className="h-8 text-xs w-44 border-[#252528] focus:ring-[#e8a020]/40" style={{ background: "#0f0f11", color: "#a09a92" }}>
+              <SelectTrigger className="h-8 text-xs w-44 border-border focus:ring-accent/40" style={{ background: "var(--background)", color: "var(--secondary-foreground)" }}>
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent style={{ background: "#17171a", border: "1px solid #252528" }}>
+              <SelectContent style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
                 {Object.entries(screenLabels).map(([value, label]) => (
-                  <SelectItem key={value} value={value} className="text-xs" style={{ color: "#a09a92" }}>{label}</SelectItem>
+                  <SelectItem key={value} value={value} className="text-xs" style={{ color: "var(--secondary-foreground)" }}>{label}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -179,20 +178,20 @@ export function ScreenControl({
 
           {ui.screen === "BATTLE" && (
             <div className="space-y-1.5">
-              <p className="text-[10px] uppercase tracking-widest" style={{ color: "#6b6560" }}>Match</p>
+              <p className="text-[10px] uppercase tracking-widest" style={{ color: "var(--muted-foreground)" }}>Match</p>
               <Select
                 value={ui.matchId ? String(ui.matchId) : ""}
                 onValueChange={(value) => dispatch({ type: "setMatchId", id: Number(value) })}
               >
-                <SelectTrigger className="h-8 text-xs w-64 border-[#252528] focus:ring-[#e8a020]/40" style={{ background: "#0f0f11", color: "#a09a92" }}>
+                <SelectTrigger className="h-8 text-xs w-64 border-border focus:ring-accent/40" style={{ background: "var(--background)", color: "var(--secondary-foreground)" }}>
                   <SelectValue placeholder="Select match" />
                 </SelectTrigger>
-                <SelectContent style={{ background: "#17171a", border: "1px solid #252528" }}>
+                <SelectContent style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
                   {readyMatches.map((m) => {
                     const red = athletes.find((a) => a.id === m.athleteRedId);
                     const blue = athletes.find((a) => a.id === m.athleteBlueId);
                     return (
-                      <SelectItem key={m.id} value={String(m.id)} className="text-xs" style={{ color: "#a09a92" }}>
+                      <SelectItem key={m.id} value={String(m.id)} className="text-xs" style={{ color: "var(--secondary-foreground)" }}>
                         #{m.id} — {red?.name ?? "Red"} vs {blue?.name ?? "Blue"}
                       </SelectItem>
                     );
@@ -204,17 +203,17 @@ export function ScreenControl({
 
           {ui.screen === "LEADERBOARD" && (
             <div className="space-y-1.5">
-              <p className="text-[10px] uppercase tracking-widest" style={{ color: "#6b6560" }}>Bracket</p>
+              <p className="text-[10px] uppercase tracking-widest" style={{ color: "var(--muted-foreground)" }}>Bracket</p>
               <Select
                 value={ui.bracketId ? String(ui.bracketId) : ""}
                 onValueChange={(value) => dispatch({ type: "setBracketId", id: Number(value) })}
               >
-                <SelectTrigger className="h-8 text-xs w-64 border-[#252528] focus:ring-[#e8a020]/40" style={{ background: "#0f0f11", color: "#a09a92" }}>
+                <SelectTrigger className="h-8 text-xs w-64 border-border focus:ring-accent/40" style={{ background: "var(--background)", color: "var(--secondary-foreground)" }}>
                   <SelectValue placeholder="Select bracket" />
                 </SelectTrigger>
-                <SelectContent style={{ background: "#17171a", border: "1px solid #252528" }}>
+                <SelectContent style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
                   {brackets.map((b) => (
-                    <SelectItem key={b.id} value={String(b.id)} className="text-xs" style={{ color: "#a09a92" }}>
+                    <SelectItem key={b.id} value={String(b.id)} className="text-xs" style={{ color: "var(--secondary-foreground)" }}>
                       {b.stage} · {b.division}
                     </SelectItem>
                   ))}
@@ -225,17 +224,17 @@ export function ScreenControl({
 
           {ui.screen === "BRACKETS" && (
             <div className="space-y-1.5">
-              <p className="text-[10px] uppercase tracking-widest" style={{ color: "#6b6560" }}>Division</p>
+              <p className="text-[10px] uppercase tracking-widest" style={{ color: "var(--muted-foreground)" }}>Division</p>
               <Select
                 value={ui.division ?? ""}
                 onValueChange={(value) => dispatch({ type: "setDivision", division: value })}
               >
-                <SelectTrigger className="h-8 text-xs w-44 border-[#252528] focus:ring-[#e8a020]/40" style={{ background: "#0f0f11", color: "#a09a92" }}>
+                <SelectTrigger className="h-8 text-xs w-44 border-border focus:ring-accent/40" style={{ background: "var(--background)", color: "var(--secondary-foreground)" }}>
                   <SelectValue placeholder="Select division" />
                 </SelectTrigger>
-                <SelectContent style={{ background: "#17171a", border: "1px solid #252528" }}>
+                <SelectContent style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
                   {divisions.map((d) => (
-                    <SelectItem key={d} value={d} className="text-xs" style={{ color: "#a09a92" }}>{d}</SelectItem>
+                    <SelectItem key={d} value={d} className="text-xs" style={{ color: "var(--secondary-foreground)" }}>{d}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -246,7 +245,7 @@ export function ScreenControl({
             onClick={() => void handleUpdateScreen()}
             disabled={ui.loading || (ui.screen === "BATTLE" && !ui.matchId) || (ui.screen === "LEADERBOARD" && !ui.bracketId) || (ui.screen === "BRACKETS" && !ui.division)}
             className="px-4 py-2 rounded text-sm font-medium transition-opacity disabled:opacity-50"
-            style={{ background: "#e8a020", color: "#0f0f11" }}
+            style={{ background: "var(--accent)", color: "var(--accent-foreground)" }}
           >
             {ui.loading ? "Updating…" : "Update screen"}
           </button>

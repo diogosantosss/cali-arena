@@ -22,10 +22,10 @@ export function ListRow({
   return (
     <div
       onClick={onClick}
-      className="group flex items-center gap-5 px-5 py-4 rounded-lg transition-colors animate-fade-up hover:border-[#363639] cursor-default"
+      className="group flex items-center gap-5 px-5 py-4 rounded-lg transition-colors animate-fade-up hover:border-border-hover cursor-default"
       style={{
-        background: "#17171a",
-        border: "1px solid #252528",
+        background: "var(--card)",
+        border: "1px solid var(--border)",
         animationDelay: `${index * 0.03}s`,
         opacity: 0,
         cursor: onClick ? "pointer" : undefined,
@@ -37,11 +37,11 @@ export function ListRow({
       />
 
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium truncate" style={{ color: "#f0ede8" }}>
+        <p className="text-sm font-medium truncate" style={{ color: "var(--foreground)" }}>
           {title}
         </p>
         {meta && (
-          <div className="flex items-center gap-3 mt-0.5 text-xs" style={{ color: "#6b6560" }}>
+          <div className="flex items-center gap-3 mt-0.5 text-xs" style={{ color: "var(--muted-foreground)" }}>
             {meta}
           </div>
         )}

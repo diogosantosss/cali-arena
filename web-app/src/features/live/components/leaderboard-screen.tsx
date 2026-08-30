@@ -1,5 +1,33 @@
+import { Medal, Trophy } from "lucide-react";
 import type { BracketLeaderboard } from "@/features/tournaments/types";
 import { screenBackground } from "../lib/screen-background";
+
+const podiumMeta = [
+  {
+    color: "var(--spec-gold)",
+    soft: "var(--spec-gold-soft)",
+    border: "var(--spec-gold-border)",
+    glow: "var(--spec-gold-glow)",
+  },
+  {
+    color: "var(--spec-silver)",
+    soft: "var(--spec-silver-soft)",
+    border: "var(--spec-silver-border)",
+    glow: "var(--spec-silver-border)",
+  },
+  {
+    color: "var(--spec-bronze)",
+    soft: "var(--spec-bronze-soft)",
+    border: "var(--spec-bronze-border)",
+    glow: "var(--spec-bronze-border)",
+  },
+];
+
+function displayOrder(count: number): number[] {
+  if (count >= 3) return [1, 0, 2];
+  if (count === 2) return [1, 0];
+  return [0];
+}
 
 export function LeaderboardScreen({
   tournamentName,
@@ -9,68 +37,106 @@ export function LeaderboardScreen({
   leaderboard: BracketLeaderboard;
 }) {
   const entries = leaderboard.entries;
+  const podiumEntries = entries.slice(0, 3);
+  const restEntries = entries.slice(3);
 
   return (
     <div className="min-h-screen flex flex-col" style={{ ...screenBackground, color: "white" }}>
-      <div className="text-center pt-16 px-16">
-        <p className="font-cairo text-6xl font-semibold leading-tight uppercase bg-gradient-to-r from-[#e8a020] to-[#f0ede8] bg-clip-text text-transparent">
+      <div className="text-center pt-16 px-16 shrink-0">
+        <p className="font-cairo text-6xl font-semibold leading-tight uppercase bg-gradient-to-r from-[var(--spec-accent)] to-[var(--spec-title-end)] bg-clip-text text-transparent">
           {tournamentName}
         </p>
-        <p className="mt-4 font-cairo text-[2rem] font-semibold uppercase tracking-widest text-white/60">
+        <p className="mt-4 font-cairo text-[2rem] font-semibold uppercase tracking-widest text-[var(--spec-text-soft)]">
           Best times — {leaderboard.stage} · {leaderboard.division}
         </p>
       </div>
 
       {entries.length === 0 ? (
         <div className="flex-1 flex items-center justify-center">
-          <p className="font-cairo text-white/25 uppercase tracking-widest text-lg">
+          <p className="font-cairo text-[var(--spec-text-ghost)] uppercase tracking-widest text-lg">
             No finished attempts yet
           </p>
         </div>
       ) : (
-        <div className="flex-1 flex items-start justify-center pt-14 px-16">
-          <div className="w-full max-w-3xl">
-            <div className="grid grid-cols-[64px_1fr_170px] gap-4 px-6 pb-3 font-cairo text-[1.1rem] uppercase tracking-widest text-white/40">
-              <span>#</span>
-              <span>Athlete</span>
-              <span className="text-right">Time</span>
-            </div>
-
-            <div className="space-y-1.5">
-              {entries.map((entry, index) => {
+        <div className="flex-1 flex flex-col items-center justify-center px-16 pb-16">
+          {podiumEntries.length > 0 && (
+            <div className="flex items-end justify-center gap-6">
+              {displayOrder(podiumEntries.length).map((index) => {
+                const entry = podiumEntries[index];
                 const position = index + 1;
-                const isPodium = position <= 3;
-                const medalColor = ["#f5c453", "#c9c9cf", "#cd8b4c"][position - 1];
+                const meta = podiumMeta[index];
+                const isFirst = position === 1;
 
                 return (
                   <div
                     key={entry.matchId}
-                    className="grid grid-cols-[64px_1fr_170px] items-center gap-4 px-6 py-4 rounded-lg"
+                    className="flex flex-col items-center rounded-3xl text-center"
                     style={{
-                      background: isPodium ? `${medalColor}1a` : "rgba(255,255,255,0.04)",
-                      border: isPodium ? `1px solid ${medalColor}55` : "1px solid transparent",
+                      background: meta.soft,
+                      border: `1px solid ${meta.border}`,
+                      boxShadow: isFirst ? `0 0 80px ${meta.glow}` : undefined,
+                      ...(isFirst ? { padding: "2.5rem 3.5rem" } : { padding: "1.75rem 2.5rem 2rem" }),
                     }}
                   >
-                    <span
-                      className="font-cairo text-[1.75rem] font-bold leading-none"
-                      style={{ color: isPodium ? medalColor : "rgba(255,255,255,0.4)" }}
+                    <div className={isFirst ? "mb-4" : "mb-3"} style={{ color: meta.color }}>
+                      {isFirst ? <Trophy className="w-14 h-14" strokeWidth={1.5} /> : <Medal className="w-10 h-10" strokeWidth={1.5} />}
+                    </div>
+
+                    <p
+                      className={
+                        "font-cairo font-bold leading-none " + (isFirst ? "text-[3.5rem]" : "text-[2.25rem]")
+                      }
                     >
-                      {position}
-                    </span>
-                    <span className="font-cairo text-[1.75rem] font-semibold leading-none text-white">
+                      {position}º
+                    </p>
+
+                    <p
+                      className={
+                        "font-cairo font-semibold leading-tight text-white mt-3 " +
+                        (isFirst ? "text-[1.75rem]" : "text-[1.25rem]")
+                      }
+                    >
                       {entry.athleteName}
-                    </span>
-                    <span
-                      className="font-cairo text-[1.75rem] font-bold leading-none tabular-nums text-right"
-                      style={{ color: isPodium ? medalColor : "#a09a92" }}
+                    </p>
+
+                    <p
+                      className="font-cairo font-bold leading-none tabular-nums mt-5"
+                      style={{ color: meta.color, fontSize: isFirst ? "1.75rem" : "1.25rem" }}
                     >
                       {entry.duration}
-                    </span>
+                    </p>
                   </div>
                 );
               })}
             </div>
-          </div>
+          )}
+
+          {restEntries.length > 0 && (
+            <div className="w-full mt-10">
+              <div
+                className="grid gap-2"
+                style={{ gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))" }}
+              >
+                {restEntries.map((entry, index) => (
+                  <div
+                    key={entry.matchId}
+                    className="grid grid-cols-[56px_1fr_auto] items-center gap-4 px-5 py-2.5 rounded-lg"
+                    style={{ background: "var(--spec-surface-glass-2)" }}
+                  >
+                    <span className="font-cairo text-[1.3rem] font-bold leading-none text-[var(--spec-text-muted)]">
+                      {index + 4}º
+                    </span>
+                    <span className="font-cairo text-[1.3rem] font-semibold leading-none text-white truncate">
+                      {entry.athleteName}
+                    </span>
+                    <span className="font-cairo text-[1.3rem] font-bold leading-none tabular-nums text-[var(--spec-text-grey)]">
+                      {entry.duration}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

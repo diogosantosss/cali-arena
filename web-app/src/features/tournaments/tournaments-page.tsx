@@ -17,9 +17,9 @@ import type { CreateTournamentInput, TournamentStatus } from "./types";
 import { MapPin, CalendarDays, ArrowRight, Plus } from "lucide-react";
 
 const statusStyles: Record<TournamentStatus, { label: string; color: string; bg: string }> = {
-  DRAFT:    { label: "Draft",    color: "#6b6560", bg: "rgba(107,101,96,0.12)" },
+  DRAFT:    { label: "Draft",    color: "var(--muted-foreground)", bg: "rgba(107,101,96,0.12)" },
   READY:    { label: "Ready",    color: "#7eb8f7", bg: "rgba(126,184,247,0.12)" },
-  LIVE:     { label: "Live",     color: "#e8a020", bg: "rgba(232,160,32,0.12)" },
+  LIVE:     { label: "Live",     color: "var(--accent)", bg: "rgba(232,160,32,0.12)" },
   FINISHED: { label: "Finished", color: "#4a4a4e", bg: "rgba(74,74,78,0.12)" },
 };
 
@@ -138,19 +138,19 @@ export function TournamentsPage() {
           </div>
           <div className="col-span-2">
             <TextField
-              label={<>Location <span style={{ color: "#3a3a3d" }}>(optional)</span></>}
+              label={<>Location <span style={{ color: "var(--faint)" }}>(optional)</span></>}
               value={ui.form.location ?? ""}
               onChange={(value) => dispatch({ type: "setFormField", field: "location", value: value || null })}
               placeholder="e.g. Lisboa, Portugal"
             />
           </div>
           <DateField
-            label={<>Start date <span style={{ color: "#3a3a3d" }}>(optional)</span></>}
+            label={<>Start date <span style={{ color: "var(--faint)" }}>(optional)</span></>}
             value={ui.form.startDate}
             onChange={(value) => dispatch({ type: "setFormField", field: "startDate", value })}
           />
           <DateField
-            label={<>End date <span style={{ color: "#3a3a3d" }}>(optional)</span></>}
+            label={<>End date <span style={{ color: "var(--faint)" }}>(optional)</span></>}
             value={ui.form.endDate}
             onChange={(value) => dispatch({ type: "setFormField", field: "endDate", value })}
           />
@@ -214,7 +214,7 @@ export function TournamentsPage() {
                 trailing={
                   <ArrowRight
                     className="w-4 h-4 shrink-0 transition-transform group-hover:translate-x-0.5"
-                    style={{ color: "#3a3a3d" }}
+                    style={{ color: "var(--faint)" }}
                   />
                 }
               />

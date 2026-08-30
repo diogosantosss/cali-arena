@@ -84,7 +84,7 @@ export function ClubsPage() {
             required
           />
           <TextField
-            label={<>Short name <span style={{ color: "#3a3a3d" }}>(max 6)</span></>}
+            label={<>Short name <span style={{ color: "var(--faint)" }}>(max 6)</span></>}
             value={form.shortName}
             onChange={(value) => setField("shortName", value)}
             placeholder="e.g. CAL"
@@ -114,7 +114,7 @@ export function ClubsPage() {
           renderRow={(club, index) => (
             <ListRow
               index={index}
-              accentColor="#e8a020"
+              accentColor="var(--accent)"
               title={club.name}
               meta={
                 <span className="flex items-center gap-1">
@@ -125,7 +125,7 @@ export function ClubsPage() {
               badge={
                 <span
                   className="text-xs px-2.5 py-1 rounded-md font-mono tracking-widest shrink-0 uppercase"
-                  style={{ background: "#1e1e22", color: "#a09a92", border: "1px solid #252528" }}
+                  style={{ background: "var(--secondary)", color: "var(--secondary-foreground)", border: "1px solid var(--border)" }}
                 >
                   {club.shortName}
                 </span>

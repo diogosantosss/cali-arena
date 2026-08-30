@@ -8,10 +8,10 @@ import { useMatchControl } from "../hooks/use-match-control";
 import type { Match } from "../types";
 
 const matchStatusStyles: Record<Match["status"], { label: string; color: string; bg: string }> = {
-  PENDING: { label: "Pending", color: "#6b6560", bg: "rgba(107,101,96,0.12)" },
+  PENDING: { label: "Pending", color: "var(--muted-foreground)", bg: "rgba(107,101,96,0.12)" },
   READY: { label: "Ready", color: "#7eb8f7", bg: "rgba(126,184,247,0.12)" },
   RUNNING: { label: "Running", color: "#4ade80", bg: "rgba(74,222,128,0.12)" },
-  PAUSED: { label: "Paused", color: "#a09a92", bg: "rgba(160,154,146,0.12)" },
+  PAUSED: { label: "Paused", color: "var(--secondary-foreground)", bg: "rgba(160,154,146,0.12)" },
   FINISHED: { label: "Finished", color: "#4a4a4e", bg: "rgba(74,74,78,0.12)" },
 };
 
@@ -104,15 +104,15 @@ export function BattlePanel({ matchId, athletes, routines, overviews, onError }:
 
   const repButton =
     "px-3 py-1.5 rounded text-sm font-semibold transition-colors disabled:opacity-30 disabled:cursor-not-allowed";
-  const repIncrementStyle = { background: "rgba(232,160,32,0.12)", color: "#e8a020", border: "1px solid rgba(232,160,32,0.25)" };
-  const repDecrementStyle = { background: "#1e1e22", color: "#a09a92", border: "1px solid #252528" };
+  const repIncrementStyle = { background: "rgba(232,160,32,0.12)", color: "var(--accent)", border: "1px solid rgba(232,160,32,0.25)" };
+  const repDecrementStyle = { background: "var(--secondary)", color: "var(--secondary-foreground)", border: "1px solid var(--border)" };
 
   return (
-    <div className="rounded-lg" style={{ background: "#0f0f11", border: "1px solid #252528" }}>
+    <div className="rounded-lg" style={{ background: "var(--background)", border: "1px solid var(--border)" }}>
       <div className="flex items-center justify-between px-5 py-4">
         <div className="flex items-center gap-3">
-          <span className="text-sm font-bold" style={{ color: "#f0ede8" }}>Match #{matchId}</span>
-          <span className="text-xs hidden sm:block" style={{ color: "#6b6560" }}>
+          <span className="text-sm font-bold" style={{ color: "var(--foreground)" }}>Match #{matchId}</span>
+          <span className="text-xs hidden sm:block" style={{ color: "var(--muted-foreground)" }}>
             {routine?.name}
           </span>
           {matchStatus && (
@@ -126,7 +126,7 @@ export function BattlePanel({ matchId, athletes, routines, overviews, onError }:
           <p
             className="text-xl font-bold tabular-nums hidden sm:block"
             style={{
-              color: redFinished || blueFinished ? "#4ade80" : "#f0ede8",
+              color: redFinished || blueFinished ? "#4ade80" : "var(--foreground)",
               fontFamily: "Geist Variable, monospace",
             }}
           >
@@ -136,7 +136,7 @@ export function BattlePanel({ matchId, athletes, routines, overviews, onError }:
             <button
               onClick={() => void run(startMatch)}
               className="px-4 py-1.5 rounded text-sm font-medium"
-              style={{ background: "#e8a020", color: "#0f0f11" }}
+              style={{ background: "var(--accent)", color: "var(--accent-foreground)" }}
             >
               Start match
             </button>
@@ -176,7 +176,7 @@ export function BattlePanel({ matchId, athletes, routines, overviews, onError }:
       )}
 
       {exercises.length > 0 && (
-        <div style={{ borderTop: "1px solid #252528" }} className="px-5 py-4">
+        <div style={{ borderTop: "1px solid var(--border)" }} className="px-5 py-4">
           <div className="flex flex-wrap gap-2">
             {groups.map((group, i) => {
               const hasRed = group.items.some((e) => e.id === redExercise?.id);
@@ -193,7 +193,7 @@ export function BattlePanel({ matchId, athletes, routines, overviews, onError }:
                           ? "rgba(224,85,85,0.14)"
                           : hasBlue
                             ? "rgba(85,136,224,0.14)"
-                            : "#1e1e22",
+                            : "var(--secondary)",
                     color:
                       hasRed && hasBlue
                         ? "#ffffff"
@@ -201,7 +201,7 @@ export function BattlePanel({ matchId, athletes, routines, overviews, onError }:
                           ? "#e05555"
                           : hasBlue
                             ? "#5588e0"
-                            : "#6b6560",
+                            : "var(--muted-foreground)",
                     border:
                       hasRed && hasBlue
                         ? "1px solid rgba(160,120,220,0.4)"
@@ -209,7 +209,7 @@ export function BattlePanel({ matchId, athletes, routines, overviews, onError }:
                           ? "1px solid rgba(224,85,85,0.45)"
                           : hasBlue
                             ? "1px solid rgba(85,136,224,0.45)"
-                            : "1px solid #252528",
+                            : "1px solid var(--border)",
                   }}
                 >
                   {group.label}
@@ -219,7 +219,7 @@ export function BattlePanel({ matchId, athletes, routines, overviews, onError }:
             })}
           </div>
           {routine?.timeCapSeconds && (
-            <p className="text-[11px] mt-3 tracking-widest uppercase" style={{ color: "#3a3a3d" }}>
+            <p className="text-[11px] mt-3 tracking-widest uppercase" style={{ color: "var(--faint)" }}>
               Time cap — {Math.floor(routine.timeCapSeconds / 60)}m
               {routine.timeCapSeconds % 60 > 0 ? ` ${routine.timeCapSeconds % 60}s` : ""}
             </p>
@@ -233,7 +233,7 @@ export function BattlePanel({ matchId, athletes, routines, overviews, onError }:
           if (!open) setFinishTarget(null);
         }}
       >
-        <DialogContent style={{ background: "#17171a", border: "1px solid #252528" }}>
+        <DialogContent style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
           <DialogHeader>
             <DialogTitle>Force finish athlete</DialogTitle>
             <DialogDescription>
@@ -254,7 +254,7 @@ export function BattlePanel({ matchId, athletes, routines, overviews, onError }:
                 setFinishTarget(null);
                 if (target) void run(() => finishSide(target));
               }}
-              style={{ background: "#e8a020", color: "#0f0f11" }}
+              style={{ background: "var(--accent)", color: "var(--accent-foreground)" }}
             >
               Finish
             </Button>
@@ -291,20 +291,20 @@ function RepControl({
   repDecrementStyle: React.CSSProperties;
 }) {
   return (
-    <div className="rounded-lg px-4 py-3" style={{ background: "#17171a", border: "1px solid #252528" }}>
+    <div className="rounded-lg px-4 py-3" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
       <div className="flex items-center gap-2">
         <span className="w-2.5 h-2.5 rounded-full" style={{ background: dot }} />
-        <p className="text-sm font-semibold" style={{ color: "#f0ede8" }}>{label}</p>
+        <p className="text-sm font-semibold" style={{ color: "var(--foreground)" }}>{label}</p>
       </div>
 
-      <p className="text-[11px] mt-2 uppercase tracking-widest" style={{ color: finished ? "#4ade80" : "#6b6560" }}>
+      <p className="text-[11px] mt-2 uppercase tracking-widest" style={{ color: finished ? "#4ade80" : "var(--muted-foreground)" }}>
         {finished ? (finishTime ? `Finished — ${finishTime}` : "Finished") : exercise?.name ?? "—"}
         {!finished && exercise?.addedWeight ? ` (with ${exercise.addedWeight} kg)` : ""}
       </p>
 
-      <p className="text-2xl font-bold tabular-nums mt-1" style={{ color: finished ? "#4ade80" : "#e8a020", fontFamily: "Geist Variable, monospace" }}>
+      <p className="text-2xl font-bold tabular-nums mt-1" style={{ color: finished ? "#4ade80" : "var(--accent)", fontFamily: "Geist Variable, monospace" }}>
         {reps}
-        <span className="text-sm font-medium" style={{ color: "#3a3a3d" }}>/{exercise?.targetReps ?? "—"}</span>
+        <span className="text-sm font-medium" style={{ color: "var(--faint)" }}>/{exercise?.targetReps ?? "—"}</span>
       </p>
 
       <div className="flex items-center gap-2 mt-3">

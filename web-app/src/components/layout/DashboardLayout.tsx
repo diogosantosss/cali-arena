@@ -7,8 +7,11 @@ import {
   Building2,
   LogOut,
   Dumbbell,
+  Sun,
+  Moon,
 } from "lucide-react";
 import { useAuth } from "@/features/auth/hooks/use-auth";
+import { useTheme } from "@/app/hooks/use-theme";
 
 const navItems = [
   { to: "/dashboard", label: "Tournaments", icon: Trophy, end: true },
@@ -28,6 +31,7 @@ const pageTitles: Record<string, string> = {
 
 export function DashboardLayout() {
   const { logout, user } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -40,19 +44,19 @@ export function DashboardLayout() {
 
   return (
     <TooltipProvider>
-      <div className="flex h-screen w-full overflow-hidden" style={{ background: "#0f0f11" }}>
+      <div className="flex h-screen w-full overflow-hidden" style={{ background: "var(--background)" }}>
         <aside
           className="flex flex-col items-center w-14 lg:w-48 shrink-0 h-full py-5 gap-1"
-          style={{ background: "#0f0f11", borderRight: "1px solid #252528" }}
+          style={{ background: "var(--background)", borderRight: "1px solid var(--border)" }}
         >
           <div className="mb-5 flex items-center justify-center gap-2">
             <div
               className="w-7 h-7 shrink-0 rounded flex items-center justify-center text-[11px] font-bold"
-              style={{ background: "#e8a020", color: "#0f0f11" }}
+              style={{ background: "var(--accent)", color: "var(--accent-foreground)" }}
             >
               C
             </div>
-            <span className="hidden lg:inline text-xs tracking-widest uppercase" style={{ color: "#f0ede8" }}>
+            <span className="hidden lg:inline text-xs tracking-widest uppercase" style={{ color: "var(--foreground)" }}>
               Cali Arena
             </span>
           </div>
@@ -67,8 +71,8 @@ export function DashboardLayout() {
                     className={({ isActive }) =>
                       `w-full flex items-center justify-center lg:justify-start gap-3 h-9 rounded transition-colors ${
                         isActive
-                          ? "text-[#e8a020]"
-                          : "text-[#3a3a3d] hover:text-[#6b6560]"
+                          ? "text-accent"
+                          : "text-faint hover:text-muted-foreground"
                       }`
                     }
                     style={({ isActive }) =>
@@ -87,7 +91,7 @@ export function DashboardLayout() {
                 <TooltipContent
                   side="right"
                   className="text-xs lg:hidden"
-                  style={{ background: "#17171a", color: "#f0ede8", border: "1px solid #252528" }}
+                  style={{ background: "var(--card)", color: "var(--foreground)", border: "1px solid var(--border)" }}
                 >
                   {item.label}
                 </TooltipContent>
@@ -97,12 +101,12 @@ export function DashboardLayout() {
 
           {user && (
             <div className="w-full flex flex-col items-center gap-1 mb-2 lg:px-10">
-              <span className="hidden lg:inline text-[11px]" style={{ color: "#6b6560" }}>
-                Logged as <span style={{ color: "#f0ede8" }}>{user.username}</span>
+              <span className="hidden lg:inline text-[11px]" style={{ color: "var(--muted-foreground)" }}>
+                Logged as <span style={{ color: "var(--foreground)" }}>{user.username}</span>
               </span>
               <span
                 className="text-[9px] uppercase tracking-widest px-1.5 py-0.5 rounded-full"
-                style={{ background: "rgba(232,160,32,0.12)", color: "#e8a020" }}
+                style={{ background: "rgba(232,160,32,0.12)", color: "var(--accent)" }}
               >
                 {user.role}
               </span>
@@ -113,7 +117,7 @@ export function DashboardLayout() {
             <TooltipTrigger asChild>
               <button
                 onClick={handleLogout}
-                className="w-full flex items-center justify-center gap-3 h-9 rounded transition-colors text-[#3a3a3d] hover:text-[#e8a020]"
+                className="w-full flex items-center justify-center gap-3 h-9 rounded transition-colors text-faint hover:text-accent"
               >
                 <LogOut className="w-[15px] h-[15px] shrink-0" />
                 <span className="hidden lg:inline text-xs font-medium">Logout</span>
@@ -122,7 +126,7 @@ export function DashboardLayout() {
             <TooltipContent
               side="right"
               className="text-xs lg:hidden"
-              style={{ background: "#17171a", color: "#f0ede8", border: "1px solid #252528" }}
+              style={{ background: "var(--card)", color: "var(--foreground)", border: "1px solid var(--border)" }}
             >
               Logout
             </TooltipContent>
@@ -131,15 +135,23 @@ export function DashboardLayout() {
 
         <div className="flex flex-col flex-1 min-w-0 h-full min-h-0">
           <header
-            className="h-11 flex items-center px-7 shrink-0"
-            style={{ borderBottom: "1px solid #252528" }}
+            className="h-11 flex items-center justify-between px-7 shrink-0"
+            style={{ borderBottom: "1px solid var(--border)" }}
           >
             <span
               className="text-xs tracking-widest uppercase"
-              style={{ color: "#6b6560", fontFamily: "Geist Variable, sans-serif" }}
+              style={{ color: "var(--muted-foreground)", fontFamily: "Geist Variable, sans-serif" }}
             >
               {title}
             </span>
+            <button
+              onClick={toggleTheme}
+              aria-label="Toggle theme"
+              title={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
+              className="w-8 h-8 flex items-center justify-center rounded transition-colors text-foreground opacity-80 hover:text-accent hover:opacity-100"
+            >
+              {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </button>
           </header>
 
           <main className="flex-1 overflow-y-auto px-7 py-7">

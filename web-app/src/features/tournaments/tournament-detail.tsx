@@ -17,9 +17,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, MapPin, CalendarDays } from "lucide-react";
 
 const statusStyles: Record<Tournament["status"], { label: string; color: string; bg: string }> = {
-  DRAFT:    { label: "Draft",    color: "#6b6560", bg: "rgba(107,101,96,0.12)" },
+  DRAFT:    { label: "Draft",    color: "var(--muted-foreground)", bg: "rgba(107,101,96,0.12)" },
   READY:    { label: "Ready",    color: "#7eb8f7", bg: "rgba(126,184,247,0.12)" },
-  LIVE:     { label: "Live",     color: "#e8a020", bg: "rgba(232,160,32,0.12)" },
+  LIVE:     { label: "Live",     color: "var(--accent)", bg: "rgba(232,160,32,0.12)" },
   FINISHED: { label: "Finished", color: "#4a4a4e", bg: "rgba(74,74,78,0.12)" },
 };
 
@@ -229,9 +229,9 @@ export function TournamentDetailPage() {
   if (tournamentLoading && !tournament) {
     return (
       <div className="max-w-5xl mx-auto space-y-6">
-        <Skeleton className="h-6 w-48" style={{ background: "#252528" }} />
-        <Skeleton className="h-24 w-full" style={{ background: "#252528" }} />
-        <Skeleton className="h-64 w-full" style={{ background: "#252528" }} />
+        <Skeleton className="h-6 w-48" style={{ background: "var(--border)" }} />
+        <Skeleton className="h-24 w-full" style={{ background: "var(--border)" }} />
+        <Skeleton className="h-64 w-full" style={{ background: "var(--border)" }} />
       </div>
     );
   }
@@ -254,9 +254,9 @@ export function TournamentDetailPage() {
         <button
           onClick={() => navigate("/dashboard")}
           className="flex items-center gap-1.5 text-xs transition-colors"
-          style={{ color: "#6b6560" }}
-          onMouseEnter={(e) => (e.currentTarget.style.color = "#a09a92")}
-          onMouseLeave={(e) => (e.currentTarget.style.color = "#6b6560")}
+          style={{ color: "var(--muted-foreground)" }}
+          onMouseEnter={(e) => (e.currentTarget.style.color = "var(--secondary-foreground)")}
+          onMouseLeave={(e) => (e.currentTarget.style.color = "var(--muted-foreground)")}
         >
           <ArrowLeft className="w-3.5 h-3.5" />
           All tournaments
@@ -266,19 +266,19 @@ export function TournamentDetailPage() {
           <div className="space-y-2">
             <h1
               className="text-4xl leading-tight"
-              style={{ fontFamily: "DM Serif Display, Georgia, serif", color: "#f0ede8" }}
+              style={{ fontFamily: "DM Serif Display, Georgia, serif", color: "var(--foreground)" }}
             >
               {tournament.name}
             </h1>
             <div className="flex items-center gap-4">
               {tournament.location && (
-                <span className="flex items-center gap-1.5 text-xs" style={{ color: "#6b6560" }}>
+                <span className="flex items-center gap-1.5 text-xs" style={{ color: "var(--muted-foreground)" }}>
                   <MapPin className="w-3 h-3" />
                   {tournament.location}
                 </span>
               )}
               {tournament.startDate && (
-                <span className="flex items-center gap-1.5 text-xs" style={{ color: "#6b6560" }}>
+                <span className="flex items-center gap-1.5 text-xs" style={{ color: "var(--muted-foreground)" }}>
                   <CalendarDays className="w-3 h-3" />
                   {new Date(tournament.startDate).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
                   {tournament.endDate && (
@@ -300,7 +300,7 @@ export function TournamentDetailPage() {
 
       <div
         className="h-px w-full"
-        style={{ background: "#252528" }}
+        style={{ background: "var(--border)" }}
       />
 
       <ScreenControl
@@ -316,7 +316,7 @@ export function TournamentDetailPage() {
 
       <div
         className="h-px w-full"
-        style={{ background: "#252528" }}
+        style={{ background: "var(--border)" }}
       />
 
       <BracketView

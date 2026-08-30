@@ -30,7 +30,7 @@ export function BattleScreen({
 
   const routine = routines.find((r) => r.id === match.routineId);
   const exercises: Exercise[] = routine
-    ? (overviews[routine.name]?.exercises.sort((a, b) => a.exerciseOrder - b.exerciseOrder) ?? [])
+    ? (overviews[routine.name]?.exercises.slice().sort((a, b) => a.exerciseOrder - b.exerciseOrder) ?? [])
     : [];
   const groups = routineGroups(exercises);
 
@@ -73,7 +73,7 @@ export function BattleScreen({
         )
       : elapsed;
 
-  const timerColor = redWon || blueWon ? "#4ade80" : "#ffffff";
+  const timerColor = redWon || blueWon ? "var(--spec-green)" : "var(--spec-text-white)";
 
   return (
     <div
@@ -83,13 +83,13 @@ export function BattleScreen({
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
-          background: "radial-gradient(ellipse 70% 40% at 50% 0%, rgba(232,160,32,0.06) 0%, transparent 70%)",
+          background: "radial-gradient(ellipse 70% 40% at 50% 0%, var(--spec-accent-06) 0%, transparent 70%)",
         }}
       />
 
       <div className="relative z-10 flex flex-col min-h-screen">
         <div className="text-center pt-20 pb-8 px-16">
-          <p className="font-cairo text-6xl font-semibold leading-tight uppercase bg-gradient-to-r from-[#e8a020] to-[#f0ede8] bg-clip-text text-transparent">
+          <p className="font-cairo text-6xl font-semibold leading-tight uppercase bg-gradient-to-r from-[var(--spec-accent)] to-[var(--spec-title-end)] bg-clip-text text-transparent">
             {tournamentName}
           </p>
         </div>
@@ -103,7 +103,7 @@ export function BattleScreen({
               str: redFinished ? finishTime(progress!.redFinishedAt!) : null,
             }}
             name={redAthlete?.name ?? "Red"}
-            color="#e05555"
+            color="var(--spec-red)"
             currentExercise={redExercise}
             currentReps={progress?.redCurrentReps ?? 0}
             progress={redProgress}
@@ -128,16 +128,16 @@ export function BattleScreen({
                 const hasBlue = group.items.some((e) => e.id === progress?.blueCurrentExerciseId);
                 return (
                   <p key={group.order} className="flex items-center gap-3">
-                    <span className="w-4 h-4 rounded-full" style={{ background: "#e05555", visibility: hasRed ? "visible" : "hidden" }} />
+                    <span className="w-4 h-4 rounded-full" style={{ background: "var(--spec-red)", visibility: hasRed ? "visible" : "hidden" }} />
                     <span>{group.label}</span>
-                    <span className="w-4 h-4 rounded-full" style={{ background: "#5588e0", visibility: hasBlue ? "visible" : "hidden" }} />
+                    <span className="w-4 h-4 rounded-full" style={{ background: "var(--spec-blue)", visibility: hasBlue ? "visible" : "hidden" }} />
                   </p>
                 );
               })}
             </div>
 
             {routine && (
-              <div className="mt-10 rounded-[20px] bg-[#2D2D2D] px-8 py-3">
+              <div className="mt-10 rounded-[20px] bg-[var(--spec-surface)] px-8 py-3">
                 <p className="font-cairo text-[2.25rem] font-bold text-white whitespace-nowrap">
                   Time Cap: {routine.timeCapSeconds ? `${Math.floor(routine.timeCapSeconds / 60)}’${routine.timeCapSeconds % 60 > 0 ? ` ${routine.timeCapSeconds % 60}”` : ""}` : "—"}
                 </p>
@@ -153,7 +153,7 @@ export function BattleScreen({
               str: blueFinished ? finishTime(progress!.blueFinishedAt!) : null,
             }}
             name={blueAthlete?.name ?? "Blue"}
-            color="#5588e0"
+            color="var(--spec-blue)"
             currentExercise={blueExercise}
             currentReps={progress?.blueCurrentReps ?? 0}
             progress={blueProgress}
@@ -182,7 +182,7 @@ function AthletePanel({
   progress: ExerciseProgress;
   nextExercise: string | null | undefined;
 }) {
-  const finishColor = finishState.won ? "#4ade80" : finishState.lost ? "#e05555" : "#ffffff";
+  const finishColor = finishState.won ? "var(--spec-green)" : finishState.lost ? "var(--spec-red)" : "var(--spec-text-white)";
   const isFinished = finishState.finished && finishState.str !== null;
   const pct = isFinished ? 100 : progress.pct;
 
@@ -211,7 +211,7 @@ function AthletePanel({
               {currentExercise?.name ?? "—"}
             </p>
             {currentExercise?.addedWeight ? (
-              <p className="font-cairo text-[2.25rem] font-bold leading-none bg-gradient-to-r from-[#e8a020] to-[#f0ede8] bg-clip-text text-transparent">
+              <p className="font-cairo text-[2.25rem] font-bold leading-none bg-gradient-to-r from-[var(--spec-accent)] to-[var(--spec-title-end)] bg-clip-text text-transparent">
                 with {currentExercise.addedWeight} kg
               </p>
             ) : null}
@@ -226,7 +226,7 @@ function AthletePanel({
       </div>
 
       <div className="mt-6 flex w-96 items-center gap-3">
-        <div className="flex-1 h-3 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.12)" }}>
+        <div className="flex-1 h-3 rounded-full overflow-hidden" style={{ background: "var(--spec-track)" }}>
           <div
             className="h-full rounded-full transition-all duration-300"
             style={{ width: `${pct}%`, background: color }}
@@ -238,7 +238,7 @@ function AthletePanel({
       </div>
 
       {nextExercise && !isFinished && (
-        <p className="mt-42 font-cairo text-[2.5rem] font-bold leading-none bg-gradient-to-r from-[#e8a020] to-[#f0ede8] bg-clip-text text-transparent">
+        <p className="mt-42 font-cairo text-[2.5rem] font-bold leading-none bg-gradient-to-r from-[var(--spec-accent)] to-[var(--spec-title-end)] bg-clip-text text-transparent">
           Next: {nextExercise}
         </p>
       )}

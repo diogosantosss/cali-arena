@@ -1,0 +1,61 @@
+/* Specator theme — customize the live screens from here.
+ * Every color used by the spectator screens is declared once in this file.
+ * Edit any --spec-* value below to restyle all screens at once.
+ */
+:root {
+  /* screen background */
+  --spec-bg: #0f0f11;
+  --spec-accent-04: rgba(232, 160, 32, 0.04);
+  --spec-accent-06: rgba(232, 160, 32, 0.06);
+
+  /* brand / gradients */
+  --spec-accent: #e8a020;
+  --spec-title-end: #f0ede8;
+  --spec-logo-text: #0f0f11;
+  --spec-glow: rgba(232, 160, 32, 0.35);
+
+  /* accent surfaces & borders */
+  --spec-accent-08: rgba(232, 160, 32, 0.08);
+  --spec-accent-12: rgba(232, 160, 32, 0.12);
+  --spec-accent-22: rgba(232, 160, 32, 0.22);
+  --spec-accent-40: rgba(232, 160, 32, 0.4);
+  --spec-accent-45: rgba(232, 160, 32, 0.45);
+  --spec-accent-75: rgba(232, 160, 32, 0.75);
+  --spec-accent-80: rgba(232, 160, 32, 0.8);
+
+  /* neutral surfaces */
+  --spec-surface: #2d2d2d;
+  --spec-surface-glass: rgba(255, 255, 255, 0.02);
+  --spec-surface-glass-2: rgba(255, 255, 255, 0.04);
+  --spec-border-glass: rgba(255, 255, 255, 0.08);
+  --spec-track: rgba(255, 255, 255, 0.12);
+
+  /* text */
+  --spec-text-white: #ffffff;
+  --spec-text-bright: rgba(255, 255, 255, 0.85);
+  --spec-text-soft: rgba(255, 255, 255, 0.6);
+  --spec-text-muted: rgba(255, 255, 255, 0.4);
+  --spec-text-dim: rgba(255, 255, 255, 0.3);
+  --spec-text-ghost: rgba(255, 255, 255, 0.25);
+  --spec-text-faint: rgba(255, 255, 255, 0.2);
+  --spec-text-grey: #a09a92;
+
+  /* athlete colors */
+  --spec-red: #e05555;
+  --spec-blue: #5588e0;
+  --spec-green: #4ade80;
+
+  /* podium medals */
+  --spec-gold: #f5c453;
+  --spec-silver: #c9c9cf;
+  --spec-bronze: #cd8b4c;
+
+  /* podium surfaces (alpha variants of the medal colors) */
+  --spec-gold-soft: rgba(245, 196, 83, 0.12);
+  --spec-gold-border: rgba(245, 196, 83, 0.4);
+  --spec-gold-glow: rgba(245, 196, 83, 0.18);
+  --spec-silver-soft: rgba(201, 201, 207, 0.12);
+  --spec-silver-border: rgba(201, 201, 207, 0.4);
+  --spec-bronze-soft: rgba(205, 139, 76, 0.12);
+  --spec-bronze-border: rgba(205, 139, 76, 0.4);
+}

@@ -19,7 +19,7 @@ export interface Tournament {
   createdAt: string;
 }
 
-export type ScreenState = "WAITING" | "ROUTINES" | "BATTLE" | "WINNER" | "LEADERBOARD" | "BRACKETS";
+export type ScreenState = "WAITING" | "ROUTINES" | "BATTLE" | "LEADERBOARD" | "BRACKETS";
 
 export interface TournamentState {
   id: number;

@@ -148,7 +148,7 @@ export function BracketView({
             onChange={(e) => setNewDivision(e.target.value)}
             placeholder="Division name"
             className="h-8 px-2 w-40 rounded text-sm border bg-transparent"
-            style={{ border: "1px solid #252528", color: "#f0ede8" }}
+            style={{ border: "1px solid var(--border)", color: "var(--foreground)" }}
             onKeyDown={(e) => {
               if (e.key === "Enter" && newDivision.trim()) {
                 onCreateBracket(newDivision.trim(), "QUALIFIERS");
@@ -170,9 +170,9 @@ export function BracketView({
             onClick={() => setAddingDivision(true)}
             title="Add division"
             className="p-1.5 rounded transition-colors"
-            style={{ color: "#6b6560", border: "1px solid #252528", background: "#1e1e22" }}
-            onMouseEnter={(e) => (e.currentTarget.style.color = "#e8a020")}
-            onMouseLeave={(e) => (e.currentTarget.style.color = "#6b6560")}
+            style={{ color: "var(--muted-foreground)", border: "1px solid var(--border)", background: "var(--secondary)" }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = "var(--accent)")}
+            onMouseLeave={(e) => (e.currentTarget.style.color = "var(--muted-foreground)")}
           >
             <Plus className="w-3.5 h-3.5" />
           </button>
@@ -181,9 +181,9 @@ export function BracketView({
           onClick={onRefresh}
           title="Refresh matches"
           className="p-1.5 rounded transition-colors"
-          style={{ color: "#6b6560", border: "1px solid #252528", background: "#1e1e22" }}
-          onMouseEnter={(e) => (e.currentTarget.style.color = "#e8a020")}
-          onMouseLeave={(e) => (e.currentTarget.style.color = "#6b6560")}
+          style={{ color: "var(--muted-foreground)", border: "1px solid var(--border)", background: "var(--secondary)" }}
+          onMouseEnter={(e) => (e.currentTarget.style.color = "var(--accent)")}
+          onMouseLeave={(e) => (e.currentTarget.style.color = "var(--muted-foreground)")}
         >
           <RefreshCw className="w-3.5 h-3.5" />
         </button>

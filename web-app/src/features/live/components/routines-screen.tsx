@@ -25,21 +25,20 @@ export function RoutinesScreen({
     rows.push(visible.slice(i, i + rowSize));
   }
 
-  const titleClass = compact ? "text-4xl pt-4" : "text-6xl pt-20";
   const headingClass = compact ? "text-[1.5rem] mb-4" : "text-[2rem] mb-8";
-  const groupClass = compact ? "space-y-2 text-[1rem]" : "space-y-4 text-[1.5rem]";
+  const groupClass = compact ? "space-y-1 text-[1.2rem]" : "space-y-2 text-[1.5rem]";
 
   return (
     <div className="min-h-screen flex flex-col" style={{ ...screenBackground, color: "white" }}>
-      <div className="text-center pt-16 px-16">
-        <p className={`font-cairo font-semibold leading-tight uppercase bg-gradient-to-r from-[#e8a020] to-[#f0ede8] bg-clip-text text-transparent ${titleClass}`}>
+      <div className="text-center pt-20 pb-8 px-16">
+        <p className="font-cairo font-semibold leading-tight uppercase bg-gradient-to-r from-[var(--spec-accent)] to-[var(--spec-title-end)] bg-clip-text text-transparent text-6xl">
           {tournamentName}
         </p>
       </div>
 
       {visible.length === 0 ? (
         <div className="flex-1 flex items-center justify-center">
-          <p className="font-cairo text-white/20 uppercase tracking-widest text-sm">No routines configured</p>
+          <p className="font-cairo text-[var(--spec-text-faint)] uppercase tracking-widest text-sm">No routines configured</p>
         </div>
       ) : (
         <div className={`flex-1 flex flex-col items-center justify-center px-16 ${compact ? "gap-y-10" : "gap-y-14"}`}>
@@ -62,8 +61,8 @@ export function RoutinesScreen({
                     </div>
                     {routine?.timeCapSeconds && (
                       <div className={`mx-auto mt-auto w-full ${compact ? "pt-6" : "pt-8"}`}>
-                        <div className={`mx-auto w-max rounded-[20px] ${compact ? "px-4 py-1.5" : "px-5 py-2"}`} style={{ background: "#2D2D2D" }}>
-                          <p className={`font-cairo font-semibold uppercase tracking-[0.2em] ${compact ? "text-xs" : "text-sm"}`} style={{ color: "rgba(232,160,32,0.75)" }}>
+                        <div className={`mx-auto w-max rounded-[20px] ${compact ? "px-4 py-1.5" : "px-5 py-2"}`} style={{ background: "var(--spec-surface)" }}>
+                          <p className={`font-cairo font-semibold uppercase tracking-[0.2em] ${compact ? "text-xs" : "text-sm"}`} style={{ color: "var(--spec-accent-75)" }}>
                             Time Cap — {Math.floor(routine.timeCapSeconds / 60)}M
                             {routine.timeCapSeconds % 60 > 0 ? ` ${routine.timeCapSeconds % 60}S` : ""}
                           </p>

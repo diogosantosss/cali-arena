@@ -27,9 +27,9 @@ export function CollapsibleFormPanel({
   return (
     <div
       className="rounded-lg p-6 space-y-5 animate-fade-up"
-      style={{ background: "#17171a", border: "1px solid #252528" }}
+      style={{ background: "var(--card)", border: "1px solid var(--border)" }}
     >
-      <p className="text-xs tracking-widest uppercase" style={{ color: "#6b6560" }}>
+      <p className="text-xs tracking-widest uppercase" style={{ color: "var(--muted-foreground)" }}>
         {label}
       </p>
       <form onSubmit={onSubmit} className="space-y-5">
@@ -42,7 +42,7 @@ export function CollapsibleFormPanel({
             type="submit"
             disabled={saving || disabled}
             className="px-5 py-2 rounded text-sm font-medium transition-opacity disabled:opacity-50"
-            style={{ background: "#e8a020", color: "#0f0f11" }}
+            style={{ background: "var(--accent)", color: "var(--accent-foreground)" }}
           >
             {saving ? "Creating…" : "Create"}
           </button>
@@ -50,7 +50,7 @@ export function CollapsibleFormPanel({
             type="button"
             onClick={onCancel}
             className="px-4 py-2 rounded text-sm transition-colors"
-            style={{ color: "#6b6560" }}
+            style={{ color: "var(--muted-foreground)" }}
           >
             Cancel
           </button>

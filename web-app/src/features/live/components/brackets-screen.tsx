@@ -31,17 +31,17 @@ export function BracketsScreen({ tournamentName, summary }: {
   return (
     <div className="h-screen flex flex-col overflow-hidden" style={{ ...screenBackground, color: "white" }}>
       <div className="text-center pt-10 px-16 shrink-0">
-        <p className="font-cairo text-6xl font-semibold leading-tight uppercase bg-gradient-to-r from-[#e8a020] to-[#f0ede8] bg-clip-text text-transparent">
+        <p className="font-cairo text-6xl font-semibold leading-tight uppercase bg-gradient-to-r from-[var(--spec-accent)] to-[var(--spec-title-end)] bg-clip-text text-transparent">
           {tournamentName}
         </p>
-        <p className="mt-4 font-cairo text-[2rem] font-semibold uppercase tracking-widest text-white/60">
+        <p className="mt-4 font-cairo text-[2rem] font-semibold uppercase tracking-widest text-[var(--spec-text-soft)]">
           Brackets · {summary.division}
         </p>
       </div>
 
       {columns.length === 0 ? (
         <div className="flex-1 flex items-center justify-center">
-          <p className="font-cairo text-white/25 uppercase tracking-widest text-lg">No brackets yet</p>
+          <p className="font-cairo text-[var(--spec-text-ghost)] uppercase tracking-widest text-lg">No brackets yet</p>
         </div>
       ) : (
         <div className="flex-1 min-h-0 flex items-center justify-center px-16 py-8">
@@ -56,28 +56,28 @@ export function BracketsScreen({ tournamentName, summary }: {
                   key={col.stage}
                   className="relative flex-1 min-h-0 flex flex-col rounded-2xl px-5 py-6"
                   style={{
-                    background: "rgba(255,255,255,0.02)",
-                    border: isFinal ? "1px solid rgba(232,160,32,0.22)" : "1px solid rgba(232,160,32,0.08)",
+                    background: "var(--spec-surface-glass)",
+                    border: isFinal ? "1px solid var(--spec-accent-22)" : "1px solid var(--spec-accent-08)",
                   }}
                 >
                   {isFinal && (
                     <div
                       className="pointer-events-none absolute inset-0 rounded-2xl"
-                      style={{ background: "radial-gradient(circle at 50% 18%, rgba(232,160,32,0.08), transparent 70%)" }}
+                      style={{ background: "radial-gradient(circle at 50% 18%, var(--spec-accent-08), transparent 70%)" }}
                     />
                   )}
 
                   <div className="mb-5 flex items-center gap-3">
-                    <span className="h-px flex-1" style={{ background: "rgba(232,160,32,0.12)" }} />
-                    <p className="text-center font-cairo text-lg uppercase tracking-[0.2em]" style={{ color: "rgba(232,160,32,0.8)" }}>
+                    <span className="h-px flex-1" style={{ background: "var(--spec-accent-12)" }} />
+                    <p className="text-center font-cairo text-lg uppercase tracking-[0.2em]" style={{ color: "var(--spec-accent-80)" }}>
                       {bracketStageLabel[col.stage]}
                     </p>
-                    <span className="h-px flex-1" style={{ background: "rgba(232,160,32,0.12)" }} />
+                    <span className="h-px flex-1" style={{ background: "var(--spec-accent-12)" }} />
                   </div>
 
                   <div className="flex-1 min-h-0 w-full flex flex-col justify-around gap-4">
                     {col.matches.length === 0 ? (
-                      <p className="font-cairo text-white/20 uppercase tracking-widest text-center text-sm">
+                      <p className="font-cairo text-[var(--spec-text-faint)] uppercase tracking-widest text-center text-sm">
                         No matches yet
                       </p>
                     ) : (
@@ -95,9 +95,9 @@ export function BracketsScreen({ tournamentName, summary }: {
 
       {champion && (
         <div className="pb-8 pt-1 shrink-0 text-center">
-          <Trophy className="mx-auto mb-3 h-8 w-8" style={{ color: "#e8a020" }} strokeWidth={1.5} />
-          <p className="font-cairo text-xs uppercase tracking-[0.4em] text-white/40">Champion</p>
-          <p className="mt-1 font-cairo text-[2rem] font-bold leading-none bg-gradient-to-r from-[#e8a020] to-[#f0ede8] bg-clip-text text-transparent">
+          <Trophy className="mx-auto mb-3 h-8 w-8" style={{ color: "var(--spec-accent)" }} strokeWidth={1.5} />
+          <p className="font-cairo text-xs uppercase tracking-[0.4em] text-[var(--spec-text-muted)]">Champion</p>
+          <p className="mt-1 font-cairo text-[2rem] font-bold leading-none bg-gradient-to-r from-[var(--spec-accent)] to-[var(--spec-title-end)] bg-clip-text text-transparent">
             {champion}
           </p>
         </div>
@@ -121,16 +121,16 @@ function BracketMatchCard({ match, variant }: { match: BracketMatchSummary; vari
       className={`mx-auto w-full rounded-2xl px-5 py-4 space-y-2.5 font-cairo ${fontSize}`}
       style={{
         maxWidth,
-        background: isFinal ? "rgba(232,160,32,0.08)" : "rgba(255,255,255,0.04)",
-        border: isFinal ? "1px solid rgba(232,160,32,0.45)" : "1px solid rgba(255,255,255,0.08)",
-        boxShadow: isFinal ? "0 0 44px rgba(232,160,32,0.12)" : undefined,
+        background: isFinal ? "var(--spec-accent-08)" : "var(--spec-surface-glass-2)",
+        border: isFinal ? "1px solid var(--spec-accent-45)" : "1px solid var(--spec-border-glass)",
+        boxShadow: isFinal ? "0 0 44px var(--spec-accent-12)" : undefined,
       }}
     >
       <BracketAthleteRow name={match.athleteRed} state={redWon ? "won" : blueWon ? "lost" : "pending"} />
       <BracketAthleteRow name={match.athleteBlue} state={blueWon ? "won" : redWon ? "lost" : "pending"} />
       <div className="flex items-center justify-center h-5">
         {!decided && (
-          <p className="font-cairo text-sm uppercase tracking-widest text-white/30 text-center">TBD</p>
+          <p className="font-cairo text-sm uppercase tracking-widest text-[var(--spec-text-dim)] text-center">TBD</p>
         )}
       </div>
     </div>
@@ -144,14 +144,14 @@ function BracketAthleteRow({ name, state }: { name: string; state: "won" | "lost
     <p
       className="flex items-center justify-between gap-3 font-semibold leading-none"
       style={{
-        color: won ? "#e8a020" : "rgba(255,255,255,0.85)",
+        color: won ? "var(--spec-accent)" : "var(--spec-text-bright)",
         opacity: state === "lost" ? 0.4 : 1,
         transition: "opacity 300ms",
       }}
     >
       <span>{name}</span>
       {won && (
-        <span className="font-cairo text-[0.75rem] font-bold tracking-widest" style={{ color: "#e8a020" }}>
+        <span className="font-cairo text-[0.75rem] font-bold tracking-widest" style={{ color: "var(--spec-accent)" }}>
           WINNER
         </span>
       )}

@@ -25,9 +25,9 @@ import {
 } from "lucide-react";
 
 const typeStyles: Record<ExerciseType, { color: string; bg: string }> = {
-  NORMAL: { color: "#a09a92", bg: "rgba(160,154,146,0.12)" },
+  NORMAL: { color: "var(--secondary-foreground)", bg: "rgba(160,154,146,0.12)" },
   UNBROKEN: { color: "#7eb8f7", bg: "rgba(126,184,247,0.12)" },
-  SUPERSET: { color: "#e8a020", bg: "rgba(232,160,32,0.12)" },
+  SUPERSET: { color: "var(--accent)", bg: "rgba(232,160,32,0.12)" },
 };
 
 type ExerciseForm = Omit<CreateExerciseInput, "routineId">;
@@ -243,7 +243,7 @@ export function RoutinesPage() {
             required
           />
           <NumberField
-            label={<>Time cap <span style={{ color: "#3a3a3d" }}>(seconds, optional)</span></>}
+            label={<>Time cap <span style={{ color: "var(--faint)" }}>(seconds, optional)</span></>}
             value={ui.form.timeCapSeconds}
             onChange={(value) => dispatch({ type: "setFormField", field: "timeCapSeconds", value })}
             placeholder="e.g. 300"
@@ -259,14 +259,14 @@ export function RoutinesPage() {
               value={ui.search}
               onChange={(e) => dispatch({ type: "setSearch", value: e.target.value })}
               placeholder="Search routines…"
-              className="h-8 border-[#252528] text-[#f0ede8] placeholder:text-[#3a3a3d] focus-visible:ring-[#e8a020]/40 focus-visible:border-[#e8a020]/60 flex-1 min-w-0"
-              style={{ background: "#17171a" }}
+              className="h-8 border-border text-foreground placeholder:text-faint focus-visible:ring-accent/40 focus-visible:border-accent/60 flex-1 min-w-0"
+              style={{ background: "var(--card)" }}
             />
             <button
               onClick={() => void reloadRoutines()}
               disabled={routinesLoading}
               className="p-1.5 rounded transition-colors shrink-0"
-              style={{ color: "#6b6560" }}
+              style={{ color: "var(--muted-foreground)" }}
             >
               <RefreshCw className={`w-3.5 h-3.5 ${routinesLoading ? "animate-spin" : ""}`} />
             </button>
@@ -275,9 +275,9 @@ export function RoutinesPage() {
           {routinesLoading ? (
             <SkeletonList count={4} rowHeight="h-14" />
           ) : routinesError ? (
-            <p className="text-sm py-4" style={{ color: "#f16a6a" }}>{routinesError}</p>
+            <p className="text-sm py-4" style={{ color: "var(--danger)" }}>{routinesError}</p>
           ) : filteredRoutines.length === 0 ? (
-            <p className="text-sm py-6 text-center" style={{ color: "#3a3a3d" }}>No routines found</p>
+            <p className="text-sm py-6 text-center" style={{ color: "var(--faint)" }}>No routines found</p>
           ) : (
             <div className="space-y-2">
               {filteredRoutines.map((routine, i) => {
@@ -288,37 +288,37 @@ export function RoutinesPage() {
                     onClick={() => selectRoutine(routine)}
                     className="group flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-colors animate-fade-up w-full"
                     style={{
-                      background: selected ? "rgba(232,160,32,0.08)" : "#17171a",
+                      background: selected ? "rgba(232,160,32,0.08)" : "var(--card)",
                       border: "1px solid",
-                      borderColor: selected ? "rgba(232,160,32,0.35)" : "#252528",
+                      borderColor: selected ? "rgba(232,160,32,0.35)" : "var(--border)",
                       animationDelay: `${i * 0.03}s`,
                       opacity: 0,
                     }}
                     onMouseEnter={(e) => {
-                      if (!selected) e.currentTarget.style.borderColor = "#363639";
+                      if (!selected) e.currentTarget.style.borderColor = "var(--border-hover)";
                     }}
                     onMouseLeave={(e) => {
-                      if (!selected) e.currentTarget.style.borderColor = "#252528";
+                      if (!selected) e.currentTarget.style.borderColor = "var(--border)";
                     }}
                   >
                     <div
                       className="w-1 self-stretch rounded-full shrink-0"
-                      style={{ background: selected ? "#e8a020" : "#3a3a3d", opacity: selected ? 1 : 0.5 }}
+                      style={{ background: selected ? "var(--accent)" : "var(--faint)", opacity: selected ? 1 : 0.5 }}
                     />
 
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate" style={{ color: selected ? "#e8a020" : "#f0ede8" }}>
+                      <p className="text-sm font-medium truncate" style={{ color: selected ? "var(--accent)" : "var(--foreground)" }}>
                         {routine.name}
                       </p>
                       {routine.timeCapSeconds && (
-                        <p className="text-xs flex items-center gap-1 mt-0.5" style={{ color: "#6b6560" }}>
+                        <p className="text-xs flex items-center gap-1 mt-0.5" style={{ color: "var(--muted-foreground)" }}>
                           <Clock className="w-3 h-3" />
                           {formatTimeCap(routine.timeCapSeconds)}
                         </p>
                       )}
                     </div>
 
-                    <ChevronRight className="w-4 h-4 shrink-0" style={{ color: "#3a3a3d" }} />
+                    <ChevronRight className="w-4 h-4 shrink-0" style={{ color: "var(--faint)" }} />
                   </button>
                 );
               })}
@@ -328,8 +328,8 @@ export function RoutinesPage() {
 
         <div className="col-span-2 space-y-4">
           {!selectedRoutine ? (
-            <div className="flex items-center justify-center h-56 rounded-lg border border-dashed" style={{ borderColor: "#252528" }}>
-              <p className="text-sm" style={{ color: "#6b6560" }}>Select a routine to view and add exercises</p>
+            <div className="flex items-center justify-center h-56 rounded-lg border border-dashed" style={{ borderColor: "var(--border)" }}>
+              <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>Select a routine to view and add exercises</p>
             </div>
           ) : (
             <>
@@ -337,12 +337,12 @@ export function RoutinesPage() {
                 <div>
                   <h2
                     className="text-2xl leading-tight"
-                    style={{ fontFamily: "DM Serif Display, Georgia, serif", color: "#f0ede8" }}
+                    style={{ fontFamily: "DM Serif Display, Georgia, serif", color: "var(--foreground)" }}
                   >
                     {selectedRoutine.name}
                   </h2>
                   {selectedRoutine.timeCapSeconds && (
-                    <p className="text-xs flex items-center gap-1 mt-0.5" style={{ color: "#6b6560" }}>
+                    <p className="text-xs flex items-center gap-1 mt-0.5" style={{ color: "var(--muted-foreground)" }}>
                       <Clock className="w-3 h-3" />
                       Time cap: {formatTimeCap(selectedRoutine.timeCapSeconds)}
                     </p>
@@ -350,8 +350,8 @@ export function RoutinesPage() {
                 </div>
               </div>
 
-              <div className="rounded-lg p-6 space-y-5" style={{ background: "#17171a", border: "1px solid #252528" }}>
-                <p className="text-xs tracking-widest uppercase" style={{ color: "#6b6560" }}>Add exercise</p>
+              <div className="rounded-lg p-6 space-y-5" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+                <p className="text-xs tracking-widest uppercase" style={{ color: "var(--muted-foreground)" }}>Add exercise</p>
                 <form onSubmit={handleExerciseSubmit} className="space-y-5">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="col-span-2">
@@ -394,7 +394,7 @@ export function RoutinesPage() {
                     />
 
                     <NumberField
-                      label={<>Added weight <span style={{ color: "#3a3a3d" }}>(kg, optional)</span></>}
+                      label={<>Added weight <span style={{ color: "var(--faint)" }}>(kg, optional)</span></>}
                       value={ui.exerciseForm.addedWeight}
                       onChange={(value) => dispatch({ type: "setExerciseField", field: "addedWeight", value })}
                       placeholder="e.g. 10"
@@ -418,7 +418,7 @@ export function RoutinesPage() {
                       type="submit"
                       disabled={ui.exerciseSaving}
                       className="flex items-center gap-2 px-5 py-2 rounded text-sm font-medium transition-opacity disabled:opacity-50"
-                      style={{ background: "#e8a020", color: "#0f0f11" }}
+                      style={{ background: "var(--accent)", color: "var(--accent-foreground)" }}
                     >
                       <Plus className="w-3.5 h-3.5" />
                       {ui.exerciseSaving ? "Adding…" : "Add exercise"}
@@ -428,27 +428,27 @@ export function RoutinesPage() {
               </div>
 
               <div className="space-y-2">
-                <h3 className="text-sm font-medium" style={{ color: "#f0ede8" }}>Exercises</h3>
+                <h3 className="text-sm font-medium" style={{ color: "var(--foreground)" }}>Exercises</h3>
                 {ui.overviewLoading ? (
                   <SkeletonList count={3} rowHeight="h-12" />
                 ) : ui.overviewError ? (
-                  <p className="text-sm" style={{ color: "#f16a6a" }}>{ui.overviewError}</p>
+                  <p className="text-sm" style={{ color: "var(--danger)" }}>{ui.overviewError}</p>
                 ) : !ui.overview || ui.overview.exercises.length === 0 ? (
-                  <p className="text-sm py-4" style={{ color: "#6b6560" }}>No exercises yet.</p>
+                  <p className="text-sm py-4" style={{ color: "var(--muted-foreground)" }}>No exercises yet.</p>
                 ) : (
                   Object.entries(groupedExercises ?? {})
                     .sort(([a], [b]) => Number(a) - Number(b))
                     .map(([order, exercises]) =>
                       exercises.length > 1 ? (
-                        <div key={order} className="rounded-lg overflow-hidden" style={{ background: "#17171a", border: "1px solid #252528" }}>
+                        <div key={order} className="rounded-lg overflow-hidden" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
                           <div
                             className="flex items-center gap-2 px-4 py-2"
-                            style={{ background: "rgba(232,160,32,0.06)", borderBottom: "1px solid #252528" }}
+                            style={{ background: "rgba(232,160,32,0.06)", borderBottom: "1px solid var(--border)" }}
                           >
-                            <span className="w-5 h-5 rounded-md flex items-center justify-center text-xs font-bold" style={{ background: "rgba(232,160,32,0.15)", color: "#e8a020" }}>
+                            <span className="w-5 h-5 rounded-md flex items-center justify-center text-xs font-bold" style={{ background: "rgba(232,160,32,0.15)", color: "var(--accent)" }}>
                               {order}
                             </span>
-                            <span className="text-xs font-semibold uppercase tracking-widest" style={{ color: "#e8a020" }}>
+                            <span className="text-xs font-semibold uppercase tracking-widest" style={{ color: "var(--accent)" }}>
                               Superset — {exercises.length} exercises
                             </span>
                           </div>
@@ -477,12 +477,12 @@ function ExerciseRow({ ex, order, superset }: { ex: Exercise; order?: string; su
   return (
     <div
       className="flex items-center gap-3 rounded-lg px-4 py-3"
-      style={{ background: superset ? "#17171a" : "transparent", border: superset ? "none" : "1px solid #252528" }}
+      style={{ background: superset ? "var(--card)" : "transparent", border: superset ? "none" : "1px solid var(--border)" }}
     >
       {order !== undefined && (
         <span
           className="w-5 h-5 rounded-md flex items-center justify-center text-xs font-bold shrink-0"
-          style={{ background: "#1e1e22", color: "#6b6560" }}
+          style={{ background: "var(--secondary)", color: "var(--muted-foreground)" }}
         >
           {order}
         </span>
@@ -490,10 +490,10 @@ function ExerciseRow({ ex, order, superset }: { ex: Exercise; order?: string; su
       {superset && <span className="w-5 shrink-0" />}
 
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium truncate" style={{ color: "#f0ede8" }}>
+        <p className="text-sm font-medium truncate" style={{ color: "var(--foreground)" }}>
           {ex.name}
         </p>
-        <div className="flex items-center gap-2 mt-0.5 text-xs" style={{ color: "#6b6560" }}>
+        <div className="flex items-center gap-2 mt-0.5 text-xs" style={{ color: "var(--muted-foreground)" }}>
           <span>{ex.targetReps} reps</span>
           {ex.addedWeight ? <span>{ex.addedWeight}kg</span> : null}
         </div>

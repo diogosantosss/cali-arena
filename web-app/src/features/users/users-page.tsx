@@ -16,7 +16,7 @@ import type { CreateUserInput, UserRole } from "./types";
 import { UserPlus, CalendarDays } from "lucide-react";
 
 const roleStyles: Record<UserRole, { color: string; bg: string }> = {
-  ADMIN: { color: "#e8a020", bg: "rgba(232,160,32,0.12)" },
+  ADMIN: { color: "var(--accent)", bg: "rgba(232,160,32,0.12)" },
   JUDGE: { color: "#7eb8f7", bg: "rgba(126,184,247,0.12)" },
 };
 

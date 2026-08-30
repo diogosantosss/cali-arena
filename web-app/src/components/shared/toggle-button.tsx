@@ -16,10 +16,10 @@ export function ToggleButton({ open, onClick, icon: Icon, label }: ToggleButtonP
         open
           ? {
               background: "rgba(232,160,32,0.1)",
-              color: "#e8a020",
+              color: "var(--accent)",
               border: "1px solid rgba(232,160,32,0.3)",
             }
-          : { background: "#e8a020", color: "#0f0f11", border: "none" }
+          : { background: "var(--accent)", color: "var(--accent-foreground)", border: "none" }
       }
     >
       <Icon className="w-3.5 h-3.5" />

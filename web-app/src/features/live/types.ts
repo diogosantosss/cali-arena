@@ -1,4 +1,4 @@
-import type { ScreenRoutine, TournamentState } from "@/features/tournaments/types";
+import type { ScreenRoutine, TournamentState, BracketLeaderboard, TournamentBracketsSummary } from "@/features/tournaments/types";
 import type { MatchProgress } from "@/features/matches/types";
 import type { RoutineOverview } from "@/features/routines/types";
 
@@ -21,6 +21,8 @@ interface SpectatorEventBase {
 export interface TournamentStateUpdatedEvent extends SpectatorEventBase {
   action: "TOURNAMENT_STATE_UPDATED";
   state: TournamentState;
+  leaderboard: BracketLeaderboard | null;
+  bracketSummary: TournamentBracketsSummary | null;
 }
 
 export interface ScreenRoutinesEvent extends SpectatorEventBase {
