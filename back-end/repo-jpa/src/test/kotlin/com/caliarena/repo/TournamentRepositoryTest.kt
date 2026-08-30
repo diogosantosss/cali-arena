@@ -254,10 +254,10 @@ class TournamentRepositoryTest {
                         TournamentStateEntity(tournament = tournament, currentScreen = ScreenState.WAITING, updatedAt = now.epochSecond),
                     )
 
-                state.currentScreen = ScreenState.WINNER
+                state.currentScreen = ScreenState.BATTLE
                 tournamentStates.save(state)
 
-                assertEquals(ScreenState.WINNER, tournamentStates.findByTournamentId(tournament.id)?.currentScreen)
+                assertEquals(ScreenState.BATTLE, tournamentStates.findByTournamentId(tournament.id)?.currentScreen)
             }
 
         @Test

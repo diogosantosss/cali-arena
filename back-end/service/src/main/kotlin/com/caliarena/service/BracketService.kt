@@ -2,11 +2,8 @@ package com.caliarena.service
 
 import com.caliarena.domain.bracket.Bracket
 import com.caliarena.domain.bracket.BracketLeaderboard
-import com.caliarena.domain.bracket.BracketMatchSummary
 import com.caliarena.domain.bracket.BracketOverview
 import com.caliarena.domain.bracket.BracketStage
-import com.caliarena.domain.bracket.BracketSummary
-import com.caliarena.domain.bracket.LeaderboardEntry
 import com.caliarena.domain.bracket.TournamentBracketsResponse
 import com.caliarena.repo.entities.match.MatchEntity
 import com.caliarena.repo.entities.tournament.BracketEntity
@@ -14,7 +11,6 @@ import com.caliarena.repo.trx.TransactionManager
 import jakarta.inject.Named
 import org.springframework.data.repository.findByIdOrNull
 import java.time.Clock
-import java.time.Instant
 
 @Named
 class BracketService(
@@ -105,47 +101,11 @@ class BracketService(
 
     fun getBracketLeaderboard(bracketId: Int): Either<ApiError, BracketLeaderboard> =
         trx.run {
-            val bracket =
-                brackets.findByIdOrNull(bracketId)
+            val leaderboard =
+                buildLeaderboard(bracketId)
                     ?: return@run failure(ApiError.BRACKET_NOT_FOUND)
 
-            val times = mutableListOf<Triple<String, Long, Int>>()
-
-            for (match in matches.findByBracketId(bracketId)) {
-                val startedAt = match.startedAt ?: continue
-                val progress = matchProgresses.findByMatchId(match.id)
-
-                match.athleteRed?.let { athlete ->
-                    progress?.redFinishedAt?.let { finishedAt ->
-                        times += Triple(athlete.name, (finishedAt - startedAt), match.id)
-                    }
-                }
-
-                match.athleteBlue?.let { athlete ->
-                    progress?.blueFinishedAt?.let { finishedAt ->
-                        times += Triple(athlete.name, (finishedAt - startedAt), match.id)
-                    }
-                }
-            }
-
-            val entries =
-                times
-                    .groupBy { it.first }
-                    .map { (name, results) ->
-                        val best = results.minBy { it.second }
-                        Triple(name, best.second, best.third)
-                    }.sortedBy { it.second }
-                    .map { (name, millis, matchId) ->
-                        LeaderboardEntry(
-                            athleteName = name,
-                            duration = formatDuration(millis),
-                            matchId = matchId,
-                        )
-                    }
-
-            success(
-                BracketLeaderboard(bracket.id, bracket.division, bracket.stage, entries),
-            )
+            success(leaderboard)
         }
 
     fun getTournamentBracketsSummary(
@@ -159,39 +119,8 @@ class BracketService(
             tournaments.findByIdOrNull(tournamentId)
                 ?: return@run failure(ApiError.TOURNAMENT_NOT_FOUND)
 
-            val tournamentBrackets = brackets.findByTournamentIdAndDivision(tournamentId, divisionName)
+            val summary = buildBracketsSummary(tournamentId, divisionName)
 
-            if (tournamentBrackets.isEmpty()) {
-                return@run success(TournamentBracketsResponse(tournamentId, divisionName, emptyList()))
-            }
-
-            val summaries =
-                tournamentBrackets.map { bracket: BracketEntity ->
-                    val bracketMatches: List<MatchEntity> =
-                        matches
-                            .findByBracketId(bracket.id)
-
-                    val matchSummaries =
-                        bracketMatches.map { match ->
-                            val startedAt = match.startedAt?.let { Instant.ofEpochMilli(it) }
-                            val red = match.athleteRed?.name ?: "Unknown"
-                            val blue = match.athleteBlue?.name ?: "Unknown"
-                            val winner = match.winnerAthlete?.name ?: "—"
-
-                            BracketMatchSummary(match.id, startedAt, red, blue, winner)
-                        }
-
-                    BracketSummary(stage = bracket.stage, matches = matchSummaries)
-                }
-
-            success(TournamentBracketsResponse(tournamentId, divisionName, summaries))
+            success(summary)
         }
-
-    private fun formatDuration(totalMs: Long): String {
-        val minutes = totalMs / 60000
-        val seconds = (totalMs % 60000) / 1000
-        val ms = totalMs % 1000
-
-        return "%d:%02d.%03d".format(minutes, seconds, ms)
-    }
 }

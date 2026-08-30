@@ -153,10 +153,9 @@ CREATE TABLE screen_routines
     id            SERIAL PRIMARY KEY,
     tournament_id INT REFERENCES tournaments (id) ON DELETE CASCADE,
     routine_id    INT REFERENCES endurance_routines (id) NOT NULL,
-    display_order INT                                    NOT NULL,
-    is_visible    BOOLEAN                                NOT NULL DEFAULT TRUE,
+    display_order INT NOT NULL,
+    is_visible    BOOLEAN NOT NULL DEFAULT TRUE,
     label         VARCHAR(100),
-    created_at    BIGINT                                 NOT NULL,
-    updated_at    BIGINT                                 NOT NULL,
-    UNIQUE (tournament_id, display_order)
+    created_at    BIGINT NOT NULL,
+    updated_at    BIGINT NOT NULL
 );

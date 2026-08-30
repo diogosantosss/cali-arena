@@ -1,5 +1,7 @@
 package com.caliarena.service.sse
 
+import com.caliarena.domain.bracket.BracketLeaderboard
+import com.caliarena.domain.bracket.TournamentBracketsResponse
 import com.caliarena.domain.match.MatchProgress
 import com.caliarena.domain.routine.RoutineOverview
 import com.caliarena.domain.routine.ScreenRoutine
@@ -24,6 +26,8 @@ data class TournamentStateUpdatedEvent(
     override val action: SpectatorAction = SpectatorAction.TOURNAMENT_STATE_UPDATED,
     val state: TournamentState,
     val currentMatchId: Int? = null,
+    val leaderboard: BracketLeaderboard? = null,
+    val bracketSummary: TournamentBracketsResponse? = null,
 ) : SpectatorEvent
 
 data class ScreenRoutinesEvent(

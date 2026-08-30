@@ -149,10 +149,30 @@ class TournamentService(
 
             val updated = tournamentStates.save(state).toDomain()
 
+            val leaderboard =
+                if (screenState == ScreenState.LEADERBOARD) {
+                    bracket?.let { buildLeaderboard(it.id) }
+                } else {
+                    null
+                }
+
+            val bracketSummary =
+                if (screenState == ScreenState.BRACKETS) {
+                    division?.let { buildBracketsSummary(tournamentId, it) }
+                } else {
+                    null
+                }
+
+            if (screenState == ScreenState.ROUTINES) {
+                buildScreenRoutinesSnapshot(tournamentId).forEach { publisher.publish(it) }
+            }
+
             TournamentStateUpdatedEvent(
                 tournamentId = tournamentId,
                 state = updated,
                 currentMatchId = currentMatchId,
+                leaderboard = leaderboard,
+                bracketSummary = bracketSummary,
             ).let { publisher.publish(it) }
 
             success(updated)
