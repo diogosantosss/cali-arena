@@ -110,6 +110,12 @@ export function useMatchControl(
     function handleEvent(event: JudgeEvent) {
       if (cancelled) return;
       switch (event.type) {
+        case "STARTED":
+          // another client started the match — apply the full match + progress
+          // broadcast with the event so this viewer is in sync immediately
+          setCurrentMatch(event.match);
+          applyProgress(event.progress);
+          break;
         case "REPS":
           applyReps(event);
           break;

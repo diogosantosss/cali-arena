@@ -19,10 +19,14 @@ import org.springframework.messaging.simp.SimpMessagingTemplate
 import org.springframework.stereotype.Controller
 
 @Controller
-class JudgeActionsWsController(
+class JudgeWsController(
     private val matchService: MatchService,
     private val messaging: SimpMessagingTemplate,
 ) {
+    companion object {
+        const val BROADCAST_TOPIC_PREFIX = "/topic/matches/"
+    }
+
     /**
      * Handles a rep adjustment from a judge for one side of an ongoing match.
      *
@@ -55,7 +59,7 @@ class JudgeActionsWsController(
                 matchService.forceFinishSide(matchId, input.side)
             }
 
-        val url = "/topic/matches/$matchId"
+        val url = "$BROADCAST_TOPIC_PREFIX$matchId"
         when (result) {
             is Success -> {
                 val prog = result.value

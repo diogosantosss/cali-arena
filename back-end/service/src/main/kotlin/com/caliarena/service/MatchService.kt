@@ -4,6 +4,7 @@ import com.caliarena.domain.match.Match
 import com.caliarena.domain.match.MatchProgress
 import com.caliarena.domain.match.MatchStatus
 import com.caliarena.domain.match.RepSide
+import com.caliarena.domain.match.StartedMatch
 import com.caliarena.repo.entities.match.MatchEntity
 import com.caliarena.repo.entities.match.MatchProgressEntity
 import com.caliarena.repo.entities.match.MatchProgressEntity.Companion.fromDomain
@@ -65,7 +66,7 @@ class MatchService(
             success(match.toDomain())
         }
 
-    fun startMatch(matchId: Int): Either<ApiError, MatchProgress> =
+    fun startMatch(matchId: Int): Either<ApiError, StartedMatch> =
         trxManager.run {
             val match =
                 matches.findByIdOrNull(matchId)
@@ -116,7 +117,7 @@ class MatchService(
                 matchProgress = progress.toDomain(),
             ).let { publisher.publish(it) }
 
-            success(progress.toDomain())
+            success(StartedMatch(match = match.toDomain(), progress = progress.toDomain()))
         }
 
     fun updateAthletesReps(

@@ -1,7 +1,9 @@
 import { Client, type IMessage } from "@stomp/stompjs";
 import { getStoredToken } from "@/lib/api/client";
+import type { Match, MatchProgress } from "../types";
 
 export type JudgeEvent =
+  | { type: "STARTED"; match: Match; progress: MatchProgress }
   | { type: "REPS"; side: "RED" | "BLUE"; reps: number; exerciseId?: number | null }
   | { type: "FINISHED"; side: "RED" | "BLUE"; finishedAt: string }
   | { type: "ERROR"; message: string };

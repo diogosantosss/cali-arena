@@ -5,6 +5,7 @@ import com.caliarena.domain.bracket.BracketStage
 import com.caliarena.domain.match.MatchProgress
 import com.caliarena.domain.match.MatchStatus
 import com.caliarena.domain.match.RepSide
+import com.caliarena.domain.match.StartedMatch
 import com.caliarena.domain.routine.ExerciseType
 import com.caliarena.domain.user.UserRole
 import com.caliarena.repo.entities.athlete.AthleteEntity
@@ -319,7 +320,10 @@ class MatchServiceTest : ServiceTest() {
 
             val result = service.startMatch(1)
 
-            assertEquals(success(progress.toDomain()), result)
+            assertEquals(
+                success(StartedMatch(match = match.toDomain(), progress = progress.toDomain())),
+                result,
+            )
 
             val captor = argumentCaptor<MatchEntity>()
             verify(matches).save(captor.capture())
