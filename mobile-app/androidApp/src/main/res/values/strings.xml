@@ -1,0 +1,21 @@
+<resources>
+    <string name="app_name">Cali Arena</string>
+
+    <string name="login_title">Cali Arena</string>
+    <string name="login_subtitle">Judge performances and control the athletes</string>
+
+    <string name="username">Username</string>
+    <string name="password">Password</string>
+    <string name="password_show">Show</string>
+    <string name="password_hide">Hide</string>
+    <string name="sign_in">Sign in</string>
+
+    <string name="signing_in">Signing in…</string>
+
+    <string name="error">Error</string>
+    <string name="error_login">Unable to sign in. Please try again.</string>
+    <string name="error_login_invalid">Invalid username or password</string>
+    <string name="try_again">Try again</string>
+
+    <string name="contact_administrator">Contact administrator in case of error</string>
+</resources>
