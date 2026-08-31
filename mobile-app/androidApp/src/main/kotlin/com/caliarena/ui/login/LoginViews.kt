@@ -46,10 +46,11 @@ fun LoginScreenStructure(
     content: @Composable () -> Unit,
 ) {
     Column(
-        modifier = modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .statusBarsPadding(),
+        modifier =
+            modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
+                .statusBarsPadding(),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         content()
@@ -64,11 +65,12 @@ fun LoginScreenView(
 ) {
     LoginScreenStructure(modifier) {
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .imePadding()
-                .navigationBarsPadding()
-                .padding(horizontal = 28.dp),
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .imePadding()
+                    .navigationBarsPadding()
+                    .padding(horizontal = 28.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Spacer(Modifier.height(120.dp))
@@ -100,14 +102,13 @@ fun LoginScreenView(
 }
 
 @Composable
-fun LoginScreenLoading(
-    modifier: Modifier = Modifier,
-) {
+fun LoginScreenLoading(modifier: Modifier = Modifier) {
     LoginScreenStructure(modifier) {
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(32.dp),
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(32.dp),
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
@@ -132,9 +133,10 @@ fun LoginScreenError(
 ) {
     LoginScreenStructure(modifier) {
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(32.dp),
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(32.dp),
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
@@ -219,18 +221,20 @@ private fun LoginFormView(
             label = { Text(stringResource(R.string.password)) },
             singleLine = true,
             enabled = !state.isLoading,
-            visualTransformation = if (state.passwordVisible) {
-                VisualTransformation.None
-            } else {
-                PasswordVisualTransformation()
-            },
+            visualTransformation =
+                if (state.passwordVisible) {
+                    VisualTransformation.None
+                } else {
+                    PasswordVisualTransformation()
+                },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
             trailingIcon = {
                 IconButton(onClick = onTogglePasswordVisibility) {
                     Text(
-                        text = stringResource(
-                            if (state.passwordVisible) R.string.password_hide else R.string.password_show,
-                        ),
+                        text =
+                            stringResource(
+                                if (state.passwordVisible) R.string.password_hide else R.string.password_show,
+                            ),
                         color = CaliMuted,
                         fontSize = 12.sp,
                     )
@@ -244,16 +248,18 @@ private fun LoginFormView(
         Button(
             onClick = onSubmit,
             enabled = state.canSubmit,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(52.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(52.dp),
             shape = RoundedCornerShape(14.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary,
-                disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-            ),
+            colors =
+                ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                    disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                ),
         ) {
             if (state.isLoading) {
                 CircularProgressIndicator(

@@ -34,14 +34,16 @@ fun LoginScreen(
     ) {
         when {
             state.isLoading -> LoginScreenLoading()
-            state.errorMessage != null -> LoginScreenError(
-                message = state.errorMessage,
-                onRetry = { onEvent(LoginEvent.LoginSubmitted) },
-            )
-            else -> LoginScreenView(
-                state = state,
-                onEvent = onEvent,
-            )
+            state.errorMessage != null ->
+                LoginScreenError(
+                    message = state.errorMessage,
+                    onRetry = { onEvent(LoginEvent.LoginSubmitted) },
+                )
+            else ->
+                LoginScreenView(
+                    state = state,
+                    onEvent = onEvent,
+                )
         }
     }
 }
@@ -56,13 +58,14 @@ fun rememberLoginState(): Pair<LoginState, (LoginEvent) -> Unit> {
     var state by rememberSaveable { mutableStateOf(LoginState()) }
 
     fun onEvent(event: LoginEvent) {
-        state = when (event) {
-            is LoginEvent.UsernameChanged -> state.copy(username = event.username)
-            is LoginEvent.PasswordChanged -> state.copy(password = event.password)
-            is LoginEvent.TogglePasswordVisibility -> state.copy(passwordVisible = !state.passwordVisible)
-            LoginEvent.LoginSubmitted -> state.copy(isLoading = true)
-            LoginEvent.ContactAdministrator -> state
-        }
+        state =
+            when (event) {
+                is LoginEvent.UsernameChanged -> state.copy(username = event.username)
+                is LoginEvent.PasswordChanged -> state.copy(password = event.password)
+                is LoginEvent.TogglePasswordVisibility -> state.copy(passwordVisible = !state.passwordVisible)
+                LoginEvent.LoginSubmitted -> state.copy(isLoading = true)
+                LoginEvent.ContactAdministrator -> state
+            }
     }
 
     return state to ::onEvent

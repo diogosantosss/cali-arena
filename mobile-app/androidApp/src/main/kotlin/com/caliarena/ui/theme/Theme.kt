@@ -11,7 +11,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 
-// Destructive (vermelho ameaçador, equivalente a oklch do CSS)
 private val DarkDestructive = Color(0xFFE5484D)
 private val LightDestructive = Color(0xFFD9534F)
 
@@ -68,7 +67,6 @@ private val LightColorScheme =
 @Composable
 fun CaliArenaTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
     dynamicColor: Boolean = false,
     content: @Composable () -> Unit,
 ) {

@@ -4,9 +4,17 @@ import androidx.annotation.StringRes
 
 sealed interface LoginEvent {
     data object LoginSubmitted : LoginEvent
-    data class UsernameChanged(val username: String) : LoginEvent
-    data class PasswordChanged(val password: String) : LoginEvent
+
+    data class UsernameChanged(
+        val username: String,
+    ) : LoginEvent
+
+    data class PasswordChanged(
+        val password: String,
+    ) : LoginEvent
+
     data object TogglePasswordVisibility : LoginEvent
+
     data object ContactAdministrator : LoginEvent
 }
 

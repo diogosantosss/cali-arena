@@ -2,7 +2,6 @@ package com.caliarena.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// ---- Dark (default, como no web-app) ----
 val DarkBackground = Color(0xFF0F0F11)
 val DarkForeground = Color(0xFFF0EDE8)
 val DarkCard = Color(0xFF17171A)
