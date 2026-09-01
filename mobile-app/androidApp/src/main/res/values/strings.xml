@@ -18,4 +18,70 @@
     <string name="try_again">Try again</string>
 
     <string name="contact_administrator">Contact administrator in case of error</string>
+
+    <!-- General errors -->
+    <string name="error_unknown">An unexpected error occurred</string>
+    <string name="error_internal_server">Internal server error. Please try again later.</string>
+    <string name="error_username_required">Username is required</string>
+    <string name="error_password_required">Password is required</string>
+    <string name="error_no_connection">Unable to reach the server. Check your connection and try again.</string>
+
+    <!-- User related errors -->
+    <string name="error_already_used_username">This username is already in use</string>
+    <string name="error_insecure_password">Password must have at least 8 characters, one uppercase letter, one lowercase letter and one number</string>
+    <string name="error_invalid_credentials">Invalid username or password</string>
+    <string name="error_user_not_found">User not found</string>
+    <string name="error_not_authorized">You are not authorized to perform this action</string>
+    <string name="error_invalid_role">Invalid role</string>
+    <string name="error_updating_user_role">Could not update the user role</string>
+
+    <!-- Athlete related errors -->
+    <string name="error_athlete_not_found">Athlete not found</string>
+    <string name="error_invalid_gender">Invalid gender</string>
+    <string name="error_creating_athlete">Could not create the athlete</string>
+    <string name="error_updating_athlete">Could not update the athlete</string>
+
+    <!-- Club related errors -->
+    <string name="error_club_not_found">Club not found</string>
+    <string name="error_club_already_exists">This club already exists</string>
+    <string name="error_updating_club">Could not update the club</string>
+
+    <!-- Routine related errors -->
+    <string name="error_routine_not_found">Routine not found</string>
+    <string name="error_routine_already_exists">This routine already exists</string>
+    <string name="error_exercise_type_not_found">Exercise type not found</string>
+
+    <!-- Tournament related errors -->
+    <string name="error_tournament_not_found">Tournament not found</string>
+    <string name="error_tournament_already_exists">This tournament already exists</string>
+    <string name="error_invalid_tournament_status">Invalid tournament status</string>
+    <string name="error_tournament_state_not_found">Tournament state not found</string>
+    <string name="error_tournament_state_already_exists">This tournament state already exists</string>
+    <string name="error_invalid_screen_state">Invalid screen state</string>
+
+    <!-- Bracket related errors -->
+    <string name="error_bracket_not_found">Bracket not found</string>
+    <string name="error_bracket_already_exists">This bracket already exists</string>
+    <string name="error_invalid_bracket_stage">Invalid bracket stage</string>
+    <string name="error_invalid_bracket_division">Invalid bracket division</string>
+
+    <!-- Match related errors -->
+    <string name="error_match_not_found">Match not found</string>
+    <string name="error_athlete_not_in_match">Athlete is not part of this match</string>
+    <string name="error_match_not_running">Match is not running</string>
+    <string name="error_progress_not_found">Progress not found</string>
+    <string name="error_progress_already_exists">Progress already exists</string>
+    <string name="error_athletes_not_assigned">Athletes are not assigned to both sides of the match</string>
+    <string name="error_judge_not_found">Judge not found</string>
+    <string name="error_same_athlete_on_both_sides">The same athlete cannot be on both sides of the match</string>
+    <string name="error_creating_match_prog">Could not create the match progress</string>
+    <string name="error_exercise_not_found">Exercise not found</string>
+    <string name="error_match_already_started">Match has already started</string>
+    <string name="error_opponent_not_finished">The opponent has not finished the routine</string>
+    <string name="error_match_not_finished">Match is not finished</string>
+
+    <!-- Screen routine related errors -->
+    <string name="error_screen_routine_not_found">Screen routine not found</string>
+    <string name="error_tournament_mismatch">Tournament does not match</string>
+    <string name="error_updating_screen_routine">Could not update the screen routine</string>
 </resources>
