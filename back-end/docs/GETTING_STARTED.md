@@ -2,82 +2,66 @@
 
 ## Prerequisites
 
-Ensure the following are installed before proceeding:
+| Tool   | Version |
+|--------|---------|
+| JDK    | 21+     |
+| Docker | Latest  |
 
-| Tool   | Version  |
-|--------|----------|
-| JDK    | 21+      |
-| Docker | Latest   |
-| Gradle | Wrapper  |
+## Setup
 
----
-
-## Environment Configuration
-
-Create a `.env` file at the **root of the project** with the following variables:
+Create a `.env` file at the **project root** with the database credentials:
 
 ```env
 POSTGRES_USER=dbuser
 POSTGRES_PASSWORD=changeit
 POSTGRES_DB=db
-DB_URL=jdbc:postgresql://agenda-postgres:5432/db?user=dbuser&password=changeit
+DB_URL=jdbc:postgresql://caliarena-postgres:5432/db?user=dbuser&password=changeit
 ```
 
-> **Important:** This file contains sensitive credentials and must never be committed to version control. It is already listed in `.gitignore`.
+> **Important:** this file contains credentials and must never be committed. It is gitignored.
 
----
+## Build & run with Docker
 
-## Running the Application
+From `back-end/`:
 
-### Locally (without Docker)
+```bash
+./gradlew allUp      # builds everything (JVM + Postgres + nginx) and starts the stack
+./gradlew allDown    # stops the stack
+```
+
+Once running:
+
+- App (JVM): `http://localhost:8080`
+- Web (nginx): `http://localhost:4000`
+
+The JVM container starts with the **`prod`** Spring profile
+(`SPRING_PROFILES_ACTIVE=prod` set in `app/docker-compose.yaml`), reading config from
+`application-prod.properties` via the `.env` variables.
+
+## Run locally (without Docker)
 
 ```bash
 ./gradlew bootRun
 ```
 
-The Gradle `dotenv` plugin reads the `.env` file automatically and injects all variables into the process environment. Spring Boot then resolves them from `application-prod.properties` (e.g. `${DB_URL}`).
-
-> Requires a locally running PostgreSQL instance on port `5432`.
-
----
-
-### With Docker
-
-```bash
-./gradlew allUp
-```
-
-This command orchestrates the full startup sequence:
-
-1. **`assemble`** — compiles and packages the application JAR
-2. **`extractUberJar`** — extracts the JAR into `build/dependency` for layered Docker builds
-3. **`buildImageJvm`** — builds the application image (`caliarena-jvm`)
-4. **`buildImagePostgres`** — builds the database image (`caliarena-postgres`)
-5. **`buildImageUbuntu`** — builds the utility image (`caliarena-ubuntu`)
-6. **`docker compose up`** — starts all containers, passing the `.env` file from the project root via `--env-file`
-
-Once running, the application is available at:
-
-```
-http://localhost:8080
-```
+> Requires PostgreSQL running on `localhost:5432` and the local profile (`dev`) set in
+> `app/src/main/resources/application.properties`. This file is dev-only and not committed.
 
 ---
 
-### Stopping the Application
-
-```bash
-./gradlew allDown
-```
-
----
-
-## Configuration Flow
-
-Both `bootRun` and `allUp` read from the same `.env` file, ensuring a consistent configuration across local and Docker environments.
+## Backend structure
 
 ```
-.env
- ├── bootRun  →  dotenv plugin injects variables  →  Spring Boot resolves ${VAR}
- └── allUp    →  docker compose --env-file        →  container environment variables  →  Spring Boot resolves ${VAR}
+back-end/
+├── app/                  # entry point, Spring Boot config, Docker + Compose
+│   ├── docker/           # Dockerfiles (jvm, postgres)
+│   ├── docker-compose.yaml
+│   └── src/main/resources/  # application.properties + per-profile config
+├── http/                 # REST controllers, websocket controllers, DTOs
+├── service/              # business logic / use cases
+├── domain/               # pure domain models & rules
+├── repo-jpa/             # JPA entities and repositories (persistence)
+├── nginx/                # nginx reverse-proxy (web front on port 4000)
+├── docs/                 # documentation
+└── build.gradle.kts      # build + Docker tasks (allUp / allDown)
 ```

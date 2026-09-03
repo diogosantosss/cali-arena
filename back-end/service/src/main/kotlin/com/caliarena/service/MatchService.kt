@@ -271,6 +271,14 @@ class MatchService(
         matches.save(match)
     }
 
+    fun getAllMatchesByJudge(judgeId: Int): Either<ApiError, List<Match>> =
+        trxManager.run {
+            users.findByIdOrNull(judgeId)
+                ?: return@run failure(ApiError.JUDGE_NOT_FOUND)
+
+            success(matches.findAllByJudgeId(judgeId).map(MatchEntity::toDomain))
+        }
+
     fun getMatchById(id: Int): Either<ApiError, Match> =
         trxManager.run {
             val match =
