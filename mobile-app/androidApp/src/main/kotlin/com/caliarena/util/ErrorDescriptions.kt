@@ -12,6 +12,7 @@ object ErrorDescriptions {
             ErrorCode.USERNAME_REQUIRED to R.string.error_username_required,
             ErrorCode.PASSWORD_REQUIRED to R.string.error_password_required,
             ErrorCode.NO_CONNECTION to R.string.error_no_connection,
+            ErrorCode.SESSION_INVALID to R.string.error_session_invalid,
             // User related errors
             ErrorCode.INVALID_CREDENTIALS to R.string.error_invalid_credentials,
             ErrorCode.INSECURE_PASSWORD to R.string.error_insecure_password,

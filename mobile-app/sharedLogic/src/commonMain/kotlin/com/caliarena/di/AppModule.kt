@@ -5,7 +5,10 @@ import com.caliarena.auth.createTokenDataStore
 import com.caliarena.network.CaliApiClient
 import com.caliarena.network.createHttpClientEngine
 import com.caliarena.repository.AuthRepository
+import com.caliarena.repository.MatchRepository
 import com.caliarena.viewmodel.LoginViewModel
+import com.caliarena.viewmodel.MatchesViewModel
+import com.caliarena.viewmodel.SessionViewModel
 import io.ktor.client.HttpClient
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.serialization.kotlinx.json.json
@@ -27,6 +30,7 @@ fun appModule(baseUrl: String = DEFAULT_BASE_URL): Module =
         single { createTokenDataStore() }
         single { TokenStorage(get()) }
         single { AuthRepository(get(), get()) }
+        single { MatchRepository(get(), get()) }
 
         single {
             HttpClient(createHttpClientEngine()) {
@@ -44,4 +48,6 @@ fun appModule(baseUrl: String = DEFAULT_BASE_URL): Module =
         single { CaliApiClient(get<AppConfig>().baseUrl, get()) }
 
         viewModelOf(::LoginViewModel)
+        viewModelOf(::SessionViewModel)
+        viewModelOf(::MatchesViewModel)
     }

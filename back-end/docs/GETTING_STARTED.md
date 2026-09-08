@@ -12,10 +12,10 @@
 Create a `.env` file at the **project root** with the database credentials:
 
 ```env
+DB_URL=jdbc:postgresql://caliarena-postgres:5432/db?user=dbuser&password=changeit
+POSTGRES_DB=db
 POSTGRES_USER=dbuser
 POSTGRES_PASSWORD=changeit
-POSTGRES_DB=db
-DB_URL=jdbc:postgresql://caliarena-postgres:5432/db?user=dbuser&password=changeit
 ```
 
 > **Important:** this file contains credentials and must never be committed. It is gitignored.

@@ -49,6 +49,7 @@ enum class ErrorCode {
     TOURNAMENT_MISMATCH,
     ERROR_UPDATING_SCREEN_ROUTINE,
     INTERNAL_SERVER_ERROR,
+    SESSION_INVALID,
     ;
 
     companion object {

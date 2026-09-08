@@ -1,7 +1,11 @@
 package com.caliarena.network
 
+import com.caliarena.data.AthleteOutput
 import com.caliarena.data.ErrorCode
+import com.caliarena.data.MatchOutput
 import com.caliarena.data.ProblemBody
+import com.caliarena.data.RoutineOutput
+import com.caliarena.data.RoutineOverviewOutput
 import com.caliarena.data.UserInfoOutput
 import com.caliarena.data.UserLoginInput
 import com.caliarena.data.UserLoginOutput
@@ -53,6 +57,28 @@ class CaliApiClient(
             client.post("$base/api/users/logout") {
                 bearerAuth(token)
             }
+        }
+
+    suspend fun getMatchesForJudge(token: String): Result<List<MatchOutput>> =
+        execute {
+            client.get("$base/api/matches/judge") {
+                bearerAuth(token)
+            }
+        }
+
+    suspend fun getAthlete(id: Int): Result<AthleteOutput> =
+        execute {
+            client.get("$base/api/athletes/$id")
+        }
+
+    suspend fun getRoutines(): Result<List<RoutineOutput>> =
+        execute {
+            client.get("$base/api/routines")
+        }
+
+    suspend fun getRoutineOverview(name: String): Result<RoutineOverviewOutput> =
+        execute {
+            client.get("$base/api/routines/$name/overview")
         }
 
     private suspend inline fun <reified T> execute(request: () -> HttpResponse): Result<T> =

@@ -19,6 +19,7 @@ fun LoginScreen(
     uiState: LoginUiState,
     onLogin: (username: String, password: String) -> Unit,
     onLoginSuccess: () -> Unit,
+    sessionError: ErrorCode? = null,
     modifier: Modifier = Modifier,
 ) {
     Surface(
@@ -29,6 +30,7 @@ fun LoginScreen(
             LoginUiState.Idle, is LoginUiState.Error ->
                 LoginForm(
                     uiState = uiState,
+                    sessionError = sessionError,
                     onLogin = onLogin,
                 )
 
@@ -45,6 +47,7 @@ fun LoginScreen(
 @Composable
 private fun LoginForm(
     uiState: LoginUiState,
+    sessionError: ErrorCode?,
     onLogin: (username: String, password: String) -> Unit,
 ) {
     var username by rememberSaveable { mutableStateOf("") }
@@ -53,7 +56,7 @@ private fun LoginForm(
     val errorCode =
         when (uiState) {
             is LoginUiState.Error -> uiState.code
-            else -> null
+            else -> sessionError
         }
 
     LoginScreenView(

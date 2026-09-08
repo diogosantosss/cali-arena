@@ -99,12 +99,10 @@ class MatchController(
             )
     }
 
-    @GetMapping("/judge/{judgeId}")
-    fun getAllMatchesByJudgeId(
-        @PathVariable judgeId: Int,
-    ): ResponseEntity<Any> =
+    @GetMapping("/judge")
+    fun getAllMatchesByJudgeId(user: AuthenticatedUser): ResponseEntity<Any> =
         matchService
-            .getAllMatchesByJudge(judgeId)
+            .getAllMatchesByJudge(user.user)
             .toResponse(
                 onSuccess = { matches: List<Match> ->
                     ResponseEntity
