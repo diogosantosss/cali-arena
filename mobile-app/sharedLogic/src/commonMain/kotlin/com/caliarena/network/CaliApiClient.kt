@@ -3,6 +3,7 @@ package com.caliarena.network
 import com.caliarena.data.AthleteOutput
 import com.caliarena.data.ErrorCode
 import com.caliarena.data.MatchOutput
+import com.caliarena.data.MatchProgressOutput
 import com.caliarena.data.ProblemBody
 import com.caliarena.data.RoutineOutput
 import com.caliarena.data.RoutineOverviewOutput
@@ -66,6 +67,16 @@ class CaliApiClient(
             }
         }
 
+    suspend fun getMatch(id: Int): Result<MatchOutput> =
+        execute {
+            client.get("$base/api/matches/$id")
+        }
+
+    suspend fun getMatchProgress(id: Int): Result<MatchProgressOutput> =
+        execute {
+            client.get("$base/api/matches/$id/progress")
+        }
+
     suspend fun getAthlete(id: Int): Result<AthleteOutput> =
         execute {
             client.get("$base/api/athletes/$id")
@@ -86,14 +97,14 @@ class CaliApiClient(
             val response = request()
             if (response.status.value !in 200..299) {
                 val problem = runCatching { response.body<ProblemBody>() }.getOrNull()
-                Result.failure(CaliApiException(response.status.value, problem))
+                Result.failure(CaliApiException(problem))
             } else if (T::class == Unit::class) {
                 Result.success(Unit as T)
             } else {
                 runCatching { response.body<T>() }
             }
         } catch (e: Throwable) {
-            Result.failure(CaliApiException(statusCode = null, problem = null, code = ErrorCode.NO_CONNECTION))
+            Result.failure(CaliApiException(code = ErrorCode.NO_CONNECTION))
         }
 }
 
@@ -104,7 +115,6 @@ private data class RegisterRequest(
 )
 
 class CaliApiException(
-    val statusCode: Int?,
     val problem: ProblemBody? = null,
     val code: ErrorCode = ErrorCode.fromType(problem?.type),
     override val message: String? = null,

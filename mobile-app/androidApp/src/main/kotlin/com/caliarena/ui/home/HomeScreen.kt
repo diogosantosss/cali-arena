@@ -39,6 +39,7 @@ fun HomeScreen(
     username: String,
     role: UserRole?,
     matchesUiState: MatchesUiState,
+    onMatchClick: (MatchCardItem) -> Unit,
     onRetry: () -> Unit,
     onRefresh: () -> Unit,
     loggingOut: Boolean = false,
@@ -72,7 +73,10 @@ fun HomeScreen(
                     if (matchesUiState.matches.isEmpty()) {
                         NoMatchesView()
                     } else {
-                        MatchListView(matchesUiState.matches)
+                        MatchListView(
+                            matches = matchesUiState.matches,
+                            onMatchClick = onMatchClick,
+                        )
                     }
 
                 is MatchesUiState.Failed ->
@@ -88,6 +92,7 @@ fun HomeScreen(
 @Composable
 private fun MatchListView(
     matches: List<MatchCardItem>,
+    onMatchClick: (MatchCardItem) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     LazyColumn(
@@ -105,7 +110,7 @@ private fun MatchListView(
         }
 
         items(matches, key = { it.match.id }) { match ->
-            JudgeMatchCard(item = match)
+            JudgeMatchCard(item = match, onClick = { onMatchClick(match) })
         }
     }
 }
@@ -191,6 +196,7 @@ private fun HomeScreenPreview() {
             username = "admin",
             role = UserRole.ADMIN,
             matchesUiState = MatchesUiState.Loading,
+            onMatchClick = {},
             onRetry = {},
             onRefresh = {},
             onLogout = {},

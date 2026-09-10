@@ -32,6 +32,17 @@
     <string name="vs">vs</string>
     <string name="athlete_unassigned">—</string>
     <string name="match_created_on">Created on %1$s</string>
+    <string name="match_open">Score match</string>
+    <string name="match_connecting">Connecting to match…</string>
+    <string name="open_in_progress">Open</string>
+    <string name="connection_lost">Connection lost</string>
+    <string name="reconnect">Reconnect</string>
+    <string name="match_finished">Finished</string>
+    <string name="reps_increase">Increase reps</string>
+    <string name="reps_decrease">Decrease reps</string>
+    <string name="finish_side">Finish routine</string>
+    <string name="exercise_unknown">—</string>
+    <string name="back">Back</string>
     <string name="status_pending">Pending</string>
     <string name="status_running">Running</string>
     <string name="status_finished">Finished</string>

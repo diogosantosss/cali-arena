@@ -18,6 +18,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -61,13 +62,24 @@ import kotlinx.datetime.toLocalDateTime
 @Composable
 fun JudgeMatchCard(
     item: MatchCardItem,
+    onClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     var routineExpanded by rememberSaveable { mutableStateOf(false) }
     val routine = item.routine
+    val enterAction = if (item.match.status != MatchStatus.FINISHED) onClick else null
 
     Card(
-        modifier = modifier.fillMaxWidth(),
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .then(
+                    if (enterAction != null) {
+                        Modifier.clickable(onClick = enterAction)
+                    } else {
+                        Modifier
+                    },
+                ),
         shape = RoundedCornerShape(20.dp),
         colors =
             CardDefaults.cardColors(
@@ -116,7 +128,20 @@ fun JudgeMatchCard(
 
                     Spacer(Modifier.width(12.dp))
 
-                    MatchStatusBadge(item.match.status)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        MatchStatusBadge(item.match.status)
+
+                        if (enterAction != null) {
+                            Spacer(Modifier.width(2.dp))
+
+                            Icon(
+                                imageVector = Icons.Filled.KeyboardArrowRight,
+                                contentDescription = stringResource(R.string.match_open),
+                                tint = CaliMuted,
+                                modifier = Modifier.size(18.dp),
+                            )
+                        }
+                    }
                 }
 
                 if (routine != null) {
@@ -247,7 +272,7 @@ private fun AthleteSide(
         Spacer(Modifier.width(8.dp))
 
         Text(
-            text = if (name != null) name else stringResource(R.string.athlete_unassigned),
+            text = name ?: stringResource(R.string.athlete_unassigned),
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.Medium,
             color = if (name != null) MaterialTheme.colorScheme.onSurface else CaliMuted,

@@ -19,19 +19,26 @@ import androidx.navigation.navArgument
 import com.caliarena.data.ErrorCode
 import com.caliarena.ui.home.HomeScreen
 import com.caliarena.ui.login.LoginScreen
+import com.caliarena.ui.match.MatchScreen
 import com.caliarena.ui.theme.CaliArenaTheme
 import com.caliarena.viewmodel.LoginViewModel
+import com.caliarena.viewmodel.MatchViewModel
 import com.caliarena.viewmodel.MatchesViewModel
 import com.caliarena.viewmodel.SessionUiState
 import com.caliarena.viewmodel.SessionViewModel
 import org.koin.compose.viewmodel.koinViewModel
+import org.koin.core.parameter.parametersOf
 
 object Routes {
     const val LOGIN = "login"
     const val HOME = "home"
+    const val MATCH = "match/{matchId}"
+    const val MATCH_ARG = "matchId"
 
     const val SESSION_ERROR_ARG = "session_error"
     const val LOGIN_SESSION_ERROR = "$LOGIN?$SESSION_ERROR_ARG=true"
+
+    fun matchRoute(matchId: Int) = "match/$matchId"
 }
 
 @Composable
@@ -99,6 +106,7 @@ fun CaliArenaApp() {
                             username = state.username,
                             role = state.role,
                             matchesUiState = matchesUiState,
+                            onMatchClick = { item -> navController.navigate(Routes.matchRoute(item.match.id)) },
                             onRetry = matchesViewModel::load,
                             onRefresh = matchesViewModel::load,
                             loggingOut = false,
@@ -116,6 +124,7 @@ fun CaliArenaApp() {
                             username = state.username,
                             role = state.role,
                             matchesUiState = matchesUiState,
+                            onMatchClick = {},
                             onRetry = {},
                             onRefresh = {},
                             loggingOut = true,
@@ -124,6 +133,25 @@ fun CaliArenaApp() {
 
                     SessionUiState.LoggedOut, SessionUiState.Invalid -> Unit
                 }
+            }
+
+            composable(
+                route = Routes.MATCH,
+                arguments = listOf(navArgument(Routes.MATCH_ARG) { type = NavType.IntType }),
+            ) { backStackEntry ->
+                val matchId = backStackEntry.arguments?.getInt(Routes.MATCH_ARG) ?: return@composable
+                val viewModel = koinViewModel<MatchViewModel>(parameters = { parametersOf(matchId) })
+                val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+                MatchScreen(
+                    matchId = matchId,
+                    uiState = uiState,
+                    onBack = { navController.popBackStack() },
+                    onRetry = viewModel::load,
+                    onReconnect = viewModel::reconnect,
+                    onAdjust = viewModel::adjust,
+                    onFinish = viewModel::finish,
+                )
             }
         }
     }
