@@ -26,6 +26,8 @@
     <string name="matches_title">Matches</string>
     <string name="match_number">Match #%1$d</string>
     <string name="match_routine_unavailable">Routine unavailable</string>
+    <string name="routine_view">View routine</string>
+    <string name="routine_hide">Hide routine</string>
     <string name="exercises_count">%1$d exercises</string>
     <string name="vs">vs</string>
     <string name="athlete_unassigned">—</string>
@@ -110,4 +112,7 @@
     <string name="error_screen_routine_not_found">Screen routine not found</string>
     <string name="error_tournament_mismatch">Tournament does not match</string>
     <string name="error_updating_screen_routine">Could not update the screen routine</string>
+
+    <!-- Actions -->
+    <string name="refresh">Refresh</string>
 </resources>

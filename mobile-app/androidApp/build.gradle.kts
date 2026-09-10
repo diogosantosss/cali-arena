@@ -24,11 +24,14 @@ dependencies {
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.foundation)
     implementation(libs.androidx.compose.material3)
+    implementation(libs.androidx.material.icons.core)
     implementation(libs.androidx.compose.uiToolingPreview)
     debugImplementation(libs.androidx.compose.uiTooling)
 
     implementation(libs.koin.android)
     implementation(libs.koin.compose.viewmodel)
+
+    implementation(libs.kotlinx.datetime)
 }
 
 android {

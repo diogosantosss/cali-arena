@@ -100,6 +100,7 @@ fun CaliArenaApp() {
                             role = state.role,
                             matchesUiState = matchesUiState,
                             onRetry = matchesViewModel::load,
+                            onRefresh = matchesViewModel::load,
                             loggingOut = false,
                             onLogout = {
                                 sessionViewModel.logout {
@@ -116,6 +117,7 @@ fun CaliArenaApp() {
                             role = state.role,
                             matchesUiState = matchesUiState,
                             onRetry = {},
+                            onRefresh = {},
                             loggingOut = true,
                             onLogout = {},
                         )

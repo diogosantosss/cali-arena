@@ -1,6 +1,9 @@
 package com.caliarena.ui.home
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -12,12 +15,22 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -25,9 +38,12 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.caliarena.R
 import com.caliarena.data.AthleteGender
 import com.caliarena.data.AthleteOutput
+import com.caliarena.data.ExerciseOutput
+import com.caliarena.data.ExerciseType
 import com.caliarena.data.MatchOutput
 import com.caliarena.data.MatchStatus
 import com.caliarena.data.RoutineOverviewOutput
@@ -38,90 +54,183 @@ import com.caliarena.ui.theme.CaliFinished
 import com.caliarena.ui.theme.CaliGold
 import com.caliarena.ui.theme.CaliMuted
 import com.caliarena.viewmodel.MatchCardItem
+import kotlinx.datetime.Instant
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 
 @Composable
 fun JudgeMatchCard(
     item: MatchCardItem,
     modifier: Modifier = Modifier,
 ) {
+    var routineExpanded by rememberSaveable { mutableStateOf(false) }
+    val routine = item.routine
+
     Card(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(20.dp),
         colors =
             CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surface,
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                 contentColor = MaterialTheme.colorScheme.onSurface,
             ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
     ) {
-        Column(Modifier.padding(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = stringResource(R.string.match_number, item.match.id),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                )
+        Column {
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .height(5.dp)
+                    .background(statusColor(item.match.status)),
+            )
 
-                Spacer(Modifier.weight(1f))
+            Column(Modifier.padding(16.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            text = stringResource(R.string.match_number, item.match.id).uppercase(),
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            letterSpacing = 1.sp,
+                            color = CaliMuted,
+                        )
 
-                MatchStatusBadge(item.match.status)
+                        Spacer(Modifier.height(6.dp))
+
+                        when (routine) {
+                            null ->
+                                Text(
+                                    text = stringResource(R.string.match_routine_unavailable),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = CaliMuted,
+                                )
+
+                            else ->
+                                RoutineHeader(
+                                    routine = routine,
+                                    expanded = routineExpanded,
+                                    onToggle = { routineExpanded = !routineExpanded },
+                                )
+                        }
+                    }
+
+                    Spacer(Modifier.width(12.dp))
+
+                    MatchStatusBadge(item.match.status)
+                }
+
+                if (routine != null) {
+                    AnimatedVisibility(visible = routineExpanded) {
+                        Column {
+                            Spacer(Modifier.height(12.dp))
+                            HorizontalDivider()
+                            Spacer(Modifier.height(12.dp))
+                            RoutineExercisesList(routine)
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(12.dp))
+                HorizontalDivider()
+                Spacer(Modifier.height(12.dp))
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    AthleteSide(
+                        name = item.athleteRed?.name,
+                        accentColor = CaliAthleteRed,
+                        modifier = Modifier.weight(1f),
+                    )
+
+                    Text(
+                        text = stringResource(R.string.vs),
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = CaliMuted,
+                        modifier = Modifier.padding(horizontal = 8.dp),
+                    )
+
+                    AthleteSide(
+                        name = item.athleteBlue?.name,
+                        accentColor = CaliAthleteBlue,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+
+                Spacer(Modifier.height(12.dp))
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Filled.DateRange,
+                        contentDescription = null,
+                        tint = CaliMuted,
+                        modifier = Modifier.size(14.dp),
+                    )
+
+                    Spacer(Modifier.width(6.dp))
+
+                    Text(
+                        text = stringResource(R.string.match_created_on, formatCreatedDate(item.match.createdAt)),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = CaliMuted,
+                    )
+                }
             }
+        }
+    }
+}
 
-            Spacer(Modifier.height(12.dp))
+@Composable
+private fun RoutineHeader(
+    routine: RoutineOverviewOutput,
+    expanded: Boolean,
+    onToggle: () -> Unit,
+) {
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onToggle),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(
+                text = routine.name,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Medium,
+            )
 
-            val routine = item.routine
-            if (routine != null) {
-                Text(
-                    text = routine.name,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Medium,
-                )
-
-                Spacer(Modifier.height(2.dp))
-
-                Text(
-                    text = stringResource(R.string.exercises_count, routine.exercises.size),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = CaliMuted,
-                )
-            } else {
-                Text(
-                    text = stringResource(R.string.match_routine_unavailable),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = CaliMuted,
-                )
-            }
-
-            Spacer(Modifier.height(12.dp))
-
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                AthleteSide(
-                    name = item.athleteRed?.name,
-                    dotColor = CaliAthleteRed,
-                    modifier = Modifier.weight(1f),
-                )
-
-                Text(
-                    text = stringResource(R.string.vs),
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = CaliMuted,
-                    modifier = Modifier.padding(horizontal = 8.dp),
-                )
-
-                AthleteSide(
-                    name = item.athleteBlue?.name,
-                    dotColor = CaliAthleteBlue,
-                    modifier = Modifier.weight(1f),
-                )
-            }
-
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(2.dp))
 
             Text(
-                text = stringResource(R.string.match_created_on, formatCreatedDate(item.match.createdAt)),
-                style = MaterialTheme.typography.labelMedium,
+                text = stringResource(R.string.exercises_count, routine.exercises.size),
+                style = MaterialTheme.typography.bodySmall,
                 color = CaliMuted,
             )
+        }
+
+        Spacer(Modifier.width(8.dp))
+
+        Icon(
+            imageVector = if (expanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
+            contentDescription = stringResource(if (expanded) R.string.routine_hide else R.string.routine_view),
+            tint = CaliGold,
+        )
+    }
+}
+
+@Composable
+private fun RoutineExercisesList(
+    routine: RoutineOverviewOutput,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier) {
+        routine.exerciseGroupsSummary.forEach { line ->
+            Text(
+                text = line,
+                style = MaterialTheme.typography.bodyMedium,
+            )
+
+            Spacer(Modifier.height(6.dp))
         }
     }
 }
@@ -129,16 +238,11 @@ fun JudgeMatchCard(
 @Composable
 private fun AthleteSide(
     name: String?,
-    dotColor: Color,
+    accentColor: Color,
     modifier: Modifier = Modifier,
 ) {
     Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
-        Box(
-            modifier =
-                Modifier
-                    .size(10.dp)
-                    .background(dotColor, CircleShape),
-        )
+        AthleteAvatar(name = name, accentColor = accentColor)
 
         Spacer(Modifier.width(8.dp))
 
@@ -147,6 +251,36 @@ private fun AthleteSide(
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.Medium,
             color = if (name != null) MaterialTheme.colorScheme.onSurface else CaliMuted,
+        )
+    }
+}
+
+@Composable
+private fun AthleteAvatar(
+    name: String?,
+    accentColor: Color,
+    modifier: Modifier = Modifier,
+) {
+    val assigned = name != null
+    val initial = name?.take(1)?.uppercase()
+
+    Box(
+        modifier =
+            modifier
+                .size(30.dp)
+                .background(accentColor.copy(alpha = if (assigned) 0.18f else 0f), CircleShape)
+                .border(
+                    width = 2.dp,
+                    color = if (assigned) accentColor else MaterialTheme.colorScheme.outlineVariant,
+                    shape = CircleShape,
+                ),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = initial ?: "—",
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = if (assigned) accentColor else CaliMuted,
         )
     }
 }
@@ -195,9 +329,25 @@ private fun MatchStatusBadge(
     }
 }
 
+@Composable
+private fun statusColor(status: MatchStatus): Color =
+    when (status) {
+        MatchStatus.PENDING -> MaterialTheme.colorScheme.outlineVariant
+        MatchStatus.RUNNING -> CaliGold
+        MatchStatus.FINISHED -> CaliFinished
+    }
+
 private fun formatCreatedDate(iso: String): String {
-    val parts = iso.substringBefore('T').split('-')
-    return if (parts.size == 3) "${parts[2]}/${parts[1]}/${parts[0]}" else iso
+    val local =
+        runCatching { Instant.parse(iso) }
+            .getOrNull()
+            ?.toLocalDateTime(TimeZone.currentSystemDefault())
+            ?: return iso
+    val day = local.dayOfMonth.toString().padStart(2, '0')
+    val month = local.monthNumber.toString().padStart(2, '0')
+    val hour = local.hour.toString().padStart(2, '0')
+    val minute = local.minute.toString().padStart(2, '0')
+    return "$day/$month/${local.year} $hour:$minute"
 }
 
 @Preview(showBackground = true, showSystemUi = true)
@@ -223,7 +373,21 @@ private fun JudgeMatchCardPreview() {
                         ),
                     athleteRed = AthleteOutput(1, "João", AthleteGender.MALE, 1, "2026-01-01T00:00:00Z"),
                     athleteBlue = AthleteOutput(2, "Maria", AthleteGender.FEMALE, 1, "2026-01-01T00:00:00Z"),
-                    routine = RoutineOverviewOutput("Back & Biceps", 240, "2026-01-01T00:00:00Z", emptyList()),
+                    routine =
+                        RoutineOverviewOutput(
+                            name = "Back & Biceps",
+                            timeCapSeconds = 240,
+                            createdAt = "2026-01-01T00:00:00Z",
+                            exercises =
+                                listOf(
+                                    ExerciseOutput(1, 3, "Muscle-Ups", 1, null, 1, 0, ExerciseType.SUPERSET),
+                                    ExerciseOutput(2, 3, "Straight-Bar-Dips", 10, null, 1, 1, ExerciseType.SUPERSET),
+                                    ExerciseOutput(3, 3, "Pull-Ups", 10, null, 1, 2, ExerciseType.SUPERSET),
+                                    ExerciseOutput(4, 3, "Low-Bar Push-Ups", 20, null, 2, null, ExerciseType.NORMAL),
+                                    ExerciseOutput(5, 3, "Squats", 20, 20.0, 3, null, ExerciseType.NORMAL),
+                                    ExerciseOutput(6, 3, "Muscle-Ups", 5, null, 4, null, ExerciseType.UNBROKEN),
+                                ),
+                        ),
                 ),
         )
     }

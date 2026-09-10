@@ -40,6 +40,7 @@ fun HomeScreen(
     role: UserRole?,
     matchesUiState: MatchesUiState,
     onRetry: () -> Unit,
+    onRefresh: () -> Unit,
     loggingOut: Boolean = false,
     onLogout: () -> Unit,
     modifier: Modifier = Modifier,
@@ -53,6 +54,7 @@ fun HomeScreen(
                 role = role,
                 loggingOut = loggingOut,
                 onLogout = onLogout,
+                onRefresh = onRefresh,
             )
         },
     ) { innerPadding ->
@@ -190,6 +192,7 @@ private fun HomeScreenPreview() {
             role = UserRole.ADMIN,
             matchesUiState = MatchesUiState.Loading,
             onRetry = {},
+            onRefresh = {},
             onLogout = {},
         )
     }
