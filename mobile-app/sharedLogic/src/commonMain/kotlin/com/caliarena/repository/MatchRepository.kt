@@ -2,6 +2,8 @@ package com.caliarena.repository
 
 import com.caliarena.auth.TokenStorage
 import com.caliarena.data.AthleteOutput
+import com.caliarena.data.BracketLeaderboardOutput
+import com.caliarena.data.ClubOutput
 import com.caliarena.data.MatchOutput
 import com.caliarena.data.MatchProgressOutput
 import com.caliarena.data.RoutineOutput
@@ -20,6 +22,11 @@ class MatchRepository(
     }
 
     suspend fun getAthlete(id: Int): Result<AthleteOutput> = api.getAthlete(id)
+
+    suspend fun getClub(id: Int): Result<ClubOutput> = api.getClub(id)
+
+    suspend fun getBracketLeaderboard(bracketId: Int): Result<BracketLeaderboardOutput> =
+        api.getBracketLeaderboard(bracketId)
 
     suspend fun getMatch(id: Int): Result<MatchOutput> = api.getMatch(id)
 

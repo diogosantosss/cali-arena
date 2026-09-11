@@ -5,6 +5,8 @@ import androidx.lifecycle.viewModelScope
 import com.caliarena.data.AthleteOutput
 import com.caliarena.data.ErrorCode
 import com.caliarena.data.MatchOutput
+import com.caliarena.data.MatchProgressOutput
+import com.caliarena.data.MatchStatus
 import com.caliarena.data.RoutineOverviewOutput
 import com.caliarena.network.CaliApiException
 import com.caliarena.repository.MatchRepository
@@ -31,6 +33,7 @@ data class MatchCardItem(
     val athleteRed: AthleteOutput?,
     val athleteBlue: AthleteOutput?,
     val routine: RoutineOverviewOutput?,
+    val progress: MatchProgressOutput? = null,
 )
 
 class MatchesViewModel(
@@ -82,6 +85,11 @@ class MatchesViewModel(
                     routineNamesById[routineId]?.let { repository.getRoutineOverview(it).getOrNull() }
                 }
 
+        val progressByMatchId =
+            matches
+                .filter { it.status == MatchStatus.FINISHED }
+                .associate { it.id to repository.getMatchProgress(it.id).getOrNull() }
+
         return matches
             .sortedByDescending { it.createdAt }
             .map { match ->
@@ -90,6 +98,7 @@ class MatchesViewModel(
                     athleteRed = match.athleteRedId?.let { athletes[it] },
                     athleteBlue = match.athleteBlueId?.let { athletes[it] },
                     routine = overviewsByRoutineId[match.routineId],
+                    progress = progressByMatchId[match.id],
                 )
             }
     }

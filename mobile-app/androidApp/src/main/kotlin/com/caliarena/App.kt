@@ -142,10 +142,13 @@ fun CaliArenaApp() {
                 val matchId = backStackEntry.arguments?.getInt(Routes.MATCH_ARG) ?: return@composable
                 val viewModel = koinViewModel<MatchViewModel>(parameters = { parametersOf(matchId) })
                 val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+                val selectedSide by viewModel.selectedSide.collectAsStateWithLifecycle()
 
                 MatchScreen(
                     matchId = matchId,
                     uiState = uiState,
+                    selectedSide = selectedSide,
+                    onSelectSide = viewModel::selectSide,
                     onBack = { navController.popBackStack() },
                     onRetry = viewModel::load,
                     onReconnect = viewModel::reconnect,

@@ -1,6 +1,8 @@
 package com.caliarena.network
 
 import com.caliarena.data.AthleteOutput
+import com.caliarena.data.BracketLeaderboardOutput
+import com.caliarena.data.ClubOutput
 import com.caliarena.data.ErrorCode
 import com.caliarena.data.MatchOutput
 import com.caliarena.data.MatchProgressOutput
@@ -19,7 +21,6 @@ import io.ktor.client.request.setBody
 import io.ktor.client.statement.HttpResponse
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
-import kotlinx.serialization.Serializable
 
 class CaliApiClient(
     private val baseUrl: String,
@@ -32,17 +33,6 @@ class CaliApiClient(
             client.post("$base/api/users/token") {
                 contentType(ContentType.Application.Json)
                 setBody(input)
-            }
-        }
-
-    suspend fun register(
-        username: String,
-        password: String,
-    ): Result<UserInfoOutput> =
-        execute {
-            client.post("$base/api/users") {
-                contentType(ContentType.Application.Json)
-                setBody(RegisterRequest(username, password))
             }
         }
 
@@ -82,6 +72,16 @@ class CaliApiClient(
             client.get("$base/api/athletes/$id")
         }
 
+    suspend fun getClub(id: Int): Result<ClubOutput> =
+        execute {
+            client.get("$base/api/clubs/$id")
+        }
+
+    suspend fun getBracketLeaderboard(bracketId: Int): Result<BracketLeaderboardOutput> =
+        execute {
+            client.get("$base/api/brackets/$bracketId/leaderboard")
+        }
+
     suspend fun getRoutines(): Result<List<RoutineOutput>> =
         execute {
             client.get("$base/api/routines")
@@ -107,12 +107,6 @@ class CaliApiClient(
             Result.failure(CaliApiException(code = ErrorCode.NO_CONNECTION))
         }
 }
-
-@Serializable
-private data class RegisterRequest(
-    val username: String,
-    val password: String,
-)
 
 class CaliApiException(
     val problem: ProblemBody? = null,

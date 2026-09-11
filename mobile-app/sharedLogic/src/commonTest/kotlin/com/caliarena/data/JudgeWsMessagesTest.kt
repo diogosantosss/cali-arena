@@ -48,12 +48,42 @@ class JudgeWsMessagesTest {
     }
 
     @Test
-    fun startedEventIsNotHandledYet() {
-        val body = """{"type":"STARTED","match":{},"progress":{}}"""
+    fun parsesStartedEvent() {
+        val body =
+            """{"type":"STARTED","match":{"id":1,"bracketId":2,"routineId":3,"judgeId":4,"athleteRedId":5,"athleteBlueId":6,"winnerAthleteId":null,"status":"RUNNING","startedAt":"2026-08-09T10:00:00Z","finishedAt":null,"createdAt":"2026-08-09T09:00:00Z"},"progress":{"id":1,"matchId":1,"redCurrentExerciseId":3,"blueCurrentExerciseId":3,"redCurrentReps":0,"blueCurrentReps":0,"timerStartedAt":"2026-08-09T10:00:00Z","updatedAt":"2026-08-09T10:00:00Z"}}"""
 
         val event = parseJudgeEvent(json, body)
 
-        assertEquals(UnhandledJudgeEvent, event)
+        assertEquals(
+            JudgeStartedEvent(
+                match =
+                    MatchOutput(
+                        id = 1,
+                        bracketId = 2,
+                        routineId = 3,
+                        judgeId = 4,
+                        athleteRedId = 5,
+                        athleteBlueId = 6,
+                        winnerAthleteId = null,
+                        status = MatchStatus.RUNNING,
+                        startedAt = "2026-08-09T10:00:00Z",
+                        finishedAt = null,
+                        createdAt = "2026-08-09T09:00:00Z",
+                    ),
+                progress =
+                    MatchProgressOutput(
+                        id = 1,
+                        matchId = 1,
+                        redCurrentExerciseId = 3,
+                        blueCurrentExerciseId = 3,
+                        redCurrentReps = 0,
+                        blueCurrentReps = 0,
+                        timerStartedAt = "2026-08-09T10:00:00Z",
+                        updatedAt = "2026-08-09T10:00:00Z",
+                    ),
+            ),
+            event,
+        )
     }
 
     @Test

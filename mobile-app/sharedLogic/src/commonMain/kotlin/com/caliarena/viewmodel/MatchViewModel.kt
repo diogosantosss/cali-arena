@@ -7,11 +7,14 @@ import com.caliarena.data.ErrorCode
 import com.caliarena.data.JudgeErrorEvent
 import com.caliarena.data.JudgeFinishedEvent
 import com.caliarena.data.JudgeRepsEvent
+import com.caliarena.data.JudgeStartedEvent
 import com.caliarena.data.JudgeWsEvent
 import com.caliarena.data.MatchConnectionLost
 import com.caliarena.data.MatchOutput
 import com.caliarena.data.MatchProgressOutput
+import com.caliarena.data.MatchStatus
 import com.caliarena.data.RepSide
+import com.caliarena.data.RoutineOverviewOutput
 import com.caliarena.data.toErrorCode
 import com.caliarena.network.CaliApiException
 import com.caliarena.network.MatchWsClient
@@ -33,7 +36,10 @@ sealed interface MatchDetailUiState {
         val progress: MatchProgressOutput,
         val athleteRed: AthleteOutput?,
         val athleteBlue: AthleteOutput?,
-        val exerciseLabels: Map<Int, String>,
+        val clubRedName: String?,
+        val clubBlueName: String?,
+        val bracketDivision: String?,
+        val routine: RoutineOverviewOutput?,
         val connectionLost: Boolean = false,
         val lastActionError: ErrorCode? = null,
     ) : MatchDetailUiState
@@ -51,11 +57,18 @@ class MatchViewModel(
     private val _uiState = MutableStateFlow<MatchDetailUiState>(MatchDetailUiState.Connecting)
     val uiState: StateFlow<MatchDetailUiState> = _uiState.asStateFlow()
 
+    private val _selectedSide = MutableStateFlow<RepSide?>(null)
+    val selectedSide: StateFlow<RepSide?> = _selectedSide.asStateFlow()
+
     private var session: MatchWsSession? = null
     private var eventsJob: Job? = null
 
     init {
         load()
+    }
+
+    fun selectSide(side: RepSide) {
+        _selectedSide.value = side
     }
 
     fun load() {
@@ -68,10 +81,33 @@ class MatchViewModel(
                 }
             val progress =
                 repository.getMatchProgress(matchId).getOrElse { error ->
-                    fail(error.toErrorCode())
-                    return@launch
+                    if (match.status == MatchStatus.PENDING) {
+                        MatchProgressOutput(
+                            id = 0,
+                            matchId = match.id,
+                            redCurrentReps = 0,
+                            blueCurrentReps = 0,
+                            updatedAt = match.createdAt,
+                        )
+                    } else {
+                        fail(error.toErrorCode())
+                        return@launch
+                    }
                 }
-            val labels = exerciseLabels(match)
+            val bracketDivision =
+                repository
+                    .getBracketLeaderboard(match.bracketId)
+                    .getOrNull()
+                    ?.division
+            val clubRed =
+                match.athleteRedId
+                    ?.let { repository.getAthlete(it).getOrNull()?.clubId }
+                    ?.let { repository.getClub(it).getOrNull() }
+            val clubBlue =
+                match.athleteBlueId
+                    ?.let { repository.getAthlete(it).getOrNull()?.clubId }
+                    ?.let { repository.getClub(it).getOrNull() }
+            val routine = routineOverview(match)
             val red = match.athleteRedId?.let { repository.getAthlete(it).getOrNull() }
             val blue = match.athleteBlueId?.let { repository.getAthlete(it).getOrNull() }
             _uiState.value =
@@ -80,7 +116,10 @@ class MatchViewModel(
                     progress = progress,
                     athleteRed = red,
                     athleteBlue = blue,
-                    exerciseLabels = labels,
+                    clubRedName = clubRed?.name,
+                    clubBlueName = clubBlue?.name,
+                    bracketDivision = bracketDivision,
+                    routine = routine,
                 )
             openSession()
         }
@@ -114,20 +153,15 @@ class MatchViewModel(
         }
     }
 
-    private suspend fun exerciseLabels(match: MatchOutput): Map<Int, String> {
+    private suspend fun routineOverview(match: MatchOutput): RoutineOverviewOutput? {
         val name =
             repository
                 .getRoutines()
                 .getOrNull()
                 ?.firstOrNull { it.id == match.routineId }
                 ?.name
-                ?: return emptyMap()
-        return repository
-            .getRoutineOverview(name)
-            .getOrNull()
-            ?.exercises
-            ?.associate { exercise -> exercise.id to exercise.summaryLabel }
-            .orEmpty()
+                ?: return null
+        return repository.getRoutineOverview(name).getOrNull()
     }
 
     private suspend fun openSession() {
@@ -160,6 +194,9 @@ class MatchViewModel(
         _uiState.update { state ->
             when {
                 state !is MatchDetailUiState.Ready -> state
+
+                event is JudgeStartedEvent ->
+                    state.copy(match = event.match, progress = event.progress)
 
                 event is JudgeRepsEvent ->
                     state.copy(progress = state.progress.applyReps(event.side, event.reps, event.exerciseId))

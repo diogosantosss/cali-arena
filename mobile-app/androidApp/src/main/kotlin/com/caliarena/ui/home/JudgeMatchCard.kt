@@ -1,9 +1,12 @@
 package com.caliarena.ui.home
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -19,7 +22,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -34,7 +36,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -46,6 +50,7 @@ import com.caliarena.data.AthleteOutput
 import com.caliarena.data.ExerciseOutput
 import com.caliarena.data.ExerciseType
 import com.caliarena.data.MatchOutput
+import com.caliarena.data.MatchProgressOutput
 import com.caliarena.data.MatchStatus
 import com.caliarena.data.RoutineOverviewOutput
 import com.caliarena.ui.theme.CaliArenaTheme
@@ -159,26 +164,38 @@ fun JudgeMatchCard(
                 HorizontalDivider()
                 Spacer(Modifier.height(12.dp))
 
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    AthleteSide(
-                        name = item.athleteRed?.name,
-                        accentColor = CaliAthleteRed,
-                        modifier = Modifier.weight(1f),
+                if (item.match.status == MatchStatus.FINISHED) {
+                    MatchResultRow(
+                        redName = item.athleteRed?.name,
+                        blueName = item.athleteBlue?.name,
+                        redIsWinner = item.match.athleteRedId == item.match.winnerAthleteId,
+                        blueIsWinner = item.match.athleteBlueId == item.match.winnerAthleteId,
+                        redElapsedMs = finishElapsedMillis(item.match.startedAt, item.progress?.redFinishedAt),
+                        blueElapsedMs = finishElapsedMillis(item.match.startedAt, item.progress?.blueFinishedAt),
+                        modifier = Modifier.fillMaxWidth(),
                     )
+                } else {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        AthleteSide(
+                            name = item.athleteRed?.name,
+                            accentColor = CaliAthleteRed,
+                            modifier = Modifier.weight(1f),
+                        )
 
-                    Text(
-                        text = stringResource(R.string.vs),
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = CaliMuted,
-                        modifier = Modifier.padding(horizontal = 8.dp),
-                    )
+                        Text(
+                            text = stringResource(R.string.vs),
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = CaliMuted,
+                            modifier = Modifier.padding(horizontal = 8.dp),
+                        )
 
-                    AthleteSide(
-                        name = item.athleteBlue?.name,
-                        accentColor = CaliAthleteBlue,
-                        modifier = Modifier.weight(1f),
-                    )
+                        AthleteSide(
+                            name = item.athleteBlue?.name,
+                            accentColor = CaliAthleteBlue,
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
                 }
 
                 Spacer(Modifier.height(12.dp))
@@ -210,6 +227,13 @@ private fun RoutineHeader(
     expanded: Boolean,
     onToggle: () -> Unit,
 ) {
+    val rotation by
+        animateFloatAsState(
+            targetValue = if (expanded) 180f else 0f,
+            animationSpec = tween(durationMillis = 220),
+            label = "routineChevronRotation",
+        )
+
     Row(
         modifier =
             Modifier
@@ -235,11 +259,21 @@ private fun RoutineHeader(
 
         Spacer(Modifier.width(8.dp))
 
-        Icon(
-            imageVector = if (expanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
-            contentDescription = stringResource(if (expanded) R.string.routine_hide else R.string.routine_view),
-            tint = CaliGold,
-        )
+        Box(
+            modifier =
+                Modifier
+                    .size(32.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = Icons.Filled.KeyboardArrowDown,
+                contentDescription = stringResource(if (expanded) R.string.routine_hide else R.string.routine_view),
+                tint = CaliGold,
+                modifier = Modifier.graphicsLayer { rotationZ = rotation },
+            )
+        }
     }
 }
 
@@ -279,6 +313,101 @@ private fun AthleteSide(
         )
     }
 }
+
+@Composable
+private fun MatchResultRow(
+    redName: String?,
+    blueName: String?,
+    redIsWinner: Boolean,
+    blueIsWinner: Boolean,
+    redElapsedMs: Long?,
+    blueElapsedMs: Long?,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        ResultSide(
+            name = redName,
+            accentColor = CaliAthleteRed,
+            elapsedMs = redElapsedMs,
+            isWinner = redIsWinner,
+            modifier = Modifier.weight(1f),
+        )
+
+        ResultSide(
+            name = blueName,
+            accentColor = CaliAthleteBlue,
+            elapsedMs = blueElapsedMs,
+            isWinner = blueIsWinner,
+            modifier = Modifier.weight(1f),
+        )
+    }
+}
+
+@Composable
+private fun ResultSide(
+    name: String?,
+    accentColor: Color,
+    elapsedMs: Long?,
+    isWinner: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            AthleteAvatar(name = name, accentColor = accentColor)
+
+            Spacer(Modifier.width(8.dp))
+
+            Column {
+                Text(
+                    text = name ?: stringResource(R.string.athlete_unassigned),
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium,
+                    color = if (name != null) MaterialTheme.colorScheme.onSurface else CaliMuted,
+                )
+
+                Text(
+                    text = elapsedMs?.let { formatElapsedMs(it) } ?: "—",
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = if (isWinner) CaliGold else CaliMuted,
+                )
+            }
+        }
+
+        if (isWinner) {
+            Spacer(Modifier.height(6.dp))
+
+            Surface(
+                shape = RoundedCornerShape(50),
+                color = CaliGold.copy(alpha = 0.16f),
+                contentColor = CaliGold,
+                modifier = Modifier.align(Alignment.Start),
+            ) {
+                Text(
+                    text = stringResource(R.string.match_result_winner),
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp),
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+        }
+    }
+}
+
+private fun finishElapsedMillis(
+    startedAt: String?,
+    finishedAt: String?,
+): Long? {
+    if (startedAt == null || finishedAt == null) return null
+    val start = runCatching { Instant.parse(startedAt).toEpochMilliseconds() }.getOrNull() ?: return null
+    val end = runCatching { Instant.parse(finishedAt).toEpochMilliseconds() }.getOrNull() ?: return null
+    return (end - start).coerceAtLeast(0L)
+}
+
+private fun formatElapsedMs(ms: Long): String = "%02d:%02d.%03d".format(ms / 60000, (ms / 1000) % 60, ms % 1000)
 
 @Composable
 private fun AthleteAvatar(
@@ -412,6 +541,55 @@ private fun JudgeMatchCardPreview() {
                                     ExerciseOutput(5, 3, "Squats", 20, 20.0, 3, null, ExerciseType.NORMAL),
                                     ExerciseOutput(6, 3, "Muscle-Ups", 5, null, 4, null, ExerciseType.UNBROKEN),
                                 ),
+                        ),
+                ),
+        )
+    }
+}
+
+@Preview(showBackground = true, showSystemUi = true)
+@Composable
+private fun JudgeMatchCardFinishedPreview() {
+    CaliArenaTheme {
+        JudgeMatchCard(
+            item =
+                MatchCardItem(
+                    match =
+                        MatchOutput(
+                            id = 13,
+                            bracketId = 1,
+                            routineId = 3,
+                            judgeId = 2,
+                            athleteRedId = 1,
+                            athleteBlueId = 2,
+                            winnerAthleteId = 1,
+                            status = MatchStatus.FINISHED,
+                            startedAt = "2026-08-09T10:00:00Z",
+                            finishedAt = "2026-08-09T10:15:00Z",
+                            createdAt = "2026-08-09T09:00:00Z",
+                        ),
+                    athleteRed = AthleteOutput(1, "João", AthleteGender.MALE, 1, "2026-01-01T00:00:00Z"),
+                    athleteBlue = AthleteOutput(2, "Maria", AthleteGender.FEMALE, 1, "2026-01-01T00:00:00Z"),
+                    routine =
+                        RoutineOverviewOutput(
+                            name = "Back & Biceps",
+                            timeCapSeconds = 240,
+                            createdAt = "2026-01-01T00:00:00Z",
+                            exercises =
+                                listOf(
+                                    ExerciseOutput(1, 3, "Muscle-Ups", 1, null, 1, 0, ExerciseType.SUPERSET),
+                                    ExerciseOutput(2, 3, "Straight-Bar-Dips", 10, null, 1, 1, ExerciseType.SUPERSET),
+                                ),
+                        ),
+                    progress =
+                        MatchProgressOutput(
+                            id = 1,
+                            matchId = 13,
+                            redCurrentReps = 0,
+                            blueCurrentReps = 0,
+                            redFinishedAt = "2026-08-09T10:07:12.850Z",
+                            blueFinishedAt = "2026-08-09T10:09:40.300Z",
+                            updatedAt = "2026-08-09T10:15:00Z",
                         ),
                 ),
         )

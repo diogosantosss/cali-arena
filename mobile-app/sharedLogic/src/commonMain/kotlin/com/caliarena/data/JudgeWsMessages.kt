@@ -37,6 +37,12 @@ data class JudgeActionInput(
 sealed interface JudgeWsEvent
 
 @Serializable
+data class JudgeStartedEvent(
+    val match: MatchOutput,
+    val progress: MatchProgressOutput,
+) : JudgeWsEvent
+
+@Serializable
 data class JudgeRepsEvent(
     val side: RepSide,
     val reps: Int,
@@ -69,6 +75,9 @@ fun parseJudgeEvent(
     try {
         val obj = json.parseToJsonElement(body).jsonObject
         when (obj[TYPE_KEY]?.jsonPrimitive?.contentOrNull) {
+            JudgeOutputType.STARTED.name ->
+                json.decodeFromJsonElement(JudgeStartedEvent.serializer(), obj)
+
             JudgeOutputType.REPS.name ->
                 json.decodeFromJsonElement(JudgeRepsEvent.serializer(), obj)
 
