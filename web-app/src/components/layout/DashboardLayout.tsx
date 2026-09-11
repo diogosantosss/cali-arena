@@ -10,8 +10,8 @@ import {
   Sun,
   Moon,
 } from "lucide-react";
-import { useAuth } from "@/features/auth/hooks/use-auth";
-import { useTheme } from "@/app/hooks/use-theme";
+import { useAuth } from "@/hooks/use-auth";
+import { useTheme } from "@/hooks/use-theme";
 
 const navItems = [
   { to: "/dashboard", label: "Tournaments", icon: Trophy, end: true },

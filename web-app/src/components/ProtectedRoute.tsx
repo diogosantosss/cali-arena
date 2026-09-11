@@ -1,5 +1,5 @@
 import { Navigate, Outlet } from "react-router-dom";
-import { useAuth } from "@/features/auth/hooks/use-auth";
+import { useAuth } from "@/hooks/use-auth";
 
 /**
  * Wraps authenticated routes. While the session check (getMe) is running it
