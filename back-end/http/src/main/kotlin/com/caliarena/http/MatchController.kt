@@ -1,15 +1,22 @@
 package com.caliarena.http
 
+import com.caliarena.domain.match.JudgeStartedEvent
 import com.caliarena.domain.match.Match
 import com.caliarena.domain.match.MatchProgress
+import com.caliarena.domain.match.StartedMatch
+import com.caliarena.domain.user.AuthenticatedUser
+import com.caliarena.domain.user.UserRole
 import com.caliarena.http.model.match.CreateMatchInput
 import com.caliarena.http.model.match.UpdateRepsInput
 import com.caliarena.http.model.toResponseEntity
+import com.caliarena.http.utils.hasAnyRole
 import com.caliarena.http.utils.toResponse
+import com.caliarena.service.ApiError
 import com.caliarena.service.MatchService
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
+import org.springframework.messaging.simp.SimpMessagingTemplate
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
@@ -22,12 +29,17 @@ import org.springframework.web.bind.annotation.RestController
 @RequestMapping("/api/matches")
 class MatchController(
     private val matchService: MatchService,
+    private val messaging: SimpMessagingTemplate,
 ) {
     @PostMapping
     fun createMatch(
+        user: AuthenticatedUser,
         @RequestBody input: CreateMatchInput,
-    ): ResponseEntity<Any> =
-        matchService
+    ): ResponseEntity<Any> {
+        if (!user.hasAnyRole(UserRole.ADMIN)) {
+            return ApiError.NOT_AUTHORIZED.toResponseEntity()
+        }
+        return matchService
             .createMatch(input.bracketId, input.routineId, input.judgeId, input.athleteRedId, input.athleteBlueId)
             .toResponse(
                 onSuccess = { match: Match ->
@@ -38,29 +50,43 @@ class MatchController(
                 },
                 onError = { it.toResponseEntity() },
             )
+    }
 
     @PutMapping("/{id}/start")
     fun startMatch(
+        user: AuthenticatedUser,
         @PathVariable id: Int,
-    ): ResponseEntity<Any> =
-        matchService
+    ): ResponseEntity<Any> {
+        if (!user.hasAnyRole(UserRole.ADMIN, UserRole.JUDGE)) {
+            return ApiError.NOT_AUTHORIZED.toResponseEntity()
+        }
+        return matchService
             .startMatch(id)
             .toResponse(
-                onSuccess = { prog: MatchProgress ->
+                onSuccess = { started: StartedMatch ->
+                    messaging.convertAndSend(
+                        "${JudgeWsController.BROADCAST_TOPIC_PREFIX}$id",
+                        JudgeStartedEvent(match = started.match, progress = started.progress),
+                    )
                     ResponseEntity
                         .status(HttpStatus.OK)
                         .header(HttpHeaders.LOCATION, "/api/matches/$id")
-                        .body(prog)
+                        .body(started.progress)
                 },
                 onError = { it.toResponseEntity() },
             )
+    }
 
     @PutMapping("/{matchId}/reps")
     fun updateMatchReps(
+        user: AuthenticatedUser,
         @PathVariable matchId: Int,
         @RequestBody input: UpdateRepsInput,
-    ): ResponseEntity<Any> =
-        matchService
+    ): ResponseEntity<Any> {
+        if (!user.hasAnyRole(UserRole.ADMIN, UserRole.JUDGE)) {
+            return ApiError.NOT_AUTHORIZED.toResponseEntity()
+        }
+        return matchService
             .updateAthletesReps(matchId, input.redReps, input.blueReps)
             .toResponse(
                 onSuccess = { prog: MatchProgress ->
@@ -68,6 +94,20 @@ class MatchController(
                         .status(HttpStatus.ACCEPTED)
                         .header(HttpHeaders.LOCATION, "/api/matches/$matchId")
                         .body(prog)
+                },
+                onError = { it.toResponseEntity() },
+            )
+    }
+
+    @GetMapping("/judge")
+    fun getAllMatchesByJudgeId(user: AuthenticatedUser): ResponseEntity<Any> =
+        matchService
+            .getAllMatchesByJudge(user.user)
+            .toResponse(
+                onSuccess = { matches: List<Match> ->
+                    ResponseEntity
+                        .status(HttpStatus.OK)
+                        .body(matches)
                 },
                 onError = { it.toResponseEntity() },
             )

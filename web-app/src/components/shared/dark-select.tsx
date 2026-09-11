@@ -16,14 +16,14 @@ interface DarkSelectProps {
   onValueChange: (value: string) => void;
   options: SelectOption[];
   placeholder?: string;
-  /** form selects sit on #0f0f11 inputs; toolbar filters on #17171a cards */
+  /** form selects sit on var(--background) inputs; toolbar filters on var(--card) cards */
   variant?: "form" | "toolbar";
   width?: string;
 }
 
-const triggerBase = "h-8 text-xs border-[#252528] focus:ring-[#e8a020]/40";
+const triggerBase = "h-8 text-xs border-border focus:ring-accent/40";
 
-const contentStyle = { background: "#17171a", border: "1px solid #252528" };
+const contentStyle = { background: "var(--card)", border: "1px solid var(--border)" };
 
 export function DarkSelect({
   value,
@@ -38,8 +38,8 @@ export function DarkSelect({
       <SelectTrigger
         className={`${triggerBase} ${width ?? ""}`}
         style={{
-          background: variant === "form" ? "#0f0f11" : "#17171a",
-          color: "#a09a92",
+          background: variant === "form" ? "var(--background)" : "var(--card)",
+          color: "var(--secondary-foreground)",
         }}
       >
         <SelectValue placeholder={placeholder} />
@@ -50,7 +50,7 @@ export function DarkSelect({
             key={option.value}
             value={option.value}
             className="text-xs"
-            style={{ color: "#a09a92" }}
+            style={{ color: "var(--secondary-foreground)" }}
           >
             {option.label}
           </SelectItem>

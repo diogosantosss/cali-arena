@@ -79,7 +79,7 @@ class MatchRepositoryTest {
             brackets.save(
                 BracketEntity(
                     tournament = tournament,
-                    gender = GenderType.MALE,
+                    division = "ELITE MALE",
                     stage = BracketStage.QUALIFIERS,
                     createdAt = now().epochSecond,
                 ),

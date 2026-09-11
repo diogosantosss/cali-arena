@@ -1,8 +1,12 @@
 package com.caliarena.http
 
+import com.caliarena.domain.user.AuthenticatedUser
+import com.caliarena.domain.user.UserRole
 import com.caliarena.http.model.toResponseEntity
 import com.caliarena.http.model.tournament.CreateBracketInput
+import com.caliarena.http.utils.hasAnyRole
 import com.caliarena.http.utils.toResponse
+import com.caliarena.service.ApiError
 import com.caliarena.service.BracketService
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
@@ -22,12 +26,16 @@ class BracketController(
 ) {
     @PostMapping
     fun createBracket(
+        user: AuthenticatedUser,
         @RequestBody input: CreateBracketInput,
-    ): ResponseEntity<Any> =
-        bracketService
+    ): ResponseEntity<Any> {
+        if (!user.hasAnyRole(UserRole.ADMIN)) {
+            return ApiError.NOT_AUTHORIZED.toResponseEntity()
+        }
+        return bracketService
             .createBracket(
                 tournamentId = input.tournamentId,
-                gender = input.gender,
+                division = input.division,
                 stage = input.stage,
             ).toResponse(
                 onSuccess = { bracket ->
@@ -38,6 +46,7 @@ class BracketController(
                 },
                 onError = { it.toResponseEntity() },
             )
+    }
 
     @GetMapping("/tournament/{tournamentId}")
     fun getBracketsByTournamentId(
@@ -54,13 +63,13 @@ class BracketController(
                 onError = { it.toResponseEntity() },
             )
 
-    @GetMapping("/tournament/{tournamentId}/gender/{gender}")
-    fun getBracketsByTournamentAndGender(
+    @GetMapping("/tournament/{tournamentId}/division/{division}")
+    fun getBracketsByTournamentAndDivision(
         @PathVariable tournamentId: Int,
-        @PathVariable gender: String,
+        @PathVariable division: String,
     ): ResponseEntity<Any> =
         bracketService
-            .getBracketsByTournamentAndGender(tournamentId, gender)
+            .getBracketsByTournamentAndDivision(tournamentId, division)
             .toResponse(
                 onSuccess = { brackets ->
                     ResponseEntity
@@ -70,13 +79,13 @@ class BracketController(
                 onError = { it.toResponseEntity() },
             )
 
-    @GetMapping("/tournament/{tournamentId}/gender/{gender}/overview")
+    @GetMapping("/tournament/{tournamentId}/division/{division}/overview")
     fun getBracketOverview(
         @PathVariable tournamentId: Int,
-        @PathVariable gender: String,
+        @PathVariable division: String,
     ): ResponseEntity<Any> =
         bracketService
-            .getBracketOverview(tournamentId, gender)
+            .getBracketOverview(tournamentId, division)
             .toResponse(
                 onSuccess = { overview ->
                     ResponseEntity
@@ -104,10 +113,10 @@ class BracketController(
     @GetMapping("/tournament/{tournamentId}/summary")
     fun getBracketsSummary(
         @PathVariable tournamentId: Int,
-        @RequestParam gender: String,
+        @RequestParam division: String,
     ): ResponseEntity<Any> =
         bracketService
-            .getTournamentBracketsSummary(tournamentId, gender)
+            .getTournamentBracketsSummary(tournamentId, division)
             .toResponse(
                 onSuccess = { summary ->
                     ResponseEntity.ok(summary)

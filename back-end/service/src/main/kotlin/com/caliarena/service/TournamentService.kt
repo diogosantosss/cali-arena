@@ -113,6 +113,7 @@ class TournamentService(
         screen: String,
         currentMatchId: Int?,
         currentBracketId: Int?,
+        currentDivision: String?,
     ): Either<ApiError, TournamentState> =
         trx.run {
             tournaments.findByIdOrNull(tournamentId)?.toDomain()
@@ -129,6 +130,13 @@ class TournamentService(
                     found
                 }
 
+            val division =
+                currentDivision?.trim()?.let { divisionName ->
+                    val hasBracket = brackets.findByTournamentIdAndDivision(tournamentId, divisionName).isNotEmpty()
+                    if (divisionName.isEmpty() || !hasBracket) return@run failure(ApiError.INVALID_BRACKET_DIVISION)
+                    divisionName
+                }
+
             val state =
                 tournamentStates.findByTournamentId(tournamentId)
                     ?: return@run failure(ApiError.TOURNAMENT_STATE_NOT_FOUND)
@@ -136,14 +144,35 @@ class TournamentService(
             state.currentScreen = screenState
             state.currentMatch = currentMatchId?.let { matches.findByIdOrNull(it) }
             state.currentBracket = bracket
+            state.currentDivision = division
             state.updatedAt = clock.instant().epochSecond
 
             val updated = tournamentStates.save(state).toDomain()
+
+            val leaderboard =
+                if (screenState == ScreenState.LEADERBOARD) {
+                    bracket?.let { buildLeaderboard(it.id) }
+                } else {
+                    null
+                }
+
+            val bracketSummary =
+                if (screenState == ScreenState.BRACKETS) {
+                    division?.let { buildBracketsSummary(tournamentId, it) }
+                } else {
+                    null
+                }
+
+            if (screenState == ScreenState.ROUTINES) {
+                buildScreenRoutinesSnapshot(tournamentId).forEach { publisher.publish(it) }
+            }
 
             TournamentStateUpdatedEvent(
                 tournamentId = tournamentId,
                 state = updated,
                 currentMatchId = currentMatchId,
+                leaderboard = leaderboard,
+                bracketSummary = bracketSummary,
             ).let { publisher.publish(it) }
 
             success(updated)

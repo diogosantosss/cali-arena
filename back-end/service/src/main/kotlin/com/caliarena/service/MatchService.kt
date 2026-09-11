@@ -4,6 +4,9 @@ import com.caliarena.domain.match.Match
 import com.caliarena.domain.match.MatchProgress
 import com.caliarena.domain.match.MatchStatus
 import com.caliarena.domain.match.RepSide
+import com.caliarena.domain.match.StartedMatch
+import com.caliarena.domain.user.User
+import com.caliarena.domain.user.UserRole
 import com.caliarena.repo.entities.match.MatchEntity
 import com.caliarena.repo.entities.match.MatchProgressEntity
 import com.caliarena.repo.entities.match.MatchProgressEntity.Companion.fromDomain
@@ -65,7 +68,7 @@ class MatchService(
             success(match.toDomain())
         }
 
-    fun startMatch(matchId: Int): Either<ApiError, MatchProgress> =
+    fun startMatch(matchId: Int): Either<ApiError, StartedMatch> =
         trxManager.run {
             val match =
                 matches.findByIdOrNull(matchId)
@@ -116,7 +119,7 @@ class MatchService(
                 matchProgress = progress.toDomain(),
             ).let { publisher.publish(it) }
 
-            success(progress.toDomain())
+            success(StartedMatch(match = match.toDomain(), progress = progress.toDomain()))
         }
 
     fun updateAthletesReps(
@@ -177,7 +180,7 @@ class MatchService(
 
     fun forceFinishSide(
         matchId: Int,
-        side: com.caliarena.domain.match.RepSide,
+        side: RepSide,
     ): Either<ApiError, MatchProgress> =
         trxManager.run {
             val match =
@@ -269,6 +272,17 @@ class MatchService(
             }
         matches.save(match)
     }
+
+    fun getAllMatchesByJudge(user: User): Either<ApiError, List<Match>> =
+        trxManager.run {
+            when (user.role) {
+                UserRole.JUDGE ->
+                    success(matches.findAllByJudgeId(user.id).map(MatchEntity::toDomain))
+
+                UserRole.ADMIN ->
+                    success(matches.findAll().map(MatchEntity::toDomain))
+            }
+        }
 
     fun getMatchById(id: Int): Either<ApiError, Match> =
         trxManager.run {

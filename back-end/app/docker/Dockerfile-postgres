@@ -8,7 +8,7 @@ WORKDIR /app
 # Copy the schema and test data scripts into the PostgreSQL initialization directory
 # These scripts will run automatically when the container starts for the first time
 COPY src/sql/create-schema.sql /docker-entrypoint-initdb.d/1_create.sql
-#COPY src/sql/insert-test-data.sql /docker-entrypoint-initdb.d/2_insert-test-data.sql
+COPY src/sql/insert-test-data.sql /docker-entrypoint-initdb.d/2_insert-test-data.sql
 
 # Copy the wait-for-postgres script and ensure it's executable
 COPY --chown=postgres:postgres ./docker/scripts/wait-for-postgres.sh ./bin/wait-for-postgres.sh

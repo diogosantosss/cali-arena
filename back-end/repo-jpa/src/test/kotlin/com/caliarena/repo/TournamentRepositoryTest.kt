@@ -61,9 +61,10 @@ class TournamentRepositoryTest {
 
     private fun Transaction.newBracket(
         tournament: TournamentEntity,
-        gender: GenderType = GenderType.MALE,
+        division: String = "ELITE MALE",
         stage: BracketStage = BracketStage.QUALIFIERS,
-    ): BracketEntity = brackets.save(BracketEntity(tournament = tournament, gender = gender, stage = stage, createdAt = now.epochSecond))
+    ): BracketEntity =
+        brackets.save(BracketEntity(tournament = tournament, division = division, stage = stage, createdAt = now.epochSecond))
 
     private fun Transaction.newJudge(): UserEntity =
         users.save(
@@ -191,13 +192,13 @@ class TournamentRepositoryTest {
             }
 
         @Test
-        fun `should filter brackets by gender`() =
+        fun `should filter brackets by division`() =
             trx.run {
                 val tournament = newTournament()
-                val male = newBracket(tournament, gender = GenderType.MALE)
-                newBracket(tournament, gender = GenderType.FEMALE)
+                val male = newBracket(tournament, division = "ELITE MALE")
+                newBracket(tournament, division = "FEMALE")
 
-                val found = brackets.findByTournamentIdAndGender(tournament.id, GenderType.MALE)
+                val found = brackets.findByTournamentIdAndDivision(tournament.id, "ELITE MALE")
 
                 assertEquals(1, found.size)
                 assertEquals(male.id, found.first().id)
@@ -253,10 +254,10 @@ class TournamentRepositoryTest {
                         TournamentStateEntity(tournament = tournament, currentScreen = ScreenState.WAITING, updatedAt = now.epochSecond),
                     )
 
-                state.currentScreen = ScreenState.WINNER
+                state.currentScreen = ScreenState.BATTLE
                 tournamentStates.save(state)
 
-                assertEquals(ScreenState.WINNER, tournamentStates.findByTournamentId(tournament.id)?.currentScreen)
+                assertEquals(ScreenState.BATTLE, tournamentStates.findByTournamentId(tournament.id)?.currentScreen)
             }
 
         @Test

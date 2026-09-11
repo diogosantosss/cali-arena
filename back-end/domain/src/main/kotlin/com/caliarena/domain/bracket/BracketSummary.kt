@@ -1,6 +1,5 @@
 package com.caliarena.domain.bracket
 
-import com.caliarena.domain.athlete.GenderType
 import java.time.Instant
 
 
@@ -19,6 +18,6 @@ data class BracketSummary(
 
 data class TournamentBracketsResponse(
     val tournamentId: Int,
-    val gender: GenderType,
+    val division: String,
     val brackets: List<BracketSummary>,
 )

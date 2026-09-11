@@ -30,7 +30,8 @@ class WsHandshakeInterceptor(
             return false
         }
 
-        logger.info(
+        // only logging in dev profile
+        logger.debug(
             "user {}",
             user.user,
         )

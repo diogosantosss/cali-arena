@@ -19,7 +19,7 @@ enum class ApiError(
 
     ERROR_UPDATING_USER_ROLE("error-updating-user-role", HttpStatus.BAD_REQUEST),
 
-    USER_NOT_FOUND("not-found", HttpStatus.NOT_FOUND),
+    USER_NOT_FOUND("user-not-found", HttpStatus.NOT_FOUND),
 
     INVALID_ROLE("invalid-role", HttpStatus.BAD_REQUEST),
 
@@ -30,7 +30,7 @@ enum class ApiError(
     // Athlete related
     ATHLETE_NOT_FOUND("athlete-not-found", HttpStatus.NOT_FOUND),
 
-    INVALID_GENDER("gender", HttpStatus.BAD_REQUEST),
+    INVALID_GENDER("invalid-gender", HttpStatus.BAD_REQUEST),
 
     ERROR_CREATING_ATHLETE("error-creating-athlete", HttpStatus.BAD_REQUEST),
 
@@ -69,6 +69,8 @@ enum class ApiError(
     BRACKET_ALREADY_EXISTS("bracket-already-exists", HttpStatus.CONFLICT),
 
     INVALID_BRACKET_STAGE("invalid-bracket-stage", HttpStatus.BAD_REQUEST),
+
+    INVALID_BRACKET_DIVISION("invalid-bracket-division", HttpStatus.BAD_REQUEST),
 
     // Match related
     MATCH_NOT_FOUND("match-not-found", HttpStatus.NOT_FOUND),

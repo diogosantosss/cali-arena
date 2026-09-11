@@ -4,6 +4,6 @@ enum class ScreenState {
     WAITING,
     ROUTINES,
     BATTLE,
-    WINNER,
-    LEADERBOARD
+    LEADERBOARD,
+    BRACKETS
 }

@@ -1,0 +1,133 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "@fontsource-variable/geist";
+@import "@fontsource/dm-serif-display";
+@import "@fontsource/instrument-serif";
+@import "@fontsource/cairo/400.css";
+@import "@fontsource/cairo/600.css";
+@import "@fontsource/cairo/700.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --font-serif: "DM Serif Display", Georgia, serif;
+  --font-sans: "Geist Variable", sans-serif;
+  --font-heading: "DM Serif Display", Georgia, serif;
+  --font-cairo: "Cairo", sans-serif;
+  --color-danger: var(--danger);
+  --color-faint: var(--faint);
+  --color-border-hover: var(--border-hover);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+}
+
+:root {
+  --background: #0f0f11;
+  --foreground: #f0ede8;
+  --card: #17171a;
+  --card-foreground: #f0ede8;
+  --popover: #17171a;
+  --popover-foreground: #f0ede8;
+  --primary: #e8a020;
+  --primary-foreground: #0f0f11;
+  --secondary: #1e1e22;
+  --secondary-foreground: #a09a92;
+  --muted: #1e1e22;
+  --muted-foreground: #6b6560;
+  --accent: #e8a020;
+  --accent-foreground: #0f0f11;
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: #252528;
+  --border-hover: #363639;
+  --input: #252528;
+  --ring: #e8a020;
+  --faint: #3a3a3d;
+  --danger: #f16a6a;
+  --radius: 0.375rem;
+}
+
+:root[data-theme="light"] {
+  --background: #f4f2ed;
+  --foreground: #1c1b1a;
+  --card: #ffffff;
+  --card-foreground: #1c1b1a;
+  --popover: #ffffff;
+  --popover-foreground: #1c1b1a;
+  --primary: #e8a020;
+  --primary-foreground: #1c1b1a;
+  --secondary: #e9e6df;
+  --secondary-foreground: #6b6560;
+  --muted: #eceae4;
+  --muted-foreground: #7a746b;
+  --accent: #e8a020;
+  --accent-foreground: #1c1b1a;
+  --destructive: oklch(0.637 0.237 25.331);
+  --border: #d9d5cc;
+  --border-hover: #c3beb3;
+  --input: #d9d5cc;
+  --ring: #e8a020;
+  --faint: #a39d92;
+  --danger: #d9534f;
+  --radius: 0.375rem;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html,
+  body,
+  #container {
+    @apply font-sans text-foreground;
+    min-height: 100vh;
+    background: var(--background);
+  }
+}
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-up {
+  animation: fade-up 0.5s ease forwards;
+}
+
+@keyframes rep-pop {
+  0%   { transform: scale(1.18); color: #fff036; }
+  100% { transform: scale(1); }
+}
+
+.animate-rep-pop {
+  animation: rep-pop 0.25s ease-out;
+  transform-origin: center;
+}

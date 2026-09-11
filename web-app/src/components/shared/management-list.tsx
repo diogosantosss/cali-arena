@@ -5,7 +5,7 @@ export function SkeletonList({ count = 4, rowHeight = "h-16" }: { count?: number
   return (
     <div className="space-y-2">
       {Array.from({ length: count }).map((_, i) => (
-        <div key={i} className={`${rowHeight} rounded-lg`} style={{ background: "#17171a" }}>
+        <div key={i} className={`${rowHeight} rounded-lg`} style={{ background: "var(--card)" }}>
           <Skeleton className="h-full w-full rounded-lg opacity-40" />
         </div>
       ))}
@@ -38,7 +38,7 @@ export function ManagementList<T>({
 
   if (error) {
     return (
-      <p className="text-sm py-8 text-center" style={{ color: "#f16a6a" }}>
+      <p className="text-sm py-8 text-center" style={{ color: "var(--danger)" }}>
         {error}
       </p>
     );
@@ -47,7 +47,7 @@ export function ManagementList<T>({
   if (items.length === 0) {
     return (
       <div className="py-20 text-center">
-        <p className="text-xs tracking-widest uppercase" style={{ color: "#3a3a3d" }}>
+        <p className="text-xs tracking-widest uppercase" style={{ color: "var(--faint)" }}>
           {emptyLabel}
         </p>
       </div>

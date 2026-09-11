@@ -1,0 +1,150 @@
+<resources>
+    <string name="app_name">Cali Arena</string>
+
+    <string name="login_title">Cali Arena</string>
+    <string name="login_subtitle">Judge performances and control the athletes</string>
+
+    <string name="username">Username</string>
+    <string name="password">Password</string>
+    <string name="password_show">Show</string>
+    <string name="password_hide">Hide</string>
+    <string name="sign_in">Sign in</string>
+
+    <string name="signing_in">Signing in…</string>
+
+    <!-- Top bar -->
+    <string name="logout">Logout</string>
+    <string name="logout_confirm_title">Log out?</string>
+    <string name="logout_confirm_message">Are you sure you want to log out?</string>
+    <string name="cancel">Cancel</string>
+    <string name="confirm">Log out</string>
+    <string name="role_admin">Admin</string>
+    <string name="role_judge">Judge</string>
+    <string name="role_unknown">Member</string>
+
+    <!-- Judge matches -->
+    <string name="matches_title">Matches</string>
+    <string name="match_number">Match #%1$d</string>
+    <string name="match_routine_unavailable">Routine unavailable</string>
+    <string name="routine_view">View routine</string>
+    <string name="routine_hide">Hide routine</string>
+    <string name="exercises_count">%1$d exercises</string>
+    <string name="vs">vs</string>
+    <string name="athlete_unassigned">—</string>
+    <string name="match_created_on">Created on %1$s</string>
+    <string name="match_open">Score match</string>
+    <string name="match_result_winner">Winner</string>
+    <string name="match_connecting">Connecting to match…</string>
+    <string name="match_choose_side_title">Which athlete do you judge?</string>
+    <string name="match_choose_side_subtitle">Select the side you\'ll track for this match.</string>
+    <string name="match_judge_side">Judge this athlete</string>
+    <string name="match_side_club_missing">—</string>
+    <string name="match_athletes_unassigned">No athletes assigned to this match yet.</string>
+    <string name="match_time_label">TIME</string>
+    <string name="time_cap_label">TIME CAP</string>
+    <string name="current_exercise_label">NOW</string>
+    <string name="next_exercise_label">NEXT</string>
+    <string name="routine_label">ROUTINE</string>
+    <string name="close">Close</string>
+    <string name="reps_label">reps</string>
+    <string name="open_in_progress">Open</string>
+    <string name="connection_lost">Connection lost</string>
+    <string name="reconnect">Reconnect</string>
+    <string name="match_finished">Finished</string>
+    <string name="final_time_label">FINAL TIME</string>
+    <string name="reps_increase">Increase reps</string>
+    <string name="reps_decrease">Decrease reps</string>
+    <string name="finish_side">Finish routine</string>
+    <string name="finish_confirm_title">Finish routine?</string>
+    <string name="finish_confirm_message">Are you sure you want to finish %1$s\'s routine? This can\'t be undone.</string>
+    <string name="finish_confirm_action">Yes, finish</string>
+    <string name="exercise_unknown">—</string>
+    <string name="match_pending_title">Waiting for the match to start</string>
+    <string name="match_pending_subtitle">The score panel will unlock as soon as it begins.</string>
+    <string name="back">Back</string>
+    <string name="status_pending">Pending</string>
+    <string name="status_running">Running</string>
+    <string name="status_finished">Finished</string>
+    <string name="loading_matches">Loading matches…</string>
+    <string name="no_matches">No matches assigned to you yet</string>
+    <string name="matches_filter_all">All</string>
+    <string name="matches_filter_empty">No matches with this status</string>
+    <string name="matches_load_failed">Couldn\'t load your matches</string>
+
+    <string name="error">Error</string>
+    <string name="error_login">Unable to sign in. Please try again.</string>
+    <string name="error_login_invalid">Invalid username or password</string>
+    <string name="try_again">Try again</string>
+
+    <string name="contact_administrator">Contact administrator in case of error</string>
+
+    <!-- General errors -->
+    <string name="error_unknown">An unexpected error occurred</string>
+    <string name="error_session_invalid">Your session is no longer valid. Please sign in again.</string>
+    <string name="error_internal_server">Internal server error. Please try again later.</string>
+    <string name="error_username_required">Username is required</string>
+    <string name="error_password_required">Password is required</string>
+    <string name="error_no_connection">Unable to reach the server. Check your connection and try again.</string>
+
+    <!-- User related errors -->
+    <string name="error_already_used_username">This username is already in use</string>
+    <string name="error_insecure_password">Password must have at least 8 characters, one uppercase letter, one lowercase letter and one number</string>
+    <string name="error_invalid_credentials">Invalid username or password</string>
+    <string name="error_user_not_found">User not found</string>
+    <string name="error_not_authorized">You are not authorized to perform this action</string>
+    <string name="error_invalid_role">Invalid role</string>
+    <string name="error_updating_user_role">Could not update the user role</string>
+
+    <!-- Athlete related errors -->
+    <string name="error_athlete_not_found">Athlete not found</string>
+    <string name="error_invalid_gender">Invalid gender</string>
+    <string name="error_creating_athlete">Could not create the athlete</string>
+    <string name="error_updating_athlete">Could not update the athlete</string>
+
+    <!-- Club related errors -->
+    <string name="error_club_not_found">Club not found</string>
+    <string name="error_club_already_exists">This club already exists</string>
+    <string name="error_updating_club">Could not update the club</string>
+
+    <!-- Routine related errors -->
+    <string name="error_routine_not_found">Routine not found</string>
+    <string name="error_routine_already_exists">This routine already exists</string>
+    <string name="error_exercise_type_not_found">Exercise type not found</string>
+
+    <!-- Tournament related errors -->
+    <string name="error_tournament_not_found">Tournament not found</string>
+    <string name="error_tournament_already_exists">This tournament already exists</string>
+    <string name="error_invalid_tournament_status">Invalid tournament status</string>
+    <string name="error_tournament_state_not_found">Tournament state not found</string>
+    <string name="error_tournament_state_already_exists">This tournament state already exists</string>
+    <string name="error_invalid_screen_state">Invalid screen state</string>
+
+    <!-- Bracket related errors -->
+    <string name="error_bracket_not_found">Bracket not found</string>
+    <string name="error_bracket_already_exists">This bracket already exists</string>
+    <string name="error_invalid_bracket_stage">Invalid bracket stage</string>
+    <string name="error_invalid_bracket_division">Invalid bracket division</string>
+
+    <!-- Match related errors -->
+    <string name="error_match_not_found">Match not found</string>
+    <string name="error_athlete_not_in_match">Athlete is not part of this match</string>
+    <string name="error_match_not_running">Match is not running</string>
+    <string name="error_progress_not_found">Progress not found</string>
+    <string name="error_progress_already_exists">Progress already exists</string>
+    <string name="error_athletes_not_assigned">Athletes are not assigned to both sides of the match</string>
+    <string name="error_judge_not_found">Judge not found</string>
+    <string name="error_same_athlete_on_both_sides">The same athlete cannot be on both sides of the match</string>
+    <string name="error_creating_match_prog">Could not create the match progress</string>
+    <string name="error_exercise_not_found">Exercise not found</string>
+    <string name="error_match_already_started">Match has already started</string>
+    <string name="error_opponent_not_finished">The opponent has not finished the routine</string>
+    <string name="error_match_not_finished">Match is not finished</string>
+
+    <!-- Screen routine related errors -->
+    <string name="error_screen_routine_not_found">Screen routine not found</string>
+    <string name="error_tournament_mismatch">Tournament does not match</string>
+    <string name="error_updating_screen_routine">Could not update the screen routine</string>
+
+    <!-- Actions -->
+    <string name="refresh">Refresh</string>
+</resources>

@@ -16,6 +16,7 @@ services:
     environment:
       PORT: 8080
       DB_URL: ${DB_URL}
+      SPRING_PROFILES_ACTIVE: prod
     ports:
       - "8080:8080"
 

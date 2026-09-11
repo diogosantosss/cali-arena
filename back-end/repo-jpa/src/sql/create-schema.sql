@@ -66,7 +66,7 @@ CREATE TABLE brackets
 (
     id            SERIAL PRIMARY KEY,
     tournament_id INT REFERENCES tournaments (id),
-    gender        VARCHAR(20)   NOT NULL,
+    division      VARCHAR(40) NOT NULL,
     stage         VARCHAR(20) NOT NULL,
     created_at    BIGINT        NOT NULL
 );
@@ -122,6 +122,7 @@ CREATE TABLE tournament_state
     current_screen     VARCHAR(20) NOT NULL,
     current_match_id   INT REFERENCES matches (id),
     current_bracket_id INT REFERENCES brackets (id),
+    current_division  VARCHAR(40),
     updated_at         BIGINT       NOT NULL
 );
 
@@ -152,10 +153,9 @@ CREATE TABLE screen_routines
     id            SERIAL PRIMARY KEY,
     tournament_id INT REFERENCES tournaments (id) ON DELETE CASCADE,
     routine_id    INT REFERENCES endurance_routines (id) NOT NULL,
-    display_order INT                                    NOT NULL,
-    is_visible    BOOLEAN                                NOT NULL DEFAULT TRUE,
+    display_order INT NOT NULL,
+    is_visible    BOOLEAN NOT NULL DEFAULT TRUE,
     label         VARCHAR(100),
-    created_at    BIGINT                                 NOT NULL,
-    updated_at    BIGINT                                 NOT NULL,
-    UNIQUE (tournament_id, display_order)
+    created_at    BIGINT NOT NULL,
+    updated_at    BIGINT NOT NULL
 );

@@ -4,4 +4,5 @@ data class UpdateScreenInput(
     val screen: String,
     val currentMatchId: Int?,
     val currentBracketId: Int?,
+    val currentDivision: String?,
 )

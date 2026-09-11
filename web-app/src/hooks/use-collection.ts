@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useReducer } from "react";
-import { ApiError } from "@/lib/api/client";
+import { ApiError } from "@/api/client";
 
 interface CollectionState<T> {
   items: T[];

@@ -3,7 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 const inputClass =
-  "border-[#252528] text-[#f0ede8] placeholder:text-[#3a3a3d] focus-visible:ring-[#e8a020]/40 focus-visible:border-[#e8a020]/60";
+  "border-border text-foreground placeholder:text-faint focus-visible:ring-accent/40 focus-visible:border-accent/60";
 
 interface FormFieldProps {
   label: ReactNode;
@@ -13,7 +13,7 @@ interface FormFieldProps {
 export function FormField({ label, children }: FormFieldProps) {
   return (
     <div className="space-y-1.5">
-      <Label className="text-xs uppercase tracking-wider" style={{ color: "#6b6560" }}>
+      <Label className="text-xs uppercase tracking-wider" style={{ color: "var(--muted-foreground)" }}>
         {label}
       </Label>
       {children}
@@ -50,7 +50,7 @@ export function TextField({
         required={required}
         maxLength={maxLength}
         className={inputClass}
-        style={{ background: "#0f0f11" }}
+        style={{ background: "var(--background)" }}
       />
     </FormField>
   );
@@ -83,7 +83,7 @@ export function NumberField({
         min={min}
         required={required}
         className={inputClass}
-        style={{ background: "#0f0f11" }}
+        style={{ background: "var(--background)" }}
       />
     </FormField>
   );
@@ -102,8 +102,8 @@ export function DateField({ label, value, onChange }: DateFieldProps) {
         type="date"
         value={value ?? ""}
         onChange={(e) => onChange(e.target.value || null)}
-        className={`border-[#252528] text-[#f0ede8] focus-visible:ring-[#e8a020]/40 focus-visible:border-[#e8a020]/60`}
-        style={{ background: "#0f0f11", colorScheme: "dark" }}
+        className={`border-border text-foreground focus-visible:ring-accent/40 focus-visible:border-accent/60`}
+        style={{ background: "var(--background)", colorScheme: "dark" }}
       />
     </FormField>
   );

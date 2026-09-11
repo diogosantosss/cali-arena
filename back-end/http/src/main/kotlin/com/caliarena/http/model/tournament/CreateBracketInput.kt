@@ -2,6 +2,6 @@ package com.caliarena.http.model.tournament
 
 data class CreateBracketInput(
     val tournamentId: Int,
-    val gender: String,
+    val division: String,
     val stage: String,
 )

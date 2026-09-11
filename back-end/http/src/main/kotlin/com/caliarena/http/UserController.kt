@@ -1,6 +1,7 @@
 package com.caliarena.http
 
 import com.caliarena.domain.user.AuthenticatedUser
+import com.caliarena.domain.user.UserRole
 import com.caliarena.http.model.toResponseEntity
 import com.caliarena.http.model.user.CreateUserInput
 import com.caliarena.http.model.user.UpdateRoleInput
@@ -8,7 +9,9 @@ import com.caliarena.http.model.user.UpdateRoleOutput
 import com.caliarena.http.model.user.UserInfoOutput
 import com.caliarena.http.model.user.UserLoginInput
 import com.caliarena.http.model.user.UserLoginOutput
+import com.caliarena.http.utils.hasAnyRole
 import com.caliarena.http.utils.toResponse
+import com.caliarena.service.ApiError
 import com.caliarena.service.UserAuthService
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -25,14 +28,18 @@ class UserController(
     private val userService: UserAuthService,
 ) {
     @GetMapping
-    fun getAllUsers(): ResponseEntity<Any> =
-        ResponseEntity.ok(
+    fun getAllUsers(user: AuthenticatedUser): ResponseEntity<Any> {
+        if (!user.hasAnyRole(UserRole.ADMIN)) {
+            return ApiError.NOT_AUTHORIZED.toResponseEntity()
+        }
+        return ResponseEntity.ok(
             userService
                 .getUsers()
-                .map { user ->
-                    UserInfoOutput(user.id, user.username, user.role, user.createdAt)
+                .map { u ->
+                    UserInfoOutput(u.id, u.username, u.role, u.createdAt)
                 },
         )
+    }
 
     @PostMapping
     fun createUser(

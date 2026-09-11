@@ -4,7 +4,7 @@ import java.time.Instant
 
 enum class RepSide { RED, BLUE }
 
-enum class JudgeOutputType { REPS, FINISHED, ERROR }
+enum class JudgeOutputType { STARTED, REPS, FINISHED, ERROR }
 
 enum class JudgeActionType { ADJUST, FINISH }
 
@@ -17,6 +17,12 @@ data class JudgeActionInput(
 interface JudgeEvent {
     val type: JudgeOutputType
 }
+
+data class JudgeStartedEvent(
+    override val type: JudgeOutputType = JudgeOutputType.STARTED,
+    val match: Match,
+    val progress: MatchProgress,
+) : JudgeEvent
 
 data class JudgeRepsEvent(
     override val type: JudgeOutputType = JudgeOutputType.REPS,
