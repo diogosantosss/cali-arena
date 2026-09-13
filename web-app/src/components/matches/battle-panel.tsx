@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Lock, ShieldCheck } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import type { Athlete } from "@/data/athletes";
@@ -63,6 +64,33 @@ export function BattlePanel({ matchId, athletes, routines, overviews, onError }:
   } = useMatchControl(matchId, onError);
 
   const [finishTarget, setFinishTarget] = useState<"red" | "blue" | null>(null);
+  const [controlActive, setControlActive] = useState<boolean>(() => {
+    try {
+      return sessionStorage.getItem(`battle-control:${matchId}`) === "1";
+    } catch {
+      return false;
+    }
+  });
+  const [confirmTakeover, setConfirmTakeover] = useState(false);
+
+  function acceptControl() {
+    setControlActive(true);
+    try {
+      sessionStorage.setItem(`battle-control:${matchId}`, "1");
+    } catch {
+      // ignore
+    }
+    setConfirmTakeover(false);
+  }
+
+  function releaseControl() {
+    setControlActive(false);
+    try {
+      sessionStorage.setItem(`battle-control:${matchId}`, "0");
+    } catch {
+      // ignore
+    }
+  }
 
   async function run(action: () => Promise<void>) {
     try {
@@ -145,33 +173,76 @@ export function BattlePanel({ matchId, athletes, routines, overviews, onError }:
       </div>
 
       {isRunning && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 px-5 pb-5">
-          <RepControl
-            label={redAthlete?.name ?? "Red"}
-            dot="#e05555"
-            finished={redFinished}
-            finishTime={redFinished && progress?.redFinishedAt ? finishTime(progress.redFinishedAt) : null}
-            exercise={redExercise}
-            reps={redReps}
-            onAdjust={(delta) => void run(() => adjustReps("red", delta))}
-            onFinish={() => setFinishTarget("red")}
-            repButton={repButton}
-            repIncrementStyle={repIncrementStyle}
-            repDecrementStyle={repDecrementStyle}
-          />
-          <RepControl
-            label={blueAthlete?.name ?? "Blue"}
-            dot="#5588e0"
-            finished={blueFinished}
-            finishTime={blueFinished && progress?.blueFinishedAt ? finishTime(progress.blueFinishedAt) : null}
-            exercise={blueExercise}
-            reps={blueReps}
-            onAdjust={(delta) => void run(() => adjustReps("blue", delta))}
-            onFinish={() => setFinishTarget("blue")}
-            repButton={repButton}
-            repIncrementStyle={repIncrementStyle}
-            repDecrementStyle={repDecrementStyle}
-          />
+        <div>
+          <div
+            className="flex flex-wrap items-center gap-x-3 gap-y-2 px-5 py-3"
+            style={{
+              background: controlActive ? "rgba(74,222,128,0.08)" : "var(--card)",
+              borderTop: "1px solid var(--border)",
+            }}
+          >
+            {controlActive ? (
+              <ShieldCheck className="w-4 h-4 shrink-0" style={{ color: "#4ade80" }} />
+            ) : (
+              <Lock className="w-4 h-4 shrink-0" style={{ color: "var(--muted-foreground)" }} />
+            )}
+            <p className="text-xs font-medium" style={{ color: "var(--secondary-foreground)" }}>
+              {controlActive ? "Rep control — you" : "Rep control — mobile judge"}
+            </p>
+            <span className="text-[11px]" style={{ color: "var(--muted-foreground)" }}>
+              {controlActive ? "Adjustments from this browser are active." : "Adjustments are locked until you take over."}
+            </span>
+            <div className="ml-auto">
+              {controlActive ? (
+                <button
+                  onClick={releaseControl}
+                  className="px-3 py-1 rounded text-xs font-medium transition-colors"
+                  style={{ background: "var(--secondary)", color: "var(--secondary-foreground)", border: "1px solid var(--border)" }}
+                >
+                  Release
+                </button>
+              ) : (
+                <button
+                  onClick={() => setConfirmTakeover(true)}
+                  className="px-3 py-1 rounded text-xs font-semibold transition-colors"
+                  style={{ background: "var(--accent)", color: "var(--accent-foreground)" }}
+                >
+                  Assume control
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 px-5 pt-4 pb-5">
+            <RepControl
+              label={redAthlete?.name ?? "Red"}
+              dot="#e05555"
+              finished={redFinished}
+              finishTime={redFinished && progress?.redFinishedAt ? finishTime(progress.redFinishedAt) : null}
+              exercise={redExercise}
+              reps={redReps}
+              disabled={!controlActive}
+              onAdjust={(delta) => void run(() => adjustReps("red", delta))}
+              onFinish={() => setFinishTarget("red")}
+              repButton={repButton}
+              repIncrementStyle={repIncrementStyle}
+              repDecrementStyle={repDecrementStyle}
+            />
+            <RepControl
+              label={blueAthlete?.name ?? "Blue"}
+              dot="#5588e0"
+              finished={blueFinished}
+              finishTime={blueFinished && progress?.blueFinishedAt ? finishTime(progress.blueFinishedAt) : null}
+              exercise={blueExercise}
+              reps={blueReps}
+              disabled={!controlActive}
+              onAdjust={(delta) => void run(() => adjustReps("blue", delta))}
+              onFinish={() => setFinishTarget("blue")}
+              repButton={repButton}
+              repIncrementStyle={repIncrementStyle}
+              repDecrementStyle={repDecrementStyle}
+            />
+          </div>
         </div>
       )}
 
@@ -261,6 +332,25 @@ export function BattlePanel({ matchId, athletes, routines, overviews, onError }:
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={confirmTakeover} onOpenChange={(open) => { if (!open) setConfirmTakeover(false); }}>
+        <DialogContent style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+          <DialogHeader>
+            <DialogTitle>Take over rep control?</DialogTitle>
+            <DialogDescription>
+              A judge may be controlling this match from the mobile app. If you take over, rep changes and{" "}
+              <span className="font-semibold">finish</span> actions from this browser become active.
+              You can release control at any time.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmTakeover(false)}>Cancel</Button>
+            <Button onClick={acceptControl} style={{ background: "var(--accent)", color: "var(--accent-foreground)" }}>
+              Yes, take over
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -272,6 +362,7 @@ function RepControl({
   finishTime,
   exercise,
   reps,
+  disabled,
   onAdjust,
   onFinish,
   repButton,
@@ -284,6 +375,7 @@ function RepControl({
   finishTime: string | null;
   exercise: { name: string; targetReps: number; addedWeight?: number | null } | undefined;
   reps: number;
+  disabled: boolean;
   onAdjust: (delta: number) => void;
   onFinish: () => void;
   repButton: string;
@@ -308,13 +400,13 @@ function RepControl({
       </p>
 
       <div className="flex items-center gap-2 mt-3">
-        <button className={`${repButton} px-2.5`} disabled={finished} style={repDecrementStyle} onClick={() => onAdjust(-1)}>−1</button>
-        <button className={repButton} disabled={finished} style={repIncrementStyle} onClick={() => onAdjust(1)}>+1</button>
-        <button className={repButton} disabled={finished} style={repIncrementStyle} onClick={() => onAdjust(2)}>+2</button>
-        <button className={repButton} disabled={finished} style={repIncrementStyle} onClick={() => onAdjust(5)}>+5</button>
+        <button className={`${repButton} px-2.5`} disabled={disabled || finished} style={repDecrementStyle} onClick={() => onAdjust(-1)}>−1</button>
+        <button className={repButton} disabled={disabled || finished} style={repIncrementStyle} onClick={() => onAdjust(1)}>+1</button>
+        <button className={repButton} disabled={disabled || finished} style={repIncrementStyle} onClick={() => onAdjust(2)}>+2</button>
+        <button className={repButton} disabled={disabled || finished} style={repIncrementStyle} onClick={() => onAdjust(5)}>+5</button>
         <button
           onClick={onFinish}
-          disabled={finished}
+          disabled={disabled || finished}
           className="ml-auto px-3 py-1.5 rounded text-sm font-medium transition-colors disabled:opacity-30"
           style={{ background: "rgba(74,222,128,0.12)", color: "#4ade80", border: "1px solid rgba(74,222,128,0.25)" }}
         >

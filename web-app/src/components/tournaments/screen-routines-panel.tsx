@@ -235,7 +235,7 @@ function AddScreenRoutinePanel({
         <SelectTrigger className="h-8 text-xs flex-1 min-w-0 border-border focus:ring-accent/40" style={{ background: "var(--card)", color: "var(--secondary-foreground)" }}>
           <SelectValue placeholder="Add a routine…" />
         </SelectTrigger>
-        <SelectContent style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+        <SelectContent position="popper" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
           {routines.map((r) => (
             <SelectItem key={r.id} value={String(r.id)} className="text-xs" style={{ color: "var(--secondary-foreground)" }}>{r.name}</SelectItem>
           ))}
