@@ -7,6 +7,8 @@ interface CollapsibleFormPanelProps {
   error: string | null;
   saving: boolean;
   disabled?: boolean;
+  submitLabel?: string;
+  savingLabel?: string;
   onSubmit: (e: React.FormEvent) => void;
   onCancel: () => void;
   children: ReactNode;
@@ -18,6 +20,8 @@ export function CollapsibleFormPanel({
   error,
   saving,
   disabled = false,
+  submitLabel = "Create",
+  savingLabel = "Creating…",
   onSubmit,
   onCancel,
   children,
@@ -44,7 +48,7 @@ export function CollapsibleFormPanel({
             className="px-5 py-2 rounded text-sm font-medium transition-opacity disabled:opacity-50"
             style={{ background: "var(--accent)", color: "var(--accent-foreground)" }}
           >
-            {saving ? "Creating…" : "Create"}
+            {saving ? savingLabel : submitLabel}
           </button>
           <button
             type="button"

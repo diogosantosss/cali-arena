@@ -5,6 +5,7 @@ import type {
   Exercise,
   Routine,
   RoutineOverview,
+  UpdateExerciseInput,
 } from "@/data/routines";
 
 export const routinesService = {
@@ -18,6 +19,14 @@ export const routinesService = {
 
   createExercise(input: CreateExerciseInput): Promise<Exercise> {
     return apiClient.post("/routines/exercises", input);
+  },
+
+  updateExercise(id: number, input: UpdateExerciseInput): Promise<Exercise> {
+    return apiClient.put(`/routines/exercises/${id}`, input);
+  },
+
+  deleteExercise(id: number): Promise<void> {
+    return apiClient.delete(`/routines/exercises/${id}`);
   },
 
   /** NOTE: backend identifies routines by name, not id. */

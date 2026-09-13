@@ -5,6 +5,7 @@ import com.caliarena.domain.user.AuthenticatedUser
 import com.caliarena.domain.user.UserRole
 import com.caliarena.http.model.routine.CreateExerciseInput
 import com.caliarena.http.model.routine.CreateRoutineInput
+import com.caliarena.http.model.routine.UpdateExerciseInput
 import com.caliarena.http.model.toResponseEntity
 import com.caliarena.http.utils.hasAnyRole
 import com.caliarena.http.utils.toResponse
@@ -13,9 +14,11 @@ import com.caliarena.service.RoutineService
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
+import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
@@ -71,6 +74,54 @@ class RoutineController(
                         .status(HttpStatus.CREATED)
                         .header(HttpHeaders.LOCATION, "/api/routines/${exercise.routineId}/exercises/${exercise.id}")
                         .body(exercise)
+                },
+                onError = { it.toResponseEntity() },
+            )
+    }
+
+    @PutMapping("/exercises/{id}")
+    fun updateExercise(
+        user: AuthenticatedUser,
+        @PathVariable id: Int,
+        @RequestBody input: UpdateExerciseInput,
+    ): ResponseEntity<Any> {
+        if (!user.hasAnyRole(UserRole.ADMIN)) {
+            return ApiError.NOT_AUTHORIZED.toResponseEntity()
+        }
+        return routineService
+            .updateExercise(
+                id,
+                input.name,
+                input.targetReps,
+                input.addedWeight,
+                input.exerciseOrder,
+                input.supersetOrder,
+                input.type,
+            ).toResponse(
+                onSuccess = { exercise ->
+                    ResponseEntity
+                        .status(HttpStatus.OK)
+                        .body(exercise)
+                },
+                onError = { it.toResponseEntity() },
+            )
+    }
+
+    @DeleteMapping("/exercises/{id}")
+    fun deleteExercise(
+        user: AuthenticatedUser,
+        @PathVariable id: Int,
+    ): ResponseEntity<Any> {
+        if (!user.hasAnyRole(UserRole.ADMIN)) {
+            return ApiError.NOT_AUTHORIZED.toResponseEntity()
+        }
+        return routineService
+            .deleteExercise(id)
+            .toResponse(
+                onSuccess = {
+                    ResponseEntity
+                        .status(HttpStatus.NO_CONTENT)
+                        .build<Any>()
                 },
                 onError = { it.toResponseEntity() },
             )

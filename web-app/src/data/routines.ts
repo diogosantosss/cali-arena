@@ -33,6 +33,17 @@ export interface CreateExerciseInput {
   type: ExerciseType;
 }
 
+export type UpdateExerciseInput = Omit<CreateExerciseInput, "routineId">;
+
+export const EXERCISE_NAMES = [
+  "Muscle-Up",
+  "Pull-Up",
+  "Squat",
+  "Straight-Bar-Dip",
+  "Push-Up",
+  "Low-Bar-Push-Up",
+] as const;
+
 export interface RoutineOverview {
   name: string;
   timeCapSeconds: number | null;

@@ -158,6 +158,142 @@ class RoutineServiceTest : ServiceTest() {
     }
 
     @Nested
+    inner class UpdateExercise {
+        @Test
+        fun `should update exercise successfully`() {
+            val existing = exerciseEntity()
+            val updated = exerciseEntity(name = "Dips")
+
+            whenever(exercises.findById(10)).thenReturn(Optional.of(existing))
+            whenever(exercises.save(any())).thenReturn(updated)
+
+            val result =
+                service.updateExercise(
+                    id = 10,
+                    name = "Dips",
+                    targetReps = 15,
+                    addedWeight = null,
+                    exerciseOrder = 1,
+                    supersetOrder = null,
+                    type = "UNBROKEN",
+                )
+
+            assertEquals(success(updated.toDomain()), result)
+
+            verify(exercises).save(existing)
+            verify(exercises, never()).shiftExerciseOrdersUp(any(), any(), any())
+            verify(exercises, never()).shiftExerciseOrdersDown(any(), any(), any())
+        }
+
+        @Test
+        fun `should shift orders down when moving exercise earlier`() {
+            val existing = exerciseEntity(order = 2)
+
+            whenever(exercises.findById(10)).thenReturn(Optional.of(existing))
+            whenever(exercises.save(any())).thenReturn(existing)
+
+            service.updateExercise(
+                id = 10,
+                name = "Push-Ups",
+                targetReps = 20,
+                addedWeight = null,
+                exerciseOrder = 1,
+                supersetOrder = null,
+                type = "NORMAL",
+            )
+
+            verify(exercises).shiftExerciseOrdersUp(1, 1, 2)
+            verify(exercises, never()).shiftExerciseOrdersDown(any(), any(), any())
+        }
+
+        @Test
+        fun `should shift orders up when moving exercise later`() {
+            val existing = exerciseEntity(order = 1)
+
+            whenever(exercises.findById(10)).thenReturn(Optional.of(existing))
+            whenever(exercises.save(any())).thenReturn(existing)
+
+            service.updateExercise(
+                id = 10,
+                name = "Push-Ups",
+                targetReps = 20,
+                addedWeight = null,
+                exerciseOrder = 9,
+                supersetOrder = null,
+                type = "NORMAL",
+            )
+
+            verify(exercises).shiftExerciseOrdersDown(1, 1, 9)
+            verify(exercises, never()).shiftExerciseOrdersUp(any(), any(), any())
+        }
+
+        @Test
+        fun `should fail when exercise does not exist`() {
+            whenever(exercises.findById(10)).thenReturn(Optional.empty())
+
+            val result =
+                service.updateExercise(
+                    id = 10,
+                    name = "Dips",
+                    targetReps = 15,
+                    addedWeight = null,
+                    exerciseOrder = 2,
+                    supersetOrder = null,
+                    type = "NORMAL",
+                )
+
+            assertEquals(failure(ApiError.EXERCISE_NOT_FOUND), result)
+
+            verify(exercises, never()).save(any())
+        }
+
+        @Test
+        fun `should fail when exercise type is invalid`() {
+            val result =
+                service.updateExercise(
+                    id = 10,
+                    name = "Dips",
+                    targetReps = 15,
+                    addedWeight = null,
+                    exerciseOrder = 2,
+                    supersetOrder = null,
+                    type = "INVALID",
+                )
+
+            assertEquals(failure(ApiError.EXERCISE_TYPE_NOT_FOUND), result)
+
+            verify(exercises, never()).save(any())
+        }
+    }
+
+    @Nested
+    inner class DeleteExercise {
+        @Test
+        fun `should delete exercise successfully`() {
+            val existing = exerciseEntity()
+
+            whenever(exercises.findById(10)).thenReturn(Optional.of(existing))
+
+            val result = service.deleteExercise(10)
+
+            assertEquals(success(Unit), result)
+
+            verify(exercises).delete(existing)
+        }
+
+        @Test
+        fun `should fail when exercise does not exist`() {
+            whenever(exercises.findById(10)).thenReturn(Optional.empty())
+
+            val result = service.deleteExercise(10)
+
+            assertEquals(failure(ApiError.EXERCISE_NOT_FOUND), result)
+
+            verify(exercises, never()).delete(any())
+        }
+    }
+
+    @Nested
     inner class GetRoutineOverview {
         private val pullUps = exerciseEntity(id = 10, name = "Pull-Ups", order = 2)
         private val pushUps = exerciseEntity(id = 11, name = "Push-Ups", order = 1)
