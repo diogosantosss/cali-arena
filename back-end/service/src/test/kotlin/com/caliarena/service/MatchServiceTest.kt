@@ -7,7 +7,6 @@ import com.caliarena.domain.match.MatchStatus
 import com.caliarena.domain.match.RepSide
 import com.caliarena.domain.match.StartedMatch
 import com.caliarena.domain.routine.ExerciseType
-import com.caliarena.domain.user.UserRole
 import com.caliarena.repo.entities.athlete.AthleteEntity
 import com.caliarena.repo.entities.club.ClubEntity
 import com.caliarena.repo.entities.match.MatchEntity
@@ -15,7 +14,6 @@ import com.caliarena.repo.entities.match.MatchProgressEntity
 import com.caliarena.repo.entities.routine.EnduranceRoutineEntity
 import com.caliarena.repo.entities.routine.ExerciseEntity
 import com.caliarena.repo.entities.tournament.BracketEntity
-import com.caliarena.repo.entities.user.UserEntity
 import com.caliarena.repo.trx.Transaction
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
@@ -91,8 +89,6 @@ class MatchServiceTest : ServiceTest() {
 
     private fun bracketEntity(id: Int = 1) = BracketEntity(id = id, stage = BracketStage.QUALIFIERS, createdAt = now.epochSecond)
 
-    private fun judgeEntity(id: Int = 3) = UserEntity(id, "judge-$id", "hash", UserRole.JUDGE, now.epochSecond)
-
     private fun athleteEntity(
         id: Int,
         name: String = "athlete-$id",
@@ -106,7 +102,6 @@ class MatchServiceTest : ServiceTest() {
             id = 1,
             bracket = bracketEntity(),
             routineId = 2,
-            judge = judgeEntity(),
             athleteRed = athleteEntity(10),
             athleteBlue = athleteEntity(20),
             status = status,
@@ -166,7 +161,7 @@ class MatchServiceTest : ServiceTest() {
         fun `should fail when bracket not found`() {
             whenever(brackets.findById(1)).thenReturn(Optional.empty())
 
-            val result = service.createMatch(1, 2, 3, 10, 20)
+            val result = service.createMatch(1, 2, 10, 20)
 
             assertEquals(failure(ApiError.BRACKET_NOT_FOUND), result)
             verify(matches, never()).save(any())
@@ -177,31 +172,19 @@ class MatchServiceTest : ServiceTest() {
             stubBracketExists()
             whenever(routines.findById(2)).thenReturn(Optional.empty())
 
-            val result = service.createMatch(1, 2, 3, 10, 20)
+            val result = service.createMatch(1, 2, 10, 20)
 
             assertEquals(failure(ApiError.ROUTINE_NOT_FOUND), result)
             verify(matches, never()).save(any())
         }
 
         @Test
-        fun `should fail when judge not found`() {
-            stubBracketExists()
-            whenever(routines.findById(2)).thenReturn(Optional.of(mockRoutineEntity()))
-            whenever(users.findById(3)).thenReturn(Optional.empty())
-
-            val result = service.createMatch(1, 2, 3, 10, 20)
-
-            assertEquals(failure(ApiError.JUDGE_NOT_FOUND), result)
-        }
-
-        @Test
         fun `should fail when red athlete not found`() {
             stubBracketExists()
             whenever(routines.findById(2)).thenReturn(Optional.of(mockRoutineEntity()))
-            whenever(users.findById(3)).thenReturn(Optional.of(judgeEntity()))
             whenever(athletes.findById(10)).thenReturn(Optional.empty())
 
-            val result = service.createMatch(1, 2, 3, 10, 20)
+            val result = service.createMatch(1, 2, 10, 20)
 
             assertEquals(failure(ApiError.ATHLETE_NOT_FOUND), result)
         }
@@ -210,11 +193,10 @@ class MatchServiceTest : ServiceTest() {
         fun `should fail when blue athlete not found`() {
             stubBracketExists()
             whenever(routines.findById(2)).thenReturn(Optional.of(mockRoutineEntity()))
-            whenever(users.findById(3)).thenReturn(Optional.of(judgeEntity()))
             whenever(athletes.findById(10)).thenReturn(Optional.of(athleteEntity(10)))
             whenever(athletes.findById(20)).thenReturn(Optional.empty())
 
-            val result = service.createMatch(1, 2, 3, 10, 20)
+            val result = service.createMatch(1, 2, 10, 20)
 
             assertEquals(failure(ApiError.ATHLETE_NOT_FOUND), result)
         }
@@ -223,12 +205,11 @@ class MatchServiceTest : ServiceTest() {
         fun `should succeed`() {
             stubBracketExists()
             whenever(routines.findById(2)).thenReturn(Optional.of(mockRoutineEntity()))
-            whenever(users.findById(3)).thenReturn(Optional.of(judgeEntity()))
             whenever(athletes.findById(10)).thenReturn(Optional.of(athleteEntity(10)))
             whenever(athletes.findById(20)).thenReturn(Optional.of(athleteEntity(20)))
             whenever(matches.save(any())).thenReturn(matchEntity(status = MatchStatus.PENDING))
 
-            val result = service.createMatch(1, 2, 3, 10, 20)
+            val result = service.createMatch(1, 2, 10, 20)
 
             assertTrue(result is Either.Right)
 
@@ -689,6 +670,19 @@ class MatchServiceTest : ServiceTest() {
             whenever(matches.findByBracketId(1)).thenReturn(list)
 
             val result = service.getMatchesByBracket(1)
+
+            assertEquals(success(list.map { it.toDomain() }), result)
+        }
+    }
+
+    @Nested
+    inner class GetAllMatches {
+        @Test
+        fun `should return all matches`() {
+            val list = listOf(matchEntity(1), matchEntity(2))
+            whenever(matches.findAll()).thenReturn(list)
+
+            val result = service.getAllMatches()
 
             assertEquals(success(list.map { it.toDomain() }), result)
         }

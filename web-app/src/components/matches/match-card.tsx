@@ -1,16 +1,14 @@
 import { useState } from "react";
 import type { Athlete } from "@/data/athletes";
 import type { Routine } from "@/data/routines";
-import type { User } from "@/data/users";
 import type { Match, MatchProgress } from "@/data/matches";
-import { UserRound, ChevronDown, ChevronUp, Timer, Trophy, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronUp, Timer, Trophy, Trash2 } from "lucide-react";
 
 interface MatchCardProps {
   match: Match;
   progress?: MatchProgress;
   athletes: Athlete[];
   routines: Routine[];
-  judges: User[];
   onStartMatch: (match: Match) => void;
   onDeleteMatch?: (match: Match) => void;
 }
@@ -30,13 +28,12 @@ const matchStatusStyles: Record<Match["status"], { label: string; color: string;
   FINISHED: { label: "Finished", color: "#4a4a4e", bg: "rgba(74,74,78,0.12)" },
 };
 
-export function MatchCard({ match, progress, athletes, routines, judges, onStartMatch, onDeleteMatch }: MatchCardProps) {
+export function MatchCard({ match, progress, athletes, routines, onStartMatch, onDeleteMatch }: MatchCardProps) {
   const [expanded, setExpanded] = useState(false);
 
   const redAthlete = athletes.find((a) => a.id === match.athleteRedId);
   const blueAthlete = athletes.find((a) => a.id === match.athleteBlueId);
   const routine = routines.find((r) => r.id === match.routineId);
-  const judge = judges.find((j) => j.id === match.judgeId);
   const s = matchStatusStyles[match.status];
 
   function sideDuration(finishedAt: string | null): string | null {
@@ -154,15 +151,6 @@ export function MatchCard({ match, progress, athletes, routines, judges, onStart
       {expanded && (
         <div style={{ borderTop: "1px solid var(--border)" }} className="px-4 py-3 space-y-3">
           <div className="grid grid-cols-2 gap-3">
-            <div>
-              <p className="text-[10px] uppercase tracking-widest mb-1" style={{ color: "var(--faint)" }}>Judge</p>
-              <div className="flex items-center gap-1.5">
-                <UserRound className="w-3 h-3" style={{ color: "var(--muted-foreground)" }} />
-                <span className="text-xs" style={{ color: "var(--secondary-foreground)" }}>
-                  {judge?.username ?? `#${match.judgeId}`}
-                </span>
-              </div>
-            </div>
             {match.winnerAthleteId && (
               <div>
                 <p className="text-[10px] uppercase tracking-widest mb-1" style={{ color: "var(--faint)" }}>Winner</p>

@@ -50,9 +50,9 @@ class CaliApiClient(
             }
         }
 
-    suspend fun getMatchesForJudge(token: String): Result<List<MatchOutput>> =
+    suspend fun getMatches(token: String): Result<List<MatchOutput>> =
         execute {
-            client.get("$base/api/matches/judge") {
+            client.get("$base/api/matches") {
                 bearerAuth(token)
             }
         }

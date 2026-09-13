@@ -5,8 +5,6 @@ import com.caliarena.domain.match.MatchProgress
 import com.caliarena.domain.match.MatchStatus
 import com.caliarena.domain.match.RepSide
 import com.caliarena.domain.match.StartedMatch
-import com.caliarena.domain.user.User
-import com.caliarena.domain.user.UserRole
 import com.caliarena.repo.entities.match.MatchEntity
 import com.caliarena.repo.entities.match.MatchProgressEntity
 import com.caliarena.repo.entities.match.MatchProgressEntity.Companion.fromDomain
@@ -28,7 +26,6 @@ class MatchService(
     fun createMatch(
         bracketId: Int,
         routineId: Int,
-        judgeId: Int,
         athleteRedId: Int,
         athleteBlueId: Int,
     ): Either<ApiError, Match> =
@@ -39,10 +36,6 @@ class MatchService(
 
             routines.findByIdOrNull(routineId)
                 ?: return@run failure(ApiError.ROUTINE_NOT_FOUND)
-
-            val judge =
-                users.findByIdOrNull(judgeId)
-                    ?: return@run failure(ApiError.JUDGE_NOT_FOUND)
 
             val red =
                 athletes.findByIdOrNull(athleteRedId)
@@ -57,7 +50,6 @@ class MatchService(
                     MatchEntity(
                         bracket = bracket,
                         routineId = routineId,
-                        judge = judge,
                         athleteRed = red,
                         athleteBlue = blue,
                         status = MatchStatus.PENDING,
@@ -273,15 +265,9 @@ class MatchService(
         matches.save(match)
     }
 
-    fun getAllMatchesByJudge(user: User): Either<ApiError, List<Match>> =
+    fun getAllMatches(): Either<ApiError, List<Match>> =
         trxManager.run {
-            when (user.role) {
-                UserRole.JUDGE ->
-                    success(matches.findAllByJudgeId(user.id).map(MatchEntity::toDomain))
-
-                UserRole.ADMIN ->
-                    success(matches.findAll().map(MatchEntity::toDomain))
-            }
+            success(matches.findAll().map(MatchEntity::toDomain))
         }
 
     fun deleteMatch(matchId: Int): Either<ApiError, Unit> =

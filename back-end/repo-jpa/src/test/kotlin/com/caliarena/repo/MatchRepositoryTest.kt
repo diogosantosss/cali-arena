@@ -4,7 +4,6 @@ import com.caliarena.domain.athlete.GenderType
 import com.caliarena.domain.bracket.BracketStage
 import com.caliarena.domain.match.MatchStatus
 import com.caliarena.domain.routine.ExerciseType
-import com.caliarena.domain.user.UserRole
 import com.caliarena.repo.entities.athlete.AthleteEntity
 import com.caliarena.repo.entities.club.ClubEntity
 import com.caliarena.repo.entities.match.MatchEntity
@@ -13,7 +12,6 @@ import com.caliarena.repo.entities.routine.EnduranceRoutineEntity
 import com.caliarena.repo.entities.routine.ExerciseEntity
 import com.caliarena.repo.entities.tournament.BracketEntity
 import com.caliarena.repo.entities.tournament.TournamentEntity
-import com.caliarena.repo.entities.user.UserEntity
 import com.caliarena.repo.trx.Transaction
 import com.caliarena.repo.trx.TransactionManagerJpa
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -65,15 +63,6 @@ class MatchRepositoryTest {
             athletes.save(
                 AthleteEntity(name = "blue-${System.nanoTime()}", gender = GenderType.MALE, club = club, createdAt = now().epochSecond),
             )
-        val judge =
-            users.save(
-                UserEntity(
-                    username = "judge-${System.nanoTime()}",
-                    password = "hash",
-                    role = UserRole.JUDGE,
-                    createdAt = now().epochSecond,
-                ),
-            )
         val tournament = tournaments.save(TournamentEntity(name = "t-${System.nanoTime()}", createdAt = now().epochSecond))
         val bracket =
             brackets.save(
@@ -92,7 +81,6 @@ class MatchRepositoryTest {
             MatchEntity(
                 bracket = bracket,
                 routineId = routine.id,
-                judge = judge,
                 athleteRed = red,
                 athleteBlue = blue,
                 status = status,

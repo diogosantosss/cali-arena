@@ -7,8 +7,6 @@ import { athletesService } from "@/services/athletes.service";
 import type { Athlete } from "@/data/athletes";
 import { routinesService } from "@/services/routines.service";
 import type { Routine, RoutineOverview } from "@/data/routines";
-import { usersService } from "@/services/users.service";
-import type { User } from "@/data/users";
 import { matchesService } from "@/services/matches.service";
 import type { Match, MatchProgress } from "@/data/matches";
 import { ScreenControl } from "@/components/tournaments/screen-control";
@@ -33,7 +31,6 @@ interface DetailState {
   progresses: Record<number, MatchProgress>;
   athletes: Athlete[];
   routines: Routine[];
-  judges: User[];
   overviews: Record<string, RoutineOverview>;
 }
 
@@ -48,7 +45,6 @@ type Action =
       progresses: Record<number, MatchProgress>;
       athletes: Athlete[];
       routines: Routine[];
-      judges: User[];
       overviews: Record<string, RoutineOverview>;
     }
   | { type: "loadError"; message: string }
@@ -69,7 +65,6 @@ const initialDetailState: DetailState = {
   progresses: {},
   athletes: [],
   routines: [],
-  judges: [],
   overviews: {},
 };
 
@@ -88,7 +83,6 @@ function reducer(state: DetailState, action: Action): DetailState {
         progresses: action.progresses,
         athletes: action.athletes,
         routines: action.routines,
-        judges: action.judges,
         overviews: action.overviews,
       };
     case "loadError":
@@ -133,7 +127,6 @@ export function TournamentDetailPage() {
     progresses,
     athletes,
     routines,
-    judges,
     overviews,
   } = data;
 
@@ -151,14 +144,13 @@ export function TournamentDetailPage() {
   const loadTournament = useCallback(async () => {
     dispatch({ type: "loadStart" });
     try {
-      const [loadedTournament, loadedState, loadedBrackets, loadedAthletes, loadedRoutines, users] =
+      const [loadedTournament, loadedState, loadedBrackets, loadedAthletes, loadedRoutines] =
         await Promise.all([
           tournamentsService.getTournamentById(tournamentId),
           tournamentsService.getTournamentState(tournamentId),
           tournamentsService.getBracketsByTournamentId(tournamentId),
           athletesService.getAthletes(),
           routinesService.getRoutines(),
-          usersService.getUsers(),
         ]);
 
       const allMatches = await Promise.all(
@@ -183,7 +175,6 @@ export function TournamentDetailPage() {
         progresses: loadedProgresses,
         athletes: loadedAthletes,
         routines: loadedRoutines,
-        judges: users.filter((u) => u.role === "JUDGE"),
         overviews: Object.fromEntries(loadedOverviews),
       });
     } catch (err) {
@@ -343,7 +334,6 @@ export function TournamentDetailPage() {
         progresses={progresses}
         athletes={athletes}
         routines={routines}
-        judges={judges}
         onRefresh={() => void refreshMatches()}
         onCreateBracket={handleCreateBracket}
         onMatchCreated={(match) => dispatch({ type: "matchCreated", match })}

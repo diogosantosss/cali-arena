@@ -7,14 +7,12 @@ import com.caliarena.domain.bracket.LeaderboardEntry
 import com.caliarena.domain.bracket.TournamentBracketsResponse
 import com.caliarena.domain.match.MatchStatus
 import com.caliarena.domain.tournament.TournamentStatus
-import com.caliarena.domain.user.UserRole
 import com.caliarena.repo.entities.athlete.AthleteEntity
 import com.caliarena.repo.entities.club.ClubEntity
 import com.caliarena.repo.entities.match.MatchEntity
 import com.caliarena.repo.entities.match.MatchProgressEntity
 import com.caliarena.repo.entities.tournament.BracketEntity
 import com.caliarena.repo.entities.tournament.TournamentEntity
-import com.caliarena.repo.entities.user.UserEntity
 import com.caliarena.repo.trx.Transaction
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -82,7 +80,6 @@ class BracketServiceTest : ServiceTest() {
         id = id,
         bracket = bracket,
         routineId = 1,
-        judge = UserEntity(1, "judge", "hash", UserRole.JUDGE, now.epochSecond),
         athleteRed = AthleteEntity(1, "Red", GenderType.MALE, ClubEntity(1, "Club", null, now.epochSecond), now.epochSecond),
         athleteBlue = AthleteEntity(2, "Blue", GenderType.MALE, ClubEntity(1, "Club", null, now.epochSecond), now.epochSecond),
         winnerAthlete = AthleteEntity(1, "Red", GenderType.MALE, ClubEntity(1, "Club", null, now.epochSecond), now.epochSecond),

@@ -1,7 +1,6 @@
 import { useState } from "react";
 import type { Athlete } from "@/data/athletes";
 import type { Routine } from "@/data/routines";
-import type { User } from "@/data/users";
 import type { Bracket, BracketStage } from "@/data/tournaments";
 import type { Match, MatchProgress } from "@/data/matches";
 import { Button } from "@/components/ui/button";
@@ -18,7 +17,6 @@ interface BracketViewProps {
   progresses: Record<number, MatchProgress>;
   athletes: Athlete[];
   routines: Routine[];
-  judges: User[];
   onRefresh: () => void;
   onCreateBracket: (division: string, stage: BracketStage) => void;
   onMatchCreated: (match: Match) => void;
@@ -41,7 +39,6 @@ export function BracketView({
   progresses,
   athletes,
   routines,
-  judges,
   onRefresh,
   onCreateBracket,
   onMatchCreated,
@@ -129,7 +126,6 @@ export function BracketView({
                     progress={progresses[match.id]}
                     athletes={athletes}
                     routines={routines}
-                    judges={judges}
                     onStartMatch={onStartMatch}
                     onDeleteMatch={(match) => setDeleteTarget(match)}
                   />
@@ -227,7 +223,6 @@ export function BracketView({
           open={!!createMatchFor}
           bracket={createMatchFor}
           routines={routines}
-          judges={judges}
           athletes={athletes}
           onClose={() => setCreateMatchFor(null)}
           onCreated={(match) => {

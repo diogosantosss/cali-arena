@@ -2,12 +2,10 @@ package com.caliarena.service
 
 import com.caliarena.domain.tournament.ScreenState
 import com.caliarena.domain.tournament.TournamentStatus
-import com.caliarena.domain.user.UserRole
 import com.caliarena.repo.entities.match.MatchEntity
 import com.caliarena.repo.entities.tournament.BracketEntity
 import com.caliarena.repo.entities.tournament.TournamentEntity
 import com.caliarena.repo.entities.tournament.TournamentStateEntity
-import com.caliarena.repo.entities.user.UserEntity
 import com.caliarena.repo.trx.Transaction
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -71,7 +69,6 @@ class TournamentServiceTest : ServiceTest() {
                 com.caliarena.repo.entities.tournament
                     .BracketEntity(),
             routineId = 1,
-            judge = UserEntity(1, "judge", "hash", UserRole.JUDGE, now.epochSecond),
             athleteRed = null,
             athleteBlue = null,
             status = com.caliarena.domain.match.MatchStatus.FINISHED,

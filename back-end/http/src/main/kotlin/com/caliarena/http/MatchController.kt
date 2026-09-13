@@ -37,11 +37,11 @@ class MatchController(
         user: AuthenticatedUser,
         @RequestBody input: CreateMatchInput,
     ): ResponseEntity<Any> {
-        if (!user.hasAnyRole(UserRole.ADMIN)) {
+        if (!user.hasAnyRole(UserRole.ADMIN, UserRole.JUDGE)) {
             return ApiError.NOT_AUTHORIZED.toResponseEntity()
         }
         return matchService
-            .createMatch(input.bracketId, input.routineId, input.judgeId, input.athleteRedId, input.athleteBlueId)
+            .createMatch(input.bracketId, input.routineId, input.athleteRedId, input.athleteBlueId)
             .toResponse(
                 onSuccess = { match: Match ->
                     ResponseEntity
@@ -105,7 +105,7 @@ class MatchController(
         user: AuthenticatedUser,
         @PathVariable id: Int,
     ): ResponseEntity<Any> {
-        if (!user.hasAnyRole(UserRole.ADMIN)) {
+        if (!user.hasAnyRole(UserRole.ADMIN, UserRole.JUDGE)) {
             return ApiError.NOT_AUTHORIZED.toResponseEntity()
         }
         return matchService
@@ -118,10 +118,13 @@ class MatchController(
             )
     }
 
-    @GetMapping("/judge")
-    fun getAllMatchesByJudgeId(user: AuthenticatedUser): ResponseEntity<Any> =
-        matchService
-            .getAllMatchesByJudge(user.user)
+    @GetMapping
+    fun getAllMatches(user: AuthenticatedUser): ResponseEntity<Any> {
+        if (!user.hasAnyRole(UserRole.ADMIN, UserRole.JUDGE)) {
+            return ApiError.NOT_AUTHORIZED.toResponseEntity()
+        }
+        return matchService
+            .getAllMatches()
             .toResponse(
                 onSuccess = { matches: List<Match> ->
                     ResponseEntity
@@ -130,6 +133,7 @@ class MatchController(
                 },
                 onError = { it.toResponseEntity() },
             )
+    }
 
     @GetMapping("/{id}")
     fun getMatchById(

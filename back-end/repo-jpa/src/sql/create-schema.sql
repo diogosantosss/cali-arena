@@ -99,7 +99,6 @@ CREATE TABLE matches
     id                  SERIAL PRIMARY KEY,
     bracket_id          INT REFERENCES brackets (id),
     routine_id          INT REFERENCES endurance_routines (id),
-    judge_id            INT REFERENCES users (id),
 
     athlete_red_id      INT REFERENCES athletes (id),
     athlete_blue_id     INT REFERENCES athletes (id),

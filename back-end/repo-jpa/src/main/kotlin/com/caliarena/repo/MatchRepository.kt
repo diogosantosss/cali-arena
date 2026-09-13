@@ -8,6 +8,4 @@ interface MatchRepository : CrudRepository<MatchEntity, Int> {
     fun findByBracketId(bracketId: Int): List<MatchEntity>
 
     fun findByStatus(status: MatchStatus): List<MatchEntity>
-
-    fun findAllByJudgeId(judgeId: Int): List<MatchEntity>
 }
