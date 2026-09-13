@@ -3,7 +3,7 @@ import type { Athlete } from "@/data/athletes";
 import type { Routine } from "@/data/routines";
 import type { User } from "@/data/users";
 import type { Match, MatchProgress } from "@/data/matches";
-import { UserRound, ChevronDown, ChevronUp, Timer, Trophy } from "lucide-react";
+import { UserRound, ChevronDown, ChevronUp, Timer, Trophy, Trash2 } from "lucide-react";
 
 interface MatchCardProps {
   match: Match;
@@ -12,6 +12,7 @@ interface MatchCardProps {
   routines: Routine[];
   judges: User[];
   onStartMatch: (match: Match) => void;
+  onDeleteMatch?: (match: Match) => void;
 }
 
 function formatDuration(ms: number): string {
@@ -24,12 +25,12 @@ function formatDuration(ms: number): string {
 const matchStatusStyles: Record<Match["status"], { label: string; color: string; bg: string }> = {
   PENDING:  { label: "Pending",  color: "var(--muted-foreground)", bg: "rgba(107,101,96,0.12)" },
   READY:    { label: "Ready",    color: "#7eb8f7", bg: "rgba(126,184,247,0.12)" },
-  RUNNING:  { label: "Running",  color: "var(--accent)", bg: "rgba(232,160,32,0.12)" },
+  RUNNING:  { label: "Running",  color: "var(--accent)", bg: "var(--accent-12)" },
   PAUSED:   { label: "Paused",   color: "var(--secondary-foreground)", bg: "rgba(160,154,146,0.12)" },
   FINISHED: { label: "Finished", color: "#4a4a4e", bg: "rgba(74,74,78,0.12)" },
 };
 
-export function MatchCard({ match, progress, athletes, routines, judges, onStartMatch }: MatchCardProps) {
+export function MatchCard({ match, progress, athletes, routines, judges, onStartMatch, onDeleteMatch }: MatchCardProps) {
   const [expanded, setExpanded] = useState(false);
 
   const redAthlete = athletes.find((a) => a.id === match.athleteRedId);
@@ -84,6 +85,19 @@ export function MatchCard({ match, progress, athletes, routines, judges, onStart
           </span>
         )}
 
+        {onDeleteMatch && (
+          <button
+            onClick={() => onDeleteMatch(match)}
+            title="Delete match"
+            className="p-1 rounded transition-colors shrink-0"
+            style={{ color: "var(--faint)" }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = "var(--danger)")}
+            onMouseLeave={(e) => (e.currentTarget.style.color = "var(--faint)")}
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
+        )}
+
         <button
           onClick={() => setExpanded((v) => !v)}
           className="p-1 rounded transition-colors shrink-0"
@@ -106,10 +120,10 @@ export function MatchCard({ match, progress, athletes, routines, judges, onStart
             <span
               className="flex items-center gap-1.5"
               style={{
-                color: isRedWinner ? "var(--accent)" : "#e05555",
+                color: isRedWinner ? "var(--gold)" : "#e05555",
                 fontWeight: isRedWinner ? 600 : 400,
-                background: isRedWinner ? "rgba(232,160,32,0.1)" : undefined,
-                border: isRedWinner ? "1px solid rgba(232,160,32,0.25)" : undefined,
+                background: isRedWinner ? "var(--gold-10)" : undefined,
+                border: isRedWinner ? "1px solid var(--gold-25)" : undefined,
                 borderRadius: "9999px",
                 padding: "2px 8px",
               }}
@@ -122,10 +136,10 @@ export function MatchCard({ match, progress, athletes, routines, judges, onStart
             <span
               className="flex items-center gap-1.5"
               style={{
-                color: isBlueWinner ? "var(--accent)" : "#5588e0",
+                color: isBlueWinner ? "var(--gold)" : "#5588e0",
                 fontWeight: isBlueWinner ? 600 : 400,
-                background: isBlueWinner ? "rgba(232,160,32,0.1)" : undefined,
-                border: isBlueWinner ? "1px solid rgba(232,160,32,0.25)" : undefined,
+                background: isBlueWinner ? "var(--gold-10)" : undefined,
+                border: isBlueWinner ? "1px solid var(--gold-25)" : undefined,
                 borderRadius: "9999px",
                 padding: "2px 8px",
               }}
@@ -152,7 +166,7 @@ export function MatchCard({ match, progress, athletes, routines, judges, onStart
             {match.winnerAthleteId && (
               <div>
                 <p className="text-[10px] uppercase tracking-widest mb-1" style={{ color: "var(--faint)" }}>Winner</p>
-                <span className="text-xs font-medium" style={{ color: "var(--accent)" }}>
+                <span className="text-xs font-medium" style={{ color: "var(--gold)" }}>
                   {athletes.find((a) => a.id === match.winnerAthleteId)?.name ?? `#${match.winnerAthleteId}`}
                 </span>
               </div>

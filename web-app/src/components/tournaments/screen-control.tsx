@@ -350,7 +350,7 @@ export function ScreenControl({
           {isDirty && (
             <span
               className="ml-auto shrink-0 text-[10px] px-2 py-0.5 rounded-full uppercase tracking-wider"
-              style={{ background: "rgba(232,160,32,0.12)", color: "var(--accent)" }}
+              style={{ background: "var(--accent-12)", color: "var(--accent)" }}
             >
               Not applied
             </span>

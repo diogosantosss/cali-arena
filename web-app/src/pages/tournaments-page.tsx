@@ -19,7 +19,7 @@ import { MapPin, CalendarDays, ArrowRight, Plus } from "lucide-react";
 const statusStyles: Record<TournamentStatus, { label: string; color: string; bg: string }> = {
   DRAFT:    { label: "Draft",    color: "var(--muted-foreground)", bg: "rgba(107,101,96,0.12)" },
   READY:    { label: "Ready",    color: "#7eb8f7", bg: "rgba(126,184,247,0.12)" },
-  LIVE:     { label: "Live",     color: "var(--accent)", bg: "rgba(232,160,32,0.12)" },
+  LIVE:     { label: "Live",     color: "var(--accent)", bg: "var(--accent-12)" },
   FINISHED: { label: "Finished", color: "#4a4a4e", bg: "rgba(74,74,78,0.12)" },
 };
 

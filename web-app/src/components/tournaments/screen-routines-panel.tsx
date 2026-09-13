@@ -112,7 +112,7 @@ export function ScreenRoutinesPanel({ tournamentId, routines }: ScreenRoutinesPa
         </div>
         <span
           className="text-[11px] px-2.5 py-1 rounded-full tabular-nums"
-          style={{ background: "rgba(232,160,32,0.12)", color: "var(--accent)" }}
+          style={{ background: "var(--accent-12)", color: "var(--accent)" }}
         >
           {sortedScreenRoutines.filter((r) => r.isVisible).length}/{sortedScreenRoutines.length} visible
         </span>

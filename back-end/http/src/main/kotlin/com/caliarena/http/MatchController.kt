@@ -17,6 +17,7 @@ import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.messaging.simp.SimpMessagingTemplate
+import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
@@ -94,6 +95,24 @@ class MatchController(
                         .status(HttpStatus.ACCEPTED)
                         .header(HttpHeaders.LOCATION, "/api/matches/$matchId")
                         .body(prog)
+                },
+                onError = { it.toResponseEntity() },
+            )
+    }
+
+    @DeleteMapping("/{id}")
+    fun deleteMatch(
+        user: AuthenticatedUser,
+        @PathVariable id: Int,
+    ): ResponseEntity<Any> {
+        if (!user.hasAnyRole(UserRole.ADMIN)) {
+            return ApiError.NOT_AUTHORIZED.toResponseEntity()
+        }
+        return matchService
+            .deleteMatch(id)
+            .toResponse(
+                onSuccess = {
+                    ResponseEntity.status(HttpStatus.NO_CONTENT).build()
                 },
                 onError = { it.toResponseEntity() },
             )

@@ -612,6 +612,47 @@ class MatchServiceTest : ServiceTest() {
     }
 
     @Nested
+    inner class DeleteMatch {
+        @Test
+        fun `should fail when match not found`() {
+            whenever(matches.findById(1)).thenReturn(Optional.empty())
+
+            val result = service.deleteMatch(1)
+
+            assertEquals(failure(ApiError.MATCH_NOT_FOUND), result)
+            verify(matches, never()).delete(any())
+            verify(matchProgresses, never()).delete(any())
+        }
+
+        @Test
+        fun `should delete match without progress`() {
+            val match = matchEntity(status = MatchStatus.PENDING)
+            whenever(matches.findById(1)).thenReturn(Optional.of(match))
+            whenever(matchProgresses.findByMatchId(1)).thenReturn(null)
+
+            val result = service.deleteMatch(1)
+
+            assertEquals(success(Unit), result)
+            verify(matchProgresses, never()).delete(any())
+            verify(matches).delete(match)
+        }
+
+        @Test
+        fun `should delete progress before match`() {
+            val match = matchEntity(status = MatchStatus.FINISHED)
+            val progress = progOn(match, 1, 1)
+            whenever(matches.findById(1)).thenReturn(Optional.of(match))
+            whenever(matchProgresses.findByMatchId(1)).thenReturn(progress)
+
+            val result = service.deleteMatch(1)
+
+            assertEquals(success(Unit), result)
+            verify(matchProgresses).delete(progress)
+            verify(matches).delete(match)
+        }
+    }
+
+    @Nested
     inner class GetMatchById {
         @Test
         fun `should fail when not found`() {

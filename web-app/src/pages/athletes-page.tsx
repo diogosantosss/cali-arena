@@ -364,7 +364,7 @@ export function AthletesPage() {
                       color:
                         state.editingId === athlete.id ? "var(--accent)" : "var(--muted-foreground)",
                       background:
-                        state.editingId === athlete.id ? "rgba(232,160,32,0.1)" : "transparent",
+                        state.editingId === athlete.id ? "var(--accent-10)" : "transparent",
                     }}
                   >
                     <Pencil className="w-3.5 h-3.5" />

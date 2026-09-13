@@ -1,7 +1,7 @@
 import { useEffect, useReducer, useCallback, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { ApiError } from "@/api/client";
-import "@/assets/styles/spectator-theme.css";
+import { loadTheme } from "@/theme/theme";
 import { useSpectatorSSE } from "@/hooks/use-spectator-sse";
 import { tournamentsService } from "@/services/tournaments.service";
 import type { BracketLeaderboard, ScreenRoutine, Tournament, TournamentBracketsSummary, TournamentState } from "@/data/tournaments";
@@ -94,6 +94,10 @@ function reducer(state: State, action: Action): State {
 }
 
 export function ScreenPage() {
+  useEffect(() => {
+    loadTheme();
+  }, []);
+
   const { tournamentId } = useParams<{ tournamentId: string }>();
   const id = Number(tournamentId);
   const [state, dispatch] = useReducer(reducer, initialState);

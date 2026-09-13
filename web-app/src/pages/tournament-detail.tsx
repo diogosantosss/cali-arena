@@ -19,7 +19,7 @@ import { ArrowLeft, MapPin, CalendarDays } from "lucide-react";
 const statusStyles: Record<Tournament["status"], { label: string; color: string; bg: string }> = {
   DRAFT:    { label: "Draft",    color: "var(--muted-foreground)", bg: "rgba(107,101,96,0.12)" },
   READY:    { label: "Ready",    color: "#7eb8f7", bg: "rgba(126,184,247,0.12)" },
-  LIVE:     { label: "Live",     color: "var(--accent)", bg: "rgba(232,160,32,0.12)" },
+  LIVE:     { label: "Live",     color: "var(--accent)", bg: "var(--accent-12)" },
   FINISHED: { label: "Finished", color: "#4a4a4e", bg: "rgba(74,74,78,0.12)" },
 };
 
@@ -56,6 +56,7 @@ type Action =
   | { type: "bracketCreated"; bracket: Bracket }
   | { type: "matchCreated"; match: Match }
   | { type: "matchUpdated"; match: Match }
+  | { type: "matchDeleted"; matchId: number }
   | { type: "refreshed"; brackets: Bracket[]; matches: Match[]; progresses: Record<number, MatchProgress> };
 
 const initialDetailState: DetailState = {
@@ -102,6 +103,14 @@ function reducer(state: DetailState, action: Action): DetailState {
       return {
         ...state,
         matches: state.matches.map((m) => (m.id === action.match.id ? action.match : m)),
+      };
+    case "matchDeleted":
+      return {
+        ...state,
+        matches: state.matches.filter((m) => m.id !== action.matchId),
+        progresses: Object.fromEntries(
+          Object.entries(state.progresses).filter(([id]) => Number(id) !== action.matchId),
+        ),
       };
     case "refreshed":
       return { ...state, brackets: action.brackets, matches: action.matches, progresses: action.progresses };
@@ -226,6 +235,15 @@ export function TournamentDetailPage() {
     }
   }
 
+  async function handleDeleteMatch(match: Match) {
+    try {
+      await matchesService.deleteMatch(match.id);
+      dispatch({ type: "matchDeleted", matchId: match.id });
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
   if (tournamentLoading && !tournament) {
     return (
       <div className="max-w-5xl mx-auto space-y-6">
@@ -330,6 +348,7 @@ export function TournamentDetailPage() {
         onCreateBracket={handleCreateBracket}
         onMatchCreated={(match) => dispatch({ type: "matchCreated", match })}
         onStartMatch={handleStartMatch}
+        onDeleteMatch={handleDeleteMatch}
       />
     </div>
   );

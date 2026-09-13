@@ -15,9 +15,9 @@ export function ToggleButton({ open, onClick, icon: Icon, label }: ToggleButtonP
       style={
         open
           ? {
-              background: "rgba(232,160,32,0.1)",
+              background: "var(--accent-10)",
               color: "var(--accent)",
-              border: "1px solid rgba(232,160,32,0.3)",
+              border: "1px solid var(--accent-30)",
             }
           : { background: "var(--accent)", color: "var(--accent-foreground)", border: "none" }
       }

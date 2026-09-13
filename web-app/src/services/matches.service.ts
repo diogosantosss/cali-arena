@@ -20,6 +20,10 @@ export const matchesService = {
     return apiClient.put(`/matches/${matchId}/reps`, input);
   },
 
+  deleteMatch(matchId: number): Promise<void> {
+    return apiClient.delete(`/matches/${matchId}`);
+  },
+
   getMatchById(matchId: number): Promise<Match> {
     return apiClient.get(`/matches/${matchId}`);
   },

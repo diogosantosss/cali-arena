@@ -132,7 +132,7 @@ export function BattlePanel({ matchId, athletes, routines, overviews, onError }:
 
   const repButton =
     "px-3 py-1.5 rounded text-sm font-semibold transition-colors disabled:opacity-30 disabled:cursor-not-allowed";
-  const repIncrementStyle = { background: "rgba(232,160,32,0.12)", color: "var(--accent)", border: "1px solid rgba(232,160,32,0.25)" };
+  const repIncrementStyle = { background: "var(--accent-12)", color: "var(--accent)", border: "1px solid var(--accent-25)" };
   const repDecrementStyle = { background: "var(--secondary)", color: "var(--secondary-foreground)", border: "1px solid var(--border)" };
 
   return (

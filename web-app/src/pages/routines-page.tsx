@@ -33,7 +33,7 @@ import {
 const typeStyles: Record<ExerciseType, { color: string; bg: string }> = {
   NORMAL: { color: "var(--secondary-foreground)", bg: "rgba(160,154,146,0.12)" },
   UNBROKEN: { color: "#7eb8f7", bg: "rgba(126,184,247,0.12)" },
-  SUPERSET: { color: "var(--accent)", bg: "rgba(232,160,32,0.12)" },
+  SUPERSET: { color: "var(--accent)", bg: "var(--accent-12)" },
 };
 
 const inputClass =
@@ -494,9 +494,9 @@ export function RoutinesPage() {
                     onClick={() => selectRoutine(routine)}
                     className="group flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-colors animate-fade-up w-full"
                     style={{
-                      background: selected ? "rgba(232,160,32,0.08)" : "var(--card)",
+                      background: selected ? "var(--accent-08)" : "var(--card)",
                       border: "1px solid",
-                      borderColor: selected ? "rgba(232,160,32,0.35)" : "var(--border)",
+                      borderColor: selected ? "var(--accent-35)" : "var(--border)",
                       animationDelay: `${i * 0.03}s`,
                       opacity: 0,
                     }}
@@ -572,9 +572,9 @@ export function RoutinesPage() {
                         <div key={order} className="rounded-lg overflow-hidden" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
                           <div
                             className="flex items-center gap-2 px-4 py-2"
-                            style={{ background: "rgba(232,160,32,0.06)", borderBottom: "1px solid var(--border)" }}
+                            style={{ background: "var(--accent-06)", borderBottom: "1px solid var(--border)" }}
                           >
-                            <span className="w-5 h-5 rounded-md flex items-center justify-center text-xs font-bold" style={{ background: "rgba(232,160,32,0.15)", color: "var(--accent)" }}>
+                            <span className="w-5 h-5 rounded-md flex items-center justify-center text-xs font-bold" style={{ background: "var(--accent-15)", color: "var(--accent)" }}>
                               {order}
                             </span>
                             <span className="text-xs font-semibold uppercase tracking-widest" style={{ color: "var(--accent)" }}>
@@ -755,7 +755,7 @@ function ExerciseRow({
       style={{
         background: superset ? "var(--card)" : "transparent",
         border: superset ? "none" : "1px solid var(--border)",
-        borderColor: editing ? "rgba(232,160,32,0.45)" : superset ? "none" : "var(--border)",
+        borderColor: editing ? "var(--accent-45)" : superset ? "none" : "var(--border)",
       }}
     >
       <div className="flex items-center gap-3 rounded-lg group">

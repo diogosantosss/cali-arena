@@ -284,6 +284,18 @@ class MatchService(
             }
         }
 
+    fun deleteMatch(matchId: Int): Either<ApiError, Unit> =
+        trxManager.run {
+            val match =
+                matches.findByIdOrNull(matchId)
+                    ?: return@run failure(ApiError.MATCH_NOT_FOUND)
+
+            matchProgresses.findByMatchId(matchId)?.let { matchProgresses.delete(it) }
+            matches.delete(match)
+
+            success(Unit)
+        }
+
     fun getMatchById(id: Int): Either<ApiError, Match> =
         trxManager.run {
             val match =

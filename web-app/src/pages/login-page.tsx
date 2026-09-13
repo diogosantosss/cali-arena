@@ -72,8 +72,8 @@ export function LoginPage() {
       style={{
         background: "var(--background)",
         backgroundImage: `
-          radial-gradient(ellipse 80% 50% at 20% 0%, rgba(232,160,32,0.07) 0%, transparent 60%),
-          radial-gradient(ellipse 60% 40% at 80% 100%, rgba(232,160,32,0.04) 0%, transparent 50%)
+          radial-gradient(ellipse 80% 50% at 20% 0%, var(--accent-07) 0%, transparent 60%),
+          radial-gradient(ellipse 60% 40% at 80% 100%, var(--accent-04) 0%, transparent 50%)
         `,
       }}
     >
