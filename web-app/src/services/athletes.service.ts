@@ -1,5 +1,5 @@
 import { apiClient } from "@/api/client";
-import type { Athlete, CreateAthleteInput } from "@/data/athletes";
+import type { Athlete, CreateAthleteInput, UpdateAthleteInput } from "@/data/athletes";
 
 export const athletesService = {
   getAthletes(): Promise<Athlete[]> {
@@ -20,5 +20,9 @@ export const athletesService = {
 
   createAthlete(input: CreateAthleteInput): Promise<Athlete> {
     return apiClient.post("/athletes", input);
+  },
+
+  updateAthlete(id: number, input: UpdateAthleteInput): Promise<Athlete> {
+    return apiClient.put(`/athletes/${id}`, input);
   },
 };

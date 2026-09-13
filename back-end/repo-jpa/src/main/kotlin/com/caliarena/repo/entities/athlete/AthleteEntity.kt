@@ -28,8 +28,8 @@ class AthleteEntity(
     @Column(nullable = false, length = 20)
     var gender: GenderType = GenderType.MALE,
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "club_id", nullable = false)
-    var club: ClubEntity = ClubEntity(),
+    @JoinColumn(name = "club_id", nullable = true)
+    var club: ClubEntity? = null,
     @Column(name = "created_at", nullable = false)
     var createdAt: Long = 0L,
 ) {
@@ -38,12 +38,12 @@ class AthleteEntity(
             id = id,
             name = name,
             gender = gender,
-            clubId = club.id,
+            clubId = club?.id,
             createdAt = Instant.ofEpochSecond(createdAt),
         )
 
     companion object {
-        fun Athlete.fromDomain(club: ClubEntity) =
+        fun Athlete.fromDomain(club: ClubEntity?) =
             AthleteEntity(
                 id = this.id,
                 name = this.name,

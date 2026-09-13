@@ -16,12 +16,16 @@ class AthleteService(
     fun createAthlete(
         name: String,
         gender: String,
-        clubId: Int,
+        clubId: Int?,
     ): Either<ApiError, Athlete> =
         trx.run {
             val club =
-                clubs.findByIdOrNull(clubId)
-                    ?: return@run failure(ApiError.CLUB_NOT_FOUND)
+                if (clubId != null) {
+                    clubs.findByIdOrNull(clubId)
+                        ?: return@run failure(ApiError.CLUB_NOT_FOUND)
+                } else {
+                    null
+                }
 
             val genderType =
                 GenderType.entries.find { it.name == gender }
@@ -75,7 +79,7 @@ class AthleteService(
         id: Int,
         name: String,
         gender: String,
-        clubId: Int,
+        clubId: Int?,
     ): Either<ApiError, Athlete> =
         trx.run {
             val existing =
@@ -87,8 +91,12 @@ class AthleteService(
                     ?: return@run failure(ApiError.INVALID_GENDER)
 
             val club =
-                clubs.findByIdOrNull(clubId)
-                    ?: return@run failure(ApiError.CLUB_NOT_FOUND)
+                if (clubId != null) {
+                    clubs.findByIdOrNull(clubId)
+                        ?: return@run failure(ApiError.CLUB_NOT_FOUND)
+                } else {
+                    null
+                }
 
             existing.name = name
             existing.gender = genderType
