@@ -1,15 +1,13 @@
 package com.caliarena.http
 
+import com.caliarena.domain.RequiresRole
 import com.caliarena.domain.routine.RoutineOverview
-import com.caliarena.domain.user.AuthenticatedUser
 import com.caliarena.domain.user.UserRole
 import com.caliarena.http.model.routine.CreateExerciseInput
 import com.caliarena.http.model.routine.CreateRoutineInput
 import com.caliarena.http.model.routine.UpdateExerciseInput
 import com.caliarena.http.model.toResponseEntity
-import com.caliarena.http.utils.hasAnyRole
 import com.caliarena.http.utils.toResponse
-import com.caliarena.service.ApiError
 import com.caliarena.service.RoutineService
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
@@ -29,14 +27,11 @@ class RoutineController(
     private val routineService: RoutineService,
 ) {
     @PostMapping
+    @RequiresRole([UserRole.ADMIN])
     fun createRoutine(
-        user: AuthenticatedUser,
         @RequestBody input: CreateRoutineInput,
-    ): ResponseEntity<Any> {
-        if (!user.hasAnyRole(UserRole.ADMIN)) {
-            return ApiError.NOT_AUTHORIZED.toResponseEntity()
-        }
-        return routineService
+    ): ResponseEntity<Any> =
+        routineService
             .createRoutine(
                 input.name,
                 input.timeCapSeconds,
@@ -49,17 +44,13 @@ class RoutineController(
                 },
                 onError = { it.toResponseEntity() },
             )
-    }
 
     @PostMapping("/exercises")
+    @RequiresRole([UserRole.ADMIN])
     fun createExercise(
-        user: AuthenticatedUser,
         @RequestBody input: CreateExerciseInput,
-    ): ResponseEntity<Any> {
-        if (!user.hasAnyRole(UserRole.ADMIN)) {
-            return ApiError.NOT_AUTHORIZED.toResponseEntity()
-        }
-        return routineService
+    ): ResponseEntity<Any> =
+        routineService
             .createExercise(
                 input.routineId,
                 input.name,
@@ -77,18 +68,14 @@ class RoutineController(
                 },
                 onError = { it.toResponseEntity() },
             )
-    }
 
     @PutMapping("/exercises/{id}")
+    @RequiresRole([UserRole.ADMIN])
     fun updateExercise(
-        user: AuthenticatedUser,
         @PathVariable id: Int,
         @RequestBody input: UpdateExerciseInput,
-    ): ResponseEntity<Any> {
-        if (!user.hasAnyRole(UserRole.ADMIN)) {
-            return ApiError.NOT_AUTHORIZED.toResponseEntity()
-        }
-        return routineService
+    ): ResponseEntity<Any> =
+        routineService
             .updateExercise(
                 id,
                 input.name,
@@ -105,17 +92,13 @@ class RoutineController(
                 },
                 onError = { it.toResponseEntity() },
             )
-    }
 
     @DeleteMapping("/exercises/{id}")
+    @RequiresRole([UserRole.ADMIN])
     fun deleteExercise(
-        user: AuthenticatedUser,
         @PathVariable id: Int,
-    ): ResponseEntity<Any> {
-        if (!user.hasAnyRole(UserRole.ADMIN)) {
-            return ApiError.NOT_AUTHORIZED.toResponseEntity()
-        }
-        return routineService
+    ): ResponseEntity<Any> =
+        routineService
             .deleteExercise(id)
             .toResponse(
                 onSuccess = {
@@ -125,7 +108,6 @@ class RoutineController(
                 },
                 onError = { it.toResponseEntity() },
             )
-    }
 
     @GetMapping("/{routineName}/overview")
     fun getRoutineOverview(

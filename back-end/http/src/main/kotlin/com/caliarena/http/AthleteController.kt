@@ -1,14 +1,12 @@
 package com.caliarena.http
 
+import com.caliarena.domain.RequiresRole
 import com.caliarena.domain.athlete.Athlete
-import com.caliarena.domain.user.AuthenticatedUser
 import com.caliarena.domain.user.UserRole
 import com.caliarena.http.model.athlete.CreateAthleteInput
 import com.caliarena.http.model.athlete.UpdateAthleteInput
 import com.caliarena.http.model.toResponseEntity
-import com.caliarena.http.utils.hasAnyRole
 import com.caliarena.http.utils.toResponse
-import com.caliarena.service.ApiError
 import com.caliarena.service.AthleteService
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
@@ -27,14 +25,11 @@ class AthleteController(
     private val athleteService: AthleteService,
 ) {
     @PostMapping
+    @RequiresRole([UserRole.ADMIN])
     fun createAthlete(
-        user: AuthenticatedUser,
         @RequestBody input: CreateAthleteInput,
-    ): ResponseEntity<Any> {
-        if (!user.hasAnyRole(UserRole.ADMIN)) {
-            return ApiError.NOT_AUTHORIZED.toResponseEntity()
-        }
-        return athleteService
+    ): ResponseEntity<Any> =
+        athleteService
             .createAthlete(input.name, input.gender, input.clubId)
             .toResponse(
                 onSuccess = { athlete ->
@@ -45,18 +40,14 @@ class AthleteController(
                 },
                 onError = { it.toResponseEntity() },
             )
-    }
 
     @PutMapping("/{id}")
+    @RequiresRole([UserRole.ADMIN])
     fun updateAthlete(
-        user: AuthenticatedUser,
         @PathVariable id: Int,
         @RequestBody input: UpdateAthleteInput,
-    ): ResponseEntity<Any> {
-        if (!user.hasAnyRole(UserRole.ADMIN)) {
-            return ApiError.NOT_AUTHORIZED.toResponseEntity()
-        }
-        return athleteService
+    ): ResponseEntity<Any> =
+        athleteService
             .updateAthlete(id, input.name, input.gender, input.clubId)
             .toResponse(
                 onSuccess = { athlete ->
@@ -66,7 +57,6 @@ class AthleteController(
                 },
                 onError = { it.toResponseEntity() },
             )
-    }
 
     @GetMapping("/{id}")
     fun getAthleteById(

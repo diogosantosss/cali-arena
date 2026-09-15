@@ -4,6 +4,8 @@ import com.caliarena.domain.token.Sha256TokenEncoder
 import com.caliarena.domain.user.UsersDomainConfig
 import com.caliarena.http.AuthenticatedUserArgumentResolver
 import com.caliarena.http.AuthenticationInterceptor
+import com.caliarena.http.RateLimitInterceptor
+import com.caliarena.http.RoleAuthorizationInterceptor
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.runApplication
 import org.springframework.context.annotation.Bean
@@ -19,9 +21,13 @@ import java.time.Duration
 class PipelineConfigurer(
     private val authenticatedUserArgumentResolver: AuthenticatedUserArgumentResolver,
     private val authenticationInterceptor: AuthenticationInterceptor,
+    private val rateLimitInterceptor: RateLimitInterceptor,
+    private val roleAuthorizationInterceptor: RoleAuthorizationInterceptor,
 ) : WebMvcConfigurer {
     override fun addInterceptors(registry: InterceptorRegistry) {
         registry.addInterceptor(authenticationInterceptor)
+        registry.addInterceptor(roleAuthorizationInterceptor)
+        registry.addInterceptor(rateLimitInterceptor)
     }
 
     override fun addArgumentResolvers(resolvers: MutableList<HandlerMethodArgumentResolver>) {

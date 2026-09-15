@@ -1,13 +1,11 @@
 package com.caliarena.http
 
-import com.caliarena.domain.user.AuthenticatedUser
+import com.caliarena.domain.RequiresRole
 import com.caliarena.domain.user.UserRole
 import com.caliarena.http.model.toResponseEntity
 import com.caliarena.http.model.tournament.CreateTournamentInput
 import com.caliarena.http.model.tournament.UpdateScreenInput
-import com.caliarena.http.utils.hasAnyRole
 import com.caliarena.http.utils.toResponse
-import com.caliarena.service.ApiError
 import com.caliarena.service.TournamentService
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
@@ -29,19 +27,16 @@ class TournamentController(
     private val tournamentService: TournamentService,
 ) {
     @PostMapping
+    @RequiresRole([UserRole.ADMIN])
     fun createTournament(
-        user: AuthenticatedUser,
         @RequestBody input: CreateTournamentInput,
-    ): ResponseEntity<Any> {
-        if (!user.hasAnyRole(UserRole.ADMIN)) {
-            return ApiError.NOT_AUTHORIZED.toResponseEntity()
-        }
-        return tournamentService
+    ): ResponseEntity<Any> =
+        tournamentService
             .createTournament(
-                name = input.name,
-                location = input.location,
-                startDate = input.startDate?.convertDate(),
-                endDate = input.endDate?.convertDate(),
+                input.name,
+                input.location,
+                input.startDate?.convertDate(),
+                input.endDate?.convertDate(),
             ).toResponse(
                 onSuccess = { tournament ->
                     ResponseEntity
@@ -51,7 +46,6 @@ class TournamentController(
                 },
                 onError = { it.toResponseEntity() },
             )
-    }
 
     @GetMapping
     fun getTournaments(): ResponseEntity<Any> = ResponseEntity.ok(tournamentService.getAllTournaments())
@@ -88,15 +82,12 @@ class TournamentController(
             )
 
     @PutMapping("/{tournamentId}/state/screen")
+    @RequiresRole([UserRole.ADMIN])
     fun updateScreen(
-        user: AuthenticatedUser,
         @PathVariable tournamentId: Int,
         @RequestBody input: UpdateScreenInput,
-    ): ResponseEntity<Any> {
-        if (!user.hasAnyRole(UserRole.ADMIN)) {
-            return ApiError.NOT_AUTHORIZED.toResponseEntity()
-        }
-        return tournamentService
+    ): ResponseEntity<Any> =
+        tournamentService
             .updateScreen(
                 tournamentId = tournamentId,
                 screen = input.screen,
@@ -111,7 +102,6 @@ class TournamentController(
                 },
                 onError = { it.toResponseEntity() },
             )
-    }
 
     private fun String.convertDate(): Instant = LocalDate.parse(this).atStartOfDay().toInstant(ZoneOffset.UTC)
 }

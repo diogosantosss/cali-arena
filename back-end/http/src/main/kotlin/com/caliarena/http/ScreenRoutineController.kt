@@ -1,15 +1,13 @@
 package com.caliarena.http
 
+import com.caliarena.domain.RequiresRole
 import com.caliarena.domain.routine.ScreenRoutine
-import com.caliarena.domain.user.AuthenticatedUser
 import com.caliarena.domain.user.UserRole
 import com.caliarena.http.model.screen.CreateScreenRoutineInput
 import com.caliarena.http.model.screen.UpdateDisplayOrderInput
 import com.caliarena.http.model.screen.UpdateVisibilityInput
 import com.caliarena.http.model.toResponseEntity
-import com.caliarena.http.utils.hasAnyRole
 import com.caliarena.http.utils.toResponse
-import com.caliarena.service.ApiError
 import com.caliarena.service.ScreenRoutineService
 import com.caliarena.service.sse.SpectatorPublisher
 import org.springframework.http.HttpHeaders
@@ -63,15 +61,12 @@ class ScreenRoutineController(
             )
 
     @PostMapping
+    @RequiresRole([UserRole.ADMIN])
     fun create(
-        user: AuthenticatedUser,
         @PathVariable tournamentId: Int,
         @RequestBody input: CreateScreenRoutineInput,
-    ): ResponseEntity<Any> {
-        if (!user.hasAnyRole(UserRole.ADMIN)) {
-            return ApiError.NOT_AUTHORIZED.toResponseEntity()
-        }
-        return service
+    ): ResponseEntity<Any> =
+        service
             .create(tournamentId, input.routineId, input.displayOrder, input.label)
             .toResponse(
                 onSuccess = { screenRoutine: ScreenRoutine ->
@@ -81,58 +76,45 @@ class ScreenRoutineController(
                 },
                 onError = { it.toResponseEntity() },
             )
-    }
 
     @PatchMapping("/{id}/visibility")
+    @RequiresRole([UserRole.ADMIN])
     fun updateVisibility(
-        user: AuthenticatedUser,
         @PathVariable tournamentId: Int,
         @PathVariable id: Int,
         @RequestBody input: UpdateVisibilityInput,
-    ): ResponseEntity<Any> {
-        if (!user.hasAnyRole(UserRole.ADMIN)) {
-            return ApiError.NOT_AUTHORIZED.toResponseEntity()
-        }
-        return service
+    ): ResponseEntity<Any> =
+        service
             .update(tournamentId, id, input.isVisible, null, null)
             .toResponse(
                 onSuccess = { ResponseEntity.ok(it) },
                 onError = { it.toResponseEntity() },
             )
-    }
 
     @PatchMapping("/{id}/order")
+    @RequiresRole([UserRole.ADMIN])
     fun updateDisplayOrder(
-        user: AuthenticatedUser,
         @PathVariable tournamentId: Int,
         @PathVariable id: Int,
         @RequestBody input: UpdateDisplayOrderInput,
-    ): ResponseEntity<Any> {
-        if (!user.hasAnyRole(UserRole.ADMIN)) {
-            return ApiError.NOT_AUTHORIZED.toResponseEntity()
-        }
-        return service
+    ): ResponseEntity<Any> =
+        service
             .update(tournamentId, id, null, input.displayOrder, null)
             .toResponse(
                 onSuccess = { ResponseEntity.ok(it) },
                 onError = { it.toResponseEntity() },
             )
-    }
 
     @DeleteMapping("/{id}")
+    @RequiresRole([UserRole.ADMIN])
     fun delete(
-        user: AuthenticatedUser,
         @PathVariable tournamentId: Int,
         @PathVariable id: Int,
-    ): ResponseEntity<Any> {
-        if (!user.hasAnyRole(UserRole.ADMIN)) {
-            return ApiError.NOT_AUTHORIZED.toResponseEntity()
-        }
-        return service
+    ): ResponseEntity<Any> =
+        service
             .delete(tournamentId, id)
             .toResponse(
                 onSuccess = { ResponseEntity.noContent().build() },
                 onError = { it.toResponseEntity() },
             )
-    }
 }
