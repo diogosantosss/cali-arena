@@ -1,12 +1,12 @@
 import { useState } from "react";
 import type { Athlete } from "@/data/athletes";
 import type { Routine } from "@/data/routines";
-import type { User } from "@/data/users";
 import type { Bracket, BracketStage } from "@/data/tournaments";
 import type { Match, MatchProgress } from "@/data/matches";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge as ShadcnBadge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Plus, RefreshCw } from "lucide-react";
 import { MatchCard } from "./match-card";
 import { CreateMatchDialog } from "./create-match-dialog";
@@ -17,11 +17,11 @@ interface BracketViewProps {
   progresses: Record<number, MatchProgress>;
   athletes: Athlete[];
   routines: Routine[];
-  judges: User[];
   onRefresh: () => void;
   onCreateBracket: (division: string, stage: BracketStage) => void;
   onMatchCreated: (match: Match) => void;
   onStartMatch: (match: Match) => void;
+  onDeleteMatch: (match: Match) => void;
 }
 
 const stages: BracketStage[] = ["QUALIFIERS", "QUARTERFINALS", "SEMIFINALS", "FINALS"];
@@ -39,15 +39,17 @@ export function BracketView({
   progresses,
   athletes,
   routines,
-  judges,
   onRefresh,
   onCreateBracket,
   onMatchCreated,
   onStartMatch,
+  onDeleteMatch,
 }: BracketViewProps) {
   const [createMatchFor, setCreateMatchFor] = useState<Bracket | null>(null);
   const [addingDivision, setAddingDivision] = useState(false);
   const [newDivision, setNewDivision] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<Match | null>(null);
+  const [deleteSaving, setDeleteSaving] = useState(false);
 
   const divisions = Array.from(new Set(brackets.map((b) => b.division)));
   const [pickedDivision, setPickedDivision] = useState<string | null>(null);
@@ -60,6 +62,17 @@ export function BracketView({
 
   function getMatchesForBracket(bracketId: number) {
     return matches.filter((m) => m.bracketId === bracketId);
+  }
+
+  async function confirmDelete() {
+    if (!deleteTarget) return;
+    setDeleteSaving(true);
+    try {
+      await onDeleteMatch(deleteTarget);
+      setDeleteTarget(null);
+    } finally {
+      setDeleteSaving(false);
+    }
   }
 
   function renderStages(division: string) {
@@ -113,8 +126,8 @@ export function BracketView({
                     progress={progresses[match.id]}
                     athletes={athletes}
                     routines={routines}
-                    judges={judges}
                     onStartMatch={onStartMatch}
+                    onDeleteMatch={(match) => setDeleteTarget(match)}
                   />
                 ))}
               </div>
@@ -210,7 +223,6 @@ export function BracketView({
           open={!!createMatchFor}
           bracket={createMatchFor}
           routines={routines}
-          judges={judges}
           athletes={athletes}
           onClose={() => setCreateMatchFor(null)}
           onCreated={(match) => {
@@ -219,6 +231,48 @@ export function BracketView({
           }}
         />
       )}
+
+      <Dialog
+        open={deleteTarget != null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
+      >
+        <DialogContent style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+          <DialogHeader>
+            <DialogTitle>Delete match?</DialogTitle>
+            <DialogDescription>
+              {deleteTarget ? (
+                <>
+                  {(() => {
+                    const red = athletes.find((a) => a.id === deleteTarget.athleteRedId);
+                    const blue = athletes.find((a) => a.id === deleteTarget.athleteBlueId);
+                    const label =
+                      red && blue ? `${red.name} vs ${blue.name}` : `#${deleteTarget.id}`;
+                    return <>Are you sure you want to delete the match <strong>{label}</strong>? This also deletes the linked progress and cannot be undone.</>;
+                  })()}
+                </>
+              ) : null}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              disabled={deleteSaving}
+              onClick={() => setDeleteTarget(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              disabled={deleteSaving}
+              onClick={() => void confirmDelete()}
+              style={{ background: "var(--danger)", color: "var(--danger-foreground, #fff)" }}
+            >
+              {deleteSaving ? "Deleting…" : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

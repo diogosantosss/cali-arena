@@ -7,8 +7,6 @@ import { athletesService } from "@/services/athletes.service";
 import type { Athlete } from "@/data/athletes";
 import { routinesService } from "@/services/routines.service";
 import type { Routine, RoutineOverview } from "@/data/routines";
-import { usersService } from "@/services/users.service";
-import type { User } from "@/data/users";
 import { matchesService } from "@/services/matches.service";
 import type { Match, MatchProgress } from "@/data/matches";
 import { ScreenControl } from "@/components/tournaments/screen-control";
@@ -19,7 +17,7 @@ import { ArrowLeft, MapPin, CalendarDays } from "lucide-react";
 const statusStyles: Record<Tournament["status"], { label: string; color: string; bg: string }> = {
   DRAFT:    { label: "Draft",    color: "var(--muted-foreground)", bg: "rgba(107,101,96,0.12)" },
   READY:    { label: "Ready",    color: "#7eb8f7", bg: "rgba(126,184,247,0.12)" },
-  LIVE:     { label: "Live",     color: "var(--accent)", bg: "rgba(232,160,32,0.12)" },
+  LIVE:     { label: "Live",     color: "var(--accent)", bg: "var(--accent-12)" },
   FINISHED: { label: "Finished", color: "#4a4a4e", bg: "rgba(74,74,78,0.12)" },
 };
 
@@ -33,7 +31,6 @@ interface DetailState {
   progresses: Record<number, MatchProgress>;
   athletes: Athlete[];
   routines: Routine[];
-  judges: User[];
   overviews: Record<string, RoutineOverview>;
 }
 
@@ -48,7 +45,6 @@ type Action =
       progresses: Record<number, MatchProgress>;
       athletes: Athlete[];
       routines: Routine[];
-      judges: User[];
       overviews: Record<string, RoutineOverview>;
     }
   | { type: "loadError"; message: string }
@@ -56,6 +52,7 @@ type Action =
   | { type: "bracketCreated"; bracket: Bracket }
   | { type: "matchCreated"; match: Match }
   | { type: "matchUpdated"; match: Match }
+  | { type: "matchDeleted"; matchId: number }
   | { type: "refreshed"; brackets: Bracket[]; matches: Match[]; progresses: Record<number, MatchProgress> };
 
 const initialDetailState: DetailState = {
@@ -68,7 +65,6 @@ const initialDetailState: DetailState = {
   progresses: {},
   athletes: [],
   routines: [],
-  judges: [],
   overviews: {},
 };
 
@@ -87,7 +83,6 @@ function reducer(state: DetailState, action: Action): DetailState {
         progresses: action.progresses,
         athletes: action.athletes,
         routines: action.routines,
-        judges: action.judges,
         overviews: action.overviews,
       };
     case "loadError":
@@ -102,6 +97,14 @@ function reducer(state: DetailState, action: Action): DetailState {
       return {
         ...state,
         matches: state.matches.map((m) => (m.id === action.match.id ? action.match : m)),
+      };
+    case "matchDeleted":
+      return {
+        ...state,
+        matches: state.matches.filter((m) => m.id !== action.matchId),
+        progresses: Object.fromEntries(
+          Object.entries(state.progresses).filter(([id]) => Number(id) !== action.matchId),
+        ),
       };
     case "refreshed":
       return { ...state, brackets: action.brackets, matches: action.matches, progresses: action.progresses };
@@ -124,7 +127,6 @@ export function TournamentDetailPage() {
     progresses,
     athletes,
     routines,
-    judges,
     overviews,
   } = data;
 
@@ -142,14 +144,13 @@ export function TournamentDetailPage() {
   const loadTournament = useCallback(async () => {
     dispatch({ type: "loadStart" });
     try {
-      const [loadedTournament, loadedState, loadedBrackets, loadedAthletes, loadedRoutines, users] =
+      const [loadedTournament, loadedState, loadedBrackets, loadedAthletes, loadedRoutines] =
         await Promise.all([
           tournamentsService.getTournamentById(tournamentId),
           tournamentsService.getTournamentState(tournamentId),
           tournamentsService.getBracketsByTournamentId(tournamentId),
           athletesService.getAthletes(),
           routinesService.getRoutines(),
-          usersService.getUsers(),
         ]);
 
       const allMatches = await Promise.all(
@@ -174,7 +175,6 @@ export function TournamentDetailPage() {
         progresses: loadedProgresses,
         athletes: loadedAthletes,
         routines: loadedRoutines,
-        judges: users.filter((u) => u.role === "JUDGE"),
         overviews: Object.fromEntries(loadedOverviews),
       });
     } catch (err) {
@@ -221,6 +221,15 @@ export function TournamentDetailPage() {
       await matchesService.startMatch(match.id);
       const updated = await matchesService.getMatchById(match.id);
       dispatch({ type: "matchUpdated", match: updated });
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  async function handleDeleteMatch(match: Match) {
+    try {
+      await matchesService.deleteMatch(match.id);
+      dispatch({ type: "matchDeleted", matchId: match.id });
     } catch (err) {
       console.error(err);
     }
@@ -325,11 +334,11 @@ export function TournamentDetailPage() {
         progresses={progresses}
         athletes={athletes}
         routines={routines}
-        judges={judges}
         onRefresh={() => void refreshMatches()}
         onCreateBracket={handleCreateBracket}
         onMatchCreated={(match) => dispatch({ type: "matchCreated", match })}
         onStartMatch={handleStartMatch}
+        onDeleteMatch={handleDeleteMatch}
       />
     </div>
   );

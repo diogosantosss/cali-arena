@@ -6,7 +6,6 @@ data class Match(
     val id: Int,
     val bracketId: Int,
     val routineId: Int,
-    val judgeId: Int,
 
     val athleteRedId: Int?,
     val athleteBlueId: Int?,

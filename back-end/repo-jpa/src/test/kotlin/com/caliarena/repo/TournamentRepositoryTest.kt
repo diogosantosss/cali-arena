@@ -5,7 +5,6 @@ import com.caliarena.domain.bracket.BracketStage
 import com.caliarena.domain.match.MatchStatus
 import com.caliarena.domain.tournament.ScreenState
 import com.caliarena.domain.tournament.TournamentStatus
-import com.caliarena.domain.user.UserRole
 import com.caliarena.repo.entities.athlete.AthleteEntity
 import com.caliarena.repo.entities.club.ClubEntity
 import com.caliarena.repo.entities.match.MatchEntity
@@ -13,7 +12,6 @@ import com.caliarena.repo.entities.routine.EnduranceRoutineEntity
 import com.caliarena.repo.entities.tournament.BracketEntity
 import com.caliarena.repo.entities.tournament.TournamentEntity
 import com.caliarena.repo.entities.tournament.TournamentStateEntity
-import com.caliarena.repo.entities.user.UserEntity
 import com.caliarena.repo.trx.Transaction
 import com.caliarena.repo.trx.TransactionManagerJpa
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -66,11 +64,6 @@ class TournamentRepositoryTest {
     ): BracketEntity =
         brackets.save(BracketEntity(tournament = tournament, division = division, stage = stage, createdAt = now.epochSecond))
 
-    private fun Transaction.newJudge(): UserEntity =
-        users.save(
-            UserEntity(username = "judge-${System.nanoTime()}", password = "hash", role = UserRole.JUDGE, createdAt = now.epochSecond),
-        )
-
     private fun Transaction.newAthlete(name: String): AthleteEntity {
         val club = clubs.save(ClubEntity(name = "club-$name-${System.nanoTime()}", createdAt = now.epochSecond))
         return athletes.save(AthleteEntity(name = name, gender = GenderType.MALE, club = club, createdAt = now.epochSecond))
@@ -78,7 +71,6 @@ class TournamentRepositoryTest {
 
     private fun Transaction.newRunningMatch(tournament: TournamentEntity): MatchEntity {
         val bracket = newBracket(tournament)
-        val judge = newJudge()
         val red = newAthlete("red-${System.nanoTime()}")
         val blue = newAthlete("blue-${System.nanoTime()}")
         val routine =
@@ -88,7 +80,6 @@ class TournamentRepositoryTest {
             MatchEntity(
                 bracket = bracket,
                 routineId = routine.id,
-                judge = judge,
                 athleteRed = red,
                 athleteBlue = blue,
                 status = MatchStatus.RUNNING,

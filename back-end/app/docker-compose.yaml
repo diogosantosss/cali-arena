@@ -9,6 +9,12 @@ services:
     ports:
       - "5432:5432"
 
+  caliarena-redis:
+    container_name: caliarena-redis
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
   caliarena-jvm:
     container_name: caliarena-jvm
     hostname: caliarena-jvm
@@ -16,6 +22,7 @@ services:
     environment:
       PORT: 8080
       DB_URL: ${DB_URL}
+      REDIS_HOST: caliarena-redis
       SPRING_PROFILES_ACTIVE: prod
     ports:
       - "8080:8080"

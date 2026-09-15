@@ -1,5 +1,6 @@
 package com.caliarena.http
 
+import com.caliarena.domain.RequiresRole
 import com.caliarena.domain.user.AuthenticatedUser
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
@@ -16,11 +17,14 @@ class AuthenticationInterceptor(
         response: HttpServletResponse,
         handler: Any,
     ): Boolean {
-        if (handler is HandlerMethod &&
-            handler.methodParameters.any {
-                it.parameterType == AuthenticatedUser::class.java
-            }
-        ) {
+        val requiresAuth =
+            handler is HandlerMethod &&
+                (
+                    handler.methodParameters.any { it.parameterType == AuthenticatedUser::class.java } ||
+                        handler.getMethodAnnotation(RequiresRole::class.java) != null
+                )
+
+        if (requiresAuth) {
             // enforce authentication
             val user =
                 authorizationHeaderProcessor.processAuthorizationHeaderValue(request.getHeader(NAME_AUTHORIZATION_HEADER))

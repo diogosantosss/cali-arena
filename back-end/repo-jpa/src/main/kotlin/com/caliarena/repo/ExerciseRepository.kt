@@ -21,6 +21,34 @@ interface ExerciseRepository : CrudRepository<ExerciseEntity, Int> {
         fromOrder: Int,
     )
 
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(
+        """
+            UPDATE ExerciseEntity e
+            SET e.exerciseOrder = e.exerciseOrder + 1
+            WHERE e.routine.id = :routineId AND e.exerciseOrder >= :fromOrder AND e.exerciseOrder < :toOrder
+        """,
+    )
+    fun shiftExerciseOrdersUp(
+        routineId: Int,
+        fromOrder: Int,
+        toOrder: Int,
+    )
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(
+        """
+            UPDATE ExerciseEntity e
+            SET e.exerciseOrder = e.exerciseOrder - 1
+            WHERE e.routine.id = :routineId AND e.exerciseOrder > :fromOrder AND e.exerciseOrder <= :toOrder
+        """,
+    )
+    fun shiftExerciseOrdersDown(
+        routineId: Int,
+        fromOrder: Int,
+        toOrder: Int,
+    )
+
     fun existsByRoutineIdAndExerciseOrder(
         routineId: Int,
         exerciseOrder: Int,

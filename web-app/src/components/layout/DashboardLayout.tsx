@@ -76,7 +76,7 @@ export function DashboardLayout() {
                       }`
                     }
                     style={({ isActive }) =>
-                      isActive ? { background: "rgba(232,160,32,0.08)" } : {}
+                      isActive ? { background: "var(--accent-08)" } : {}
                     }
                   >
                     <item.icon className="w-[15px] h-[15px] shrink-0" />
@@ -106,7 +106,7 @@ export function DashboardLayout() {
               </span>
               <span
                 className="text-[9px] uppercase tracking-widest px-1.5 py-0.5 rounded-full"
-                style={{ background: "rgba(232,160,32,0.12)", color: "var(--accent)" }}
+                style={{ background: "var(--accent-12)", color: "var(--accent)" }}
               >
                 {user.role}
               </span>

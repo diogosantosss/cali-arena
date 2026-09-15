@@ -1,13 +1,11 @@
 package com.caliarena.http
 
-import com.caliarena.domain.user.AuthenticatedUser
+import com.caliarena.domain.RequiresRole
 import com.caliarena.domain.user.UserRole
 import com.caliarena.http.model.club.CreateClubInput
 import com.caliarena.http.model.club.UpdateClubInput
 import com.caliarena.http.model.toResponseEntity
-import com.caliarena.http.utils.hasAnyRole
 import com.caliarena.http.utils.toResponse
-import com.caliarena.service.ApiError
 import com.caliarena.service.ClubService
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
@@ -26,14 +24,11 @@ class ClubController(
     private val clubService: ClubService,
 ) {
     @PostMapping
+    @RequiresRole([UserRole.ADMIN])
     fun createClub(
-        user: AuthenticatedUser,
         @RequestBody input: CreateClubInput,
-    ): ResponseEntity<Any> {
-        if (!user.hasAnyRole(UserRole.ADMIN)) {
-            return ApiError.NOT_AUTHORIZED.toResponseEntity()
-        }
-        return clubService
+    ): ResponseEntity<Any> =
+        clubService
             .createClub(input.name, input.shortName)
             .toResponse(
                 onSuccess = { club ->
@@ -44,7 +39,6 @@ class ClubController(
                 },
                 onError = { it.toResponseEntity() },
             )
-    }
 
     @GetMapping("/{id}")
     fun getClubById(
@@ -68,15 +62,12 @@ class ClubController(
             .body(clubService.getAllClubs())
 
     @PutMapping("/{id}")
+    @RequiresRole([UserRole.ADMIN])
     fun updateClub(
-        user: AuthenticatedUser,
         @PathVariable id: Int,
         @RequestBody input: UpdateClubInput,
-    ): ResponseEntity<Any> {
-        if (!user.hasAnyRole(UserRole.ADMIN)) {
-            return ApiError.NOT_AUTHORIZED.toResponseEntity()
-        }
-        return clubService
+    ): ResponseEntity<Any> =
+        clubService
             .updateClub(id, input.name, input.shortName)
             .toResponse(
                 onSuccess = { club ->
@@ -86,5 +77,4 @@ class ClubController(
                 },
                 onError = { it.toResponseEntity() },
             )
-    }
 }

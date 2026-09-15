@@ -46,7 +46,7 @@ class AthleteServiceTest : ServiceTest() {
         id: Int = 1,
         name: String = "João Silva",
         gender: GenderType = GenderType.MALE,
-        club: ClubEntity = clubEntity(),
+        club: ClubEntity? = clubEntity(),
     ) = AthleteEntity(id, name, gender, club, now.epochSecond)
 
     @Nested
@@ -64,6 +64,19 @@ class AthleteServiceTest : ServiceTest() {
             assertEquals(success(created.toDomain()), result)
 
             verify(clubs).findById(1)
+        }
+
+        @Test
+        fun `should create athlete without a club`() {
+            val created = athleteEntity(club = null)
+
+            whenever(athletes.save(any())).thenReturn(created)
+
+            val result = service.createAthlete("João Silva", "MALE", null)
+
+            assertEquals(success(created.toDomain()), result)
+
+            verify(clubs, never()).findById(any())
         }
 
         @Test
@@ -194,6 +207,19 @@ class AthleteServiceTest : ServiceTest() {
             val result = service.updateAthlete(1, "new-name", "MALE", 2)
 
             assertEquals(success(Athlete(1, "new-name", GenderType.MALE, 2, now)), result)
+        }
+
+        @Test
+        fun `should remove club when updating with null`() {
+            val existing = athleteEntity(name = "old", club = clubEntity())
+            whenever(athletes.findById(1)).thenReturn(Optional.of(existing))
+            whenever(athletes.save(any())).thenAnswer { it.getArgument<AthleteEntity>(0) }
+
+            val result = service.updateAthlete(1, "new-name", "MALE", null)
+
+            assertEquals(success(Athlete(1, "new-name", GenderType.MALE, null, now)), result)
+
+            verify(clubs, never()).findById(any())
         }
 
         @Test

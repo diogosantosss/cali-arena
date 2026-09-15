@@ -62,7 +62,7 @@ class AthleteRepositoryTest {
                 assertNotEqualsZero(created.id)
                 assertEquals("Diogo", created.name)
                 assertEquals(GenderType.MALE, created.gender)
-                assertEquals(club.id, created.club.id)
+                assertEquals(club.id, created.club!!.id)
             }
 
         @Test

@@ -159,7 +159,6 @@ internal fun previewMatchState(
                 id = 12,
                 bracketId = 1,
                 routineId = 3,
-                judgeId = 2,
                 athleteRedId = 1,
                 athleteBlueId = 2,
                 winnerAthleteId = null,

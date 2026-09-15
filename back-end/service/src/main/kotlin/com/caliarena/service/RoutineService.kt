@@ -92,6 +92,56 @@ class RoutineService(
             success(exercise.toDomain())
         }
 
+    fun updateExercise(
+        id: Int,
+        name: String,
+        targetReps: Int,
+        addedWeight: BigDecimal?,
+        exerciseOrder: Int,
+        supersetOrder: Int?,
+        type: String, // ExerciseType
+    ): Either<ApiError, Exercise> =
+        trx.run {
+            val exerciseType =
+                ExerciseType.entries.find { it.name == type }
+                    ?: return@run failure(ApiError.EXERCISE_TYPE_NOT_FOUND)
+
+            val existing =
+                exercises.findByIdOrNull(id)
+                    ?: return@run failure(ApiError.EXERCISE_NOT_FOUND)
+
+            val routineId = existing.routine.id
+            val oldOrder = existing.exerciseOrder
+
+            existing.name = name
+            existing.targetReps = targetReps
+            existing.addedWeight = addedWeight
+            existing.supersetOrder = supersetOrder
+            existing.type = exerciseType
+
+            if (oldOrder != exerciseOrder) {
+                if (exerciseOrder < oldOrder) {
+                    exercises.shiftExerciseOrdersUp(routineId, exerciseOrder, oldOrder)
+                } else {
+                    exercises.shiftExerciseOrdersDown(routineId, oldOrder, exerciseOrder)
+                }
+            }
+
+            existing.exerciseOrder = exerciseOrder
+
+            success(exercises.save(existing).toDomain())
+        }
+
+    fun deleteExercise(id: Int): Either<ApiError, Unit> =
+        trx.run {
+            val existing =
+                exercises.findByIdOrNull(id)
+                    ?: return@run failure(ApiError.EXERCISE_NOT_FOUND)
+
+            exercises.delete(existing)
+            success(Unit)
+        }
+
     fun getRoutineOverview(routineName: String): Either<ApiError, RoutineOverview> =
         trx.run {
             val routine =

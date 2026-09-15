@@ -2,7 +2,6 @@ import { useState } from "react";
 import { ApiError } from "@/api/client";
 import type { Athlete } from "@/data/athletes";
 import type { Routine } from "@/data/routines";
-import type { User } from "@/data/users";
 import { matchesService } from "@/services/matches.service";
 import type { Bracket } from "@/data/tournaments";
 import type { CreateMatchInput, Match } from "@/data/matches";
@@ -15,7 +14,6 @@ interface CreateMatchDialogProps {
   open: boolean;
   bracket: Bracket;
   routines: Routine[];
-  judges: User[];
   athletes: Athlete[];
   onClose: () => void;
   onCreated: (match: Match) => void;
@@ -25,12 +23,11 @@ type MatchForm = Omit<CreateMatchInput, "bracketId">;
 
 const initialForm: MatchForm = {
   routineId: 0,
-  judgeId: 0,
   athleteRedId: 0,
   athleteBlueId: 0,
 };
 
-export function CreateMatchDialog({ open, bracket, routines, judges, athletes, onClose, onCreated }: CreateMatchDialogProps) {
+export function CreateMatchDialog({ open, bracket, routines, athletes, onClose, onCreated }: CreateMatchDialogProps) {
   const [form, setForm] = useState<MatchForm>(initialForm);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -39,7 +36,7 @@ export function CreateMatchDialog({ open, bracket, routines, judges, athletes, o
     setForm((current) => ({ ...current, [field]: value }));
   }
 
-  const isValid = form.routineId && form.judgeId && form.athleteRedId && form.athleteBlueId;
+  const isValid = form.routineId && form.athleteRedId && form.athleteBlueId;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -77,23 +74,6 @@ export function CreateMatchDialog({ open, bracket, routines, judges, athletes, o
               <SelectContent>
                 {routines.map((r) => (
                   <SelectItem key={r.id} value={String(r.id)}>{r.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label>Judge</Label>
-            <Select
-              value={form.judgeId ? String(form.judgeId) : ""}
-              onValueChange={(v) => setField("judgeId", Number(v))}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select judge" />
-              </SelectTrigger>
-              <SelectContent>
-                {judges.map((j) => (
-                  <SelectItem key={j.id} value={String(j.id)}>{j.username}</SelectItem>
                 ))}
               </SelectContent>
             </Select>

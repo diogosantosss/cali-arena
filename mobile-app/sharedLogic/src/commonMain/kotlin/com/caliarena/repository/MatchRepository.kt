@@ -18,7 +18,7 @@ class MatchRepository(
         val token =
             tokenStorage.readSession()?.token
                 ?: return Result.failure(NotAuthenticatedException())
-        return api.getMatchesForJudge(token)
+        return api.getMatches(token)
     }
 
     suspend fun getAthlete(id: Int): Result<AthleteOutput> = api.getAthlete(id)

@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -51,7 +53,10 @@ internal fun JudgePanel(
     }
 
     Column(
-        modifier = Modifier.fillMaxSize(),
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         AthleteCard(
@@ -79,10 +84,7 @@ internal fun JudgePanel(
                     finished -> JudgePhase.FINISHED
                     else -> JudgePhase.SCORING
                 },
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .weight(1f),
+            modifier = Modifier.fillMaxWidth(),
             transitionSpec = {
                 fadeIn(
                     animationSpec = tween(durationMillis = 260, easing = FastOutSlowInEasing),
@@ -92,12 +94,12 @@ internal fun JudgePanel(
         ) { phase ->
             when (phase) {
                 JudgePhase.PENDING ->
-                    PendingStartCard(modifier = Modifier.fillMaxSize())
+                    PendingStartCard(modifier = Modifier.fillMaxWidth())
 
                 JudgePhase.FINISHED ->
                     FinishedCard(
                         elapsedMs = state.finishedElapsedMillis(side),
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier.fillMaxWidth(),
                     )
 
                 JudgePhase.SCORING ->
@@ -106,7 +108,7 @@ internal fun JudgePanel(
                         side = side,
                         currentGroupIndex = currentGroupIndex,
                         onAdjust = onAdjust,
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier.fillMaxWidth(),
                     )
             }
         }
@@ -184,10 +186,7 @@ private fun ScoringBody(
             enabled = state.match.status == MatchStatus.RUNNING,
             onIncrement = { onAdjust(side, state.currentRepsOf(side) + 1) },
             onDecrement = { onAdjust(side, max(0, state.currentRepsOf(side) - 1)) },
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .weight(1f),
+            modifier = Modifier.fillMaxWidth(),
         )
 
         val nextGroup = groups.getOrNull(currentGroupIndex + 1)

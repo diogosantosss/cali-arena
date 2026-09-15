@@ -4,7 +4,6 @@ export interface Match {
   id: number;
   bracketId: number;
   routineId: number;
-  judgeId: number;
 
   athleteRedId: number;
   athleteBlueId: number;
@@ -20,7 +19,6 @@ export interface Match {
 export interface CreateMatchInput {
   bracketId: number;
   routineId: number;
-  judgeId: number;
 
   athleteRedId: number;
   athleteBlueId: number;

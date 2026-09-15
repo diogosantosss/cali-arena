@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
@@ -94,10 +95,17 @@ internal fun ReadyContent(
         }
 
         if (selectedSide == null) {
-            SideChooser(
-                state = state,
-                onSelectSide = onSelectSide,
-            )
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                item(key = "sideChooser") {
+                    SideChooser(
+                        state = state,
+                        onSelectSide = onSelectSide,
+                    )
+                }
+            }
         } else {
             JudgePanel(
                 state = state,

@@ -17,6 +17,8 @@ dependencies {
     // TransactionManager, entities and Spring Data repositories
     implementation(project(":repo-jpa"))
 
+    implementation("org.springframework.boot:spring-boot-starter-data-redis:3.5.6")
+
     // For dependency injection
     implementation("jakarta.inject:jakarta.inject-api:2.0.1")
 

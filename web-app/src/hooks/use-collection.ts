@@ -10,7 +10,8 @@ interface CollectionState<T> {
 type CollectionAction<T> =
   | { type: "loading" }
   | { type: "loaded"; items: T[] }
-  | { type: "error"; message: string };
+  | { type: "error"; message: string }
+  | { type: "patch"; update: (items: T[]) => T[] };
 
 function collectionReducer<T>(
   state: CollectionState<T>,
@@ -23,6 +24,8 @@ function collectionReducer<T>(
       return { items: action.items, loading: false, error: null };
     case "error":
       return { ...state, loading: false, error: action.message };
+    case "patch":
+      return { ...state, items: action.update(state.items) };
   }
 }
 
@@ -50,11 +53,15 @@ export function useCollection<T>(load: () => Promise<T[]>, errorLabel: string) {
     }
   }, [load, errorLabel]);
 
+  const patchItems = useCallback((update: (items: T[]) => T[]) => {
+    dispatch({ type: "patch", update });
+  }, []);
+
   useEffect(() => {
     void reload();
     // initial fetch only; refreshes go through reload()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  return { ...state, reload };
+  return { ...state, reload, patchItems };
 }
