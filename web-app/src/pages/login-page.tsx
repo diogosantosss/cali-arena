@@ -1,5 +1,5 @@
 import { useReducer } from "react";
-import { useNavigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import { Sun, Moon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -45,9 +45,22 @@ function loginReducer(state: LoginState, action: LoginAction): LoginState {
 
 export function LoginPage() {
   const [state, dispatch] = useReducer(loginReducer, initialLoginState);
-  const { login } = useAuth();
+  const { login, user, isAuthenticated, isLoading } = useAuth();
   const { theme, toggleTheme } = useTheme();
-  const navigate = useNavigate();
+  const location = useLocation();
+
+  const from = typeof location.state?.from === "string" ? location.state.from : null;
+  const judgeOrigin = from != null && from.startsWith("/judge");
+  const target =
+    from ?? (user?.role === "JUDGE" ? "/judge" : "/dashboard");
+
+  if (isLoading) {
+    return <div className="min-h-screen" style={{ background: "var(--background)" }} />;
+  }
+
+  if (isAuthenticated) {
+    return <Navigate to={target} replace />;
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -55,8 +68,7 @@ export function LoginPage() {
     try {
       const response = await authService.createToken(state.form);
       login(response.token);
-      dispatch({ type: "success" });
-      navigate("/dashboard");
+      // The authenticated branch above redirects to /judge or /dashboard.
     } catch (err) {
       if (err instanceof ApiError) {
         dispatch({ type: "error", message: err.message });
@@ -139,7 +151,7 @@ export function LoginPage() {
 
           <div>
             <p className="text-xs tracking-widest uppercase mb-2" style={{ color: "var(--muted-foreground)" }}>
-              Admin access
+              {judgeOrigin ? "Judge access" : "Admin access"}
             </p>
             <h1
               className="text-3xl leading-tight"

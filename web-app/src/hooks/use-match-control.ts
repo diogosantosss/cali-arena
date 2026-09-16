@@ -38,9 +38,20 @@ export function useMatchControl(
   const clientRef = useRef<Client | null>(null);
   const onServerErrorRef = useRef(onServerError);
   onServerErrorRef.current = onServerError;
+  const progressRef = useRef<MatchProgress | null>(null);
 
   const repsRef = useRef({ red: 0, blue: 0 });
-  repsRef.current = { red: redReps, blue: blueReps };
+
+  /**
+   * Highest rep count this client has published for each side. The tap base
+   * is always max(repsRef, lastSentRef) so a stale echo that reverts
+   * display cannot make the next tap repeat a value.
+   */
+  const lastSentRef = useRef({ red: 0, blue: 0 });
+
+  useEffect(() => {
+    progressRef.current = progress;
+  });
 
   useEffect(() => {
     let cancelled = false;
@@ -61,8 +72,27 @@ export function useMatchControl(
     }
 
     function applyReps(event: Extract<JudgeEvent, { type: "REPS" }>) {
-      if (event.side === "RED") setRedReps(event.reps);
-      else setBlueReps(event.reps);
+      const side = event.side === "RED" ? "red" : "blue";
+      const lastSent = lastSentRef.current[side];
+      const currentExerciseId =
+        side === "red" ? progressRef.current?.redCurrentExerciseId : progressRef.current?.blueCurrentExerciseId;
+      const exerciseChanged =
+        event.exerciseId != null && event.exerciseId !== currentExerciseId;
+
+      if (exerciseChanged) {
+        // Exercise advanced (server reset reps to 0). Apply the new state
+        // and reset refs so the next tap starts from the correct base.
+        lastSentRef.current[side] = event.reps;
+        repsRef.current[side] = event.reps;
+        if (event.side === "RED") setRedReps(event.reps);
+        else setBlueReps(event.reps);
+      } else if (event.reps >= lastSent) {
+        // Same exercise, forward movement — apply the confirmed value.
+        if (event.side === "RED") setRedReps(event.reps);
+        else setBlueReps(event.reps);
+      }
+      // else: stale echo that would revert the display — silently ignored.
+
       setProgress((prev) => {
         if (!prev) return prev;
         return event.side === "RED"
@@ -145,6 +175,8 @@ export function useMatchControl(
     setProgress(loaded);
     setRedReps(loaded.redCurrentReps);
     setBlueReps(loaded.blueCurrentReps);
+    repsRef.current = { red: loaded.redCurrentReps, blue: loaded.blueCurrentReps };
+    lastSentRef.current = { red: loaded.redCurrentReps, blue: loaded.blueCurrentReps };
   }
 
   async function startMatch() {
@@ -161,16 +193,19 @@ export function useMatchControl(
 
   async function adjustReps(side: "red" | "blue", delta: number) {
     if (!matchId) return;
-    if ((side === "red" && progress?.redFinishedAt) || (side === "blue" && progress?.blueFinishedAt)) {
+
+    if ((side === "red" && progressRef.current?.redFinishedAt) || (side === "blue" && progressRef.current?.blueFinishedAt)) {
       return;
     }
-    const base = repsRef.current[side];
+
+    const base = Math.max(repsRef.current[side], lastSentRef.current[side]);
     if (base === 0 && delta < 0) return;
     const next = Math.max(0, base + delta);
     if (next === base) return;
 
     // optimistic bump; confirmation comes through the topic echo
     repsRef.current[side] = next;
+    lastSentRef.current[side] = next;
     if (side === "red") setRedReps(next);
     else setBlueReps(next);
 
@@ -179,8 +214,10 @@ export function useMatchControl(
       side: side.toUpperCase() as "RED" | "BLUE",
       reps: next,
     });
+
     if (!sent) {
       repsRef.current[side] = base;
+      lastSentRef.current[side] = base;
       if (side === "red") setRedReps(base);
       else setBlueReps(base);
       throw new Error("Connection lost");
@@ -196,10 +233,12 @@ export function useMatchControl(
     if (!matchId || !clientRef.current?.connected) {
       throw new Error("Connection lost");
     }
+    
     const sent = publishJudgeAction(clientRef.current, matchId, {
       action: "FINISH",
       side: side.toUpperCase() as "RED" | "BLUE",
     });
+
     if (!sent) throw new Error("Connection lost");
   }
 

@@ -42,6 +42,10 @@ export const tournamentsService = {
     return apiClient.get(`/brackets/tournament/${tournamentId}`);
   },
 
+  getBracketById(bracketId: number): Promise<Bracket> {
+    return apiClient.get(`/brackets/${bracketId}`);
+  },
+
   getBracketOverview(tournamentId: number, division: string): Promise<BracketOverview> {
     return apiClient.get(`/brackets/tournament/${tournamentId}/division/${division}/overview`);
   },

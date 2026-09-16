@@ -63,6 +63,15 @@ class BracketService(
             success(brackets.findByTournamentId(tournamentId).map(BracketEntity::toDomain))
         }
 
+    fun getBracketById(bracketId: Int): Either<ApiError, Bracket> =
+        trx.run {
+            val bracket =
+                brackets.findByIdOrNull(bracketId)
+                    ?: return@run failure(ApiError.BRACKET_NOT_FOUND)
+
+            success(bracket.toDomain())
+        }
+
     fun getBracketsByTournamentAndDivision(
         tournamentId: Int,
         division: String,
