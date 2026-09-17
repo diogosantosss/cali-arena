@@ -17,9 +17,9 @@ import type { CreateTournamentInput, TournamentStatus } from "@/data/tournaments
 import { MapPin, CalendarDays, ArrowRight, Plus } from "lucide-react";
 
 const statusStyles: Record<TournamentStatus, { label: string; color: string; bg: string }> = {
-  DRAFT:    { label: "Draft",    color: "var(--muted-foreground)", bg: "rgba(107,101,96,0.12)" },
-  READY:    { label: "Ready",    color: "#7eb8f7", bg: "rgba(126,184,247,0.12)" },
-  LIVE:     { label: "Live",     color: "var(--accent)", bg: "var(--accent-12)" },
+  DRAFT: { label: "Draft", color: "var(--muted-foreground)", bg: "rgba(107,101,96,0.12)" },
+  READY: { label: "Ready", color: "#7eb8f7", bg: "rgba(126,184,247,0.12)" },
+  LIVE: { label: "Live", color: "var(--accent)", bg: "var(--accent-12)" },
   FINISHED: { label: "Finished", color: "#4a4a4e", bg: "rgba(74,74,78,0.12)" },
 };
 
@@ -105,7 +105,7 @@ export function TournamentsPage() {
   );
 
   return (
-    <div className="max-w-5xl mx-auto space-y-10">
+    <div className="max-w-5xl mx-auto space-y-10 animate-fade-up" style={{ opacity: 0 }}>
       <PageHeader
         title="Tournaments"
         action={

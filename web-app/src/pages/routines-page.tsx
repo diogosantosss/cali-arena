@@ -151,10 +151,10 @@ function reducer(state: RoutineUiState, action: Action): RoutineUiState {
       const open = !state.exerciseFormOpen;
       const form = open
         ? {
-            ...state.exerciseForm,
-            exerciseOrder:
-              (state.overview?.exercises.reduce((max, ex) => Math.max(max, ex.exerciseOrder), 0) ?? 0) + 1,
-          }
+          ...state.exerciseForm,
+          exerciseOrder:
+            (state.overview?.exercises.reduce((max, ex) => Math.max(max, ex.exerciseOrder), 0) ?? 0) + 1,
+        }
         : state.exerciseForm;
       return { ...state, exerciseFormOpen: open, exerciseForm: form, exerciseError: null };
     }

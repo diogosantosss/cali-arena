@@ -42,3 +42,16 @@ export function currentGroupIndexFor(
   const index = groups.findIndex((group) => group.items.some((e) => e.id === exerciseId));
   return index < 0 ? 0 : index;
 }
+
+export function currentItemIndexFor(
+  exercises: Exercise[],
+  exerciseId: number | null | undefined,
+): { groupIndex: number; itemIndex: number; isSuperset: boolean } {
+  if (exerciseId == null) return { groupIndex: 0, itemIndex: 0, isSuperset: false };
+  const groups = routineGroups(exercises);
+  const groupIndex = groups.findIndex((group) => group.items.some((e) => e.id === exerciseId));
+  if (groupIndex < 0) return { groupIndex: 0, itemIndex: 0, isSuperset: false };
+  const group = groups[groupIndex];
+  const itemIndex = group.items.findIndex((e) => e.id === exerciseId);
+  return { groupIndex, itemIndex: itemIndex < 0 ? 0 : itemIndex, isSuperset: group.items.length > 1 };
+}

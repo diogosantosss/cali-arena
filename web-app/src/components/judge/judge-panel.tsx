@@ -9,7 +9,7 @@ import { AthleteCard } from "./judge-info-cards";
 import { RoutineCard } from "./judge-info-cards";
 import { JudgeTimerRow } from "./judge-exercise-cards";
 import { CurrentExerciseCard, NextExerciseCard, PendingStartCard, FinishedCard } from "./judge-exercise-cards";
-import { sideColor, currentGroupIndexFor, type Side } from "./judge-utils";
+import { sideColor, currentGroupIndexFor, currentItemIndexFor, type Side } from "./judge-utils";
 
 interface JudgePanelProps {
   side: Side;
@@ -31,9 +31,19 @@ export function JudgePanel({ side, match, progress, athlete, clubName, overview,
 
   const currentExerciseId = side === "RED" ? progress?.redCurrentExerciseId : progress?.blueCurrentExerciseId;
   const groupIdx = currentGroupIndexFor(exercises, currentExerciseId);
+  const { itemIndex, isSuperset } = currentItemIndexFor(exercises, currentExerciseId);
   const currentGroup = groups[groupIdx];
-  const currentLabel = currentGroup?.label;
+  const currentItem = currentGroup?.items[itemIndex];
+  const currentLabel = currentItem
+    ? currentItem.addedWeight
+      ? `${currentItem.name} (+${currentItem.addedWeight}KG)`
+      : currentItem.name
+    : currentGroup?.label ?? "Exercise";
+  const nextItem = currentGroup?.items[itemIndex + 1];
   const nextGroup = groups[groupIdx + 1];
+  const nextLabel = nextItem
+    ? `${nextItem.targetReps} ${nextItem.name}`
+    : nextGroup?.label;
 
   const finished = side === "RED" ? !!progress?.redFinishedAt : !!progress?.blueFinishedAt;
   const finishedIso = side === "RED" ? progress?.redFinishedAt : progress?.blueFinishedAt;
@@ -52,7 +62,7 @@ export function JudgePanel({ side, match, progress, athlete, clubName, overview,
   if (!athlete) return null;
 
   return (
-    <div className="space-y-3">
+    <div className="flex flex-col flex-1 min-h-0 gap-3">
       <AthleteCard athlete={athlete} side={side} clubName={clubName} finished={finished} />
 
       {overview && (
@@ -66,8 +76,7 @@ export function JudgePanel({ side, match, progress, athlete, clubName, overview,
       />
 
       {!running && !finished && !ended && <PendingStartCard />}
-      {finished && <FinishedCard elapsedMs={finishedElapsed} />}
-      {ended && !finished && <FinishedCard elapsedMs={finishedElapsed} />}
+      {(finished || ended) && <FinishedCard elapsedMs={finishedElapsed} />}
       {running && !finished && (
         <>
           <CurrentExerciseCard
@@ -78,9 +87,12 @@ export function JudgePanel({ side, match, progress, athlete, clubName, overview,
             enabled={running}
             onDecrement={() => onAdjust(-1)}
             onIncrement={() => onAdjust(1)}
+            isSuperset={isSuperset}
+            itemIndex={itemIndex}
+            totalItems={currentGroup?.items.length ?? 1}
           />
-          {nextGroup && (
-            <NextExerciseCard nextLabel={nextGroup.label} />
+          {nextLabel && (
+            <NextExerciseCard nextLabel={nextLabel} />
           )}
         </>
       )}
@@ -89,7 +101,7 @@ export function JudgePanel({ side, match, progress, athlete, clubName, overview,
         <Button
           disabled={!running || finished}
           onClick={() => setShowFinishConfirm(true)}
-          className="w-full h-12 text-sm font-semibold"
+          className="w-full h-12 text-sm font-semibold mt-auto"
           style={{ background: accent, color: "#fff" }}
         >
           Finish

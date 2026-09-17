@@ -155,7 +155,9 @@ export function DashboardLayout() {
           </header>
 
           <main className="flex-1 overflow-y-auto px-7 py-7">
-            <Outlet />
+            <div className="animate-fade-up h-full" style={{ opacity: 0 }}>
+              <Outlet />
+            </div>
           </main>
         </div>
       </div>

@@ -9,6 +9,9 @@ interface CurrentExerciseCardProps {
   enabled: boolean;
   onDecrement: () => void;
   onIncrement: () => void;
+  isSuperset?: boolean;
+  itemIndex?: number;
+  totalItems?: number;
 }
 
 export function CurrentExerciseCard({
@@ -19,63 +22,106 @@ export function CurrentExerciseCard({
   enabled,
   onDecrement,
   onIncrement,
+  isSuperset = false,
+  itemIndex = 0,
+  totalItems = 1,
 }: CurrentExerciseCardProps) {
   return (
     <div
-      className="rounded-2xl px-5 py-4"
-      style={{ background: "var(--card)", border: "1px solid var(--border)" }}
+      className="rounded-2xl flex flex-col flex-1 min-h-0 animate-fade-up"
+      style={{
+        background: "var(--card)",
+        border: "1px solid var(--border)",
+        minHeight: "clamp(180px, 28vw, 300px)",
+        width: "100%",
+        margin: "0 auto",
+        overflow: "auto",
+      }}
     >
-      <p className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: "var(--muted-foreground)" }}>
-        Current exercise
-      </p>
-
-      <p
-        className="mt-1.5 text-base font-semibold leading-tight text-center"
-        style={{ color: accentColor }}
-      >
-        {label}
-      </p>
-
-      <div className="flex items-center gap-3 mt-5">
-        <button
-          disabled={!enabled}
-          onClick={onDecrement}
-          aria-label="Remove one rep"
-          className="w-14 h-14 shrink-0 flex items-center justify-center rounded-full text-3xl font-bold select-none touch-manipulation active:opacity-70 disabled:opacity-30"
-          style={{
-            background: "var(--secondary)",
-            color: "var(--secondary-foreground)",
-            border: "1px solid var(--border)",
-            WebkitTapHighlightColor: "transparent",
-          }}
-        >
-          −
-        </button>
-
-        <div className="flex-1 text-center">
-          <span className="text-4xl font-bold tabular-nums" style={{ color: accentColor, fontFamily: "Geist Variable, monospace" }}>
-            {reps}
+      {/* Header: Current exercise + superset badge */}
+      <header className="flex items-center justify-between px-4 py-2.5 sm:px-5 sm:py-3 border-b" style={{ borderColor: "var(--border)" }}>
+        <h2 className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+          Current exercise
+        </h2>
+        {isSuperset && totalItems > 1 && (
+          <span
+            className="text-[9px] sm:text-[10px] font-medium px-1.5 py-0.5 sm:px-2 rounded-full"
+            style={{
+              background: "var(--accent-12)",
+              color: "var(--accent)",
+            }}
+          >
+            {itemIndex + 1} / {totalItems}
           </span>
-          {targetReps != null && (
-            <span className="text-sm font-medium" style={{ color: "var(--faint)" }}>
-              /{targetReps}
-            </span>
-          )}
-          <p className="text-[11px] uppercase tracking-widest" style={{ color: "var(--muted-foreground)" }}>
-            reps
-          </p>
-        </div>
+        )}
+      </header>
 
-        <button
-          disabled={!enabled}
-          onClick={onIncrement}
-          aria-label="Add one rep"
-          className="w-14 h-14 shrink-0 flex items-center justify-center rounded-full text-3xl font-bold select-none touch-manipulation active:opacity-70 disabled:opacity-30"
-          style={{ background: accentColor, color: "#fff", WebkitTapHighlightColor: "transparent" }}
+      {/* Exercise name */}
+      <div className="px-4 py-3 sm:px-5 sm:py-4">
+        <h3
+          key={label}
+          className="text-lg sm:text-xl font-semibold leading-tight text-center animate-fade-scale"
+          style={{ color: accentColor }}
         >
-          +
-        </button>
+          {label}
+        </h3>
       </div>
+
+      {/* Main content: centered counter with side buttons */}
+      <main className="flex-1 flex flex-col items-center justify-center px-3 py-1.5 sm:px-4 sm:py-2">
+        <div className="flex items-center justify-center gap-3 sm:gap-4 w-full max-w-sm">
+          {/* Decrement button */}
+          <button
+            disabled={!enabled}
+            onClick={onDecrement}
+            aria-label="Remove one rep"
+            className="w-14 h-14 shrink-0 flex items-center justify-center rounded-full text-2xl font-bold select-none touch-manipulation transition-all duration-150 active:scale-90 active:opacity-70 disabled:opacity-30 disabled:scale-100"
+            style={{
+              background: "var(--secondary)",
+              color: "var(--secondary-foreground)",
+              border: "1px solid var(--border)",
+              WebkitTapHighlightColor: "transparent",
+            }}
+          >
+            −
+          </button>
+
+          {/* Counter display */}
+          <div className="flex-1 flex flex-col items-center justify-center min-w-[100px] sm:min-w-[120px] md:min-w-[140px]">
+            <div className="flex items-center baseline gap-1">
+              <span
+                key={reps}
+                className="inline-block text-3xl sm:text-4xl md:text-5xl font-bold tabular-nums animate-rep-roll"
+                style={{ color: accentColor, fontFamily: "Geist Variable, monospace", lineHeight: 1 }}
+              >
+                {reps}
+              </span>
+              {targetReps != null && (
+                <span
+                  className="text-lg sm:text-xl font-medium text-faint self-end mb-1"
+                  style={{ fontWeight: 500, lineHeight: 1 }}
+                >
+                  /{targetReps}
+                </span>
+              )}
+            </div>
+            <p className="text-[10px] sm:text-[11px] uppercase tracking-widest mt-1 text-muted-foreground">
+              reps
+            </p>
+          </div>
+
+          {/* Increment button */}
+          <button
+            disabled={!enabled}
+            onClick={onIncrement}
+            aria-label="Add one rep"
+            className="w-14 h-14 shrink-0 flex items-center justify-center rounded-full text-2xl font-bold select-none touch-manipulation transition-all duration-150 active:scale-90 active:opacity-70 disabled:opacity-30 disabled:scale-100"
+            style={{ background: accentColor, color: "#fff", WebkitTapHighlightColor: "transparent" }}
+          >
+            +
+          </button>
+        </div>
+      </main>
     </div>
   );
 }
@@ -83,15 +129,20 @@ export function CurrentExerciseCard({
 export function NextExerciseCard({ nextLabel }: { nextLabel: string }) {
   return (
     <div
-      className="rounded-2xl px-5 py-3"
+      className="rounded-2xl px-5 py-3 animate-fade-up"
       style={{ background: "var(--card)", border: "1px solid var(--border)" }}
     >
-      <p className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: "var(--gold)" }}>
-        Next
-      </p>
-      <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>
-        {nextLabel}
-      </p>
+      <div className="flex items-center gap-2">
+        <span
+          className="text-[11px] font-semibold uppercase tracking-widest px-2 py-0.5 rounded"
+          style={{ background: "var(--gold-12)", color: "var(--gold)" }}
+        >
+          Next
+        </span>
+        <p className="text-sm font-medium truncate" style={{ color: "var(--foreground)" }}>
+          {nextLabel}
+        </p>
+      </div>
     </div>
   );
 }
@@ -99,13 +150,20 @@ export function NextExerciseCard({ nextLabel }: { nextLabel: string }) {
 export function PendingStartCard() {
   return (
     <div
-      className="rounded-2xl px-5 py-6 text-center"
-      style={{ background: "rgba(224,200,80,0.08)", color: "var(--gold)" }}
+      className="rounded-2xl flex-1 min-h-0 flex flex-col border animate-fade-up"
+      style={{
+        background: "rgba(224,200,80,0.08)",
+        borderColor: "var(--border)",
+        color: "var(--gold)",
+        minHeight: "clamp(180px, 28vw, 300px)",
+      }}
     >
-      <p className="font-semibold">Waiting to start</p>
-      <p className="text-sm mt-1" style={{ color: "var(--muted-foreground)" }}>
-        The match has not started yet.
-      </p>
+      <div className="flex-1 flex flex-col items-center justify-center px-5 py-6 text-center">
+        <p className="font-semibold">Waiting to start</p>
+        <p className="text-sm mt-1" style={{ color: "var(--muted-foreground)" }}>
+          The match has not started yet.
+        </p>
+      </div>
     </div>
   );
 }
@@ -113,20 +171,30 @@ export function PendingStartCard() {
 export function FinishedCard({ elapsedMs }: { elapsedMs: number | null }) {
   return (
     <div
-      className="rounded-2xl px-5 py-6 text-center"
-      style={{ background: "rgba(74,222,128,0.08)", color: "#4ade80" }}
+      className="rounded-2xl flex flex-col flex-1 min-h-0 animate-fade-up"
+      style={{
+        background: "rgba(74,222,128,0.08)",
+        border: "1px solid var(--border)",
+        color: "#4ade80",
+        minHeight: "clamp(180px, 28vw, 300px)",
+        width: "100%",
+        margin: "0 auto",
+        overflow: "auto",
+      }}
     >
-      <p className="font-semibold">Finished</p>
-      {elapsedMs != null && (
-        <>
-          <p className="text-2xl font-bold tabular-nums mt-2" style={{ fontFamily: "Geist Variable, monospace" }}>
-            {formatTimeSmooth(elapsedMs)}
-          </p>
-          <p className="text-[11px] font-semibold uppercase tracking-widest mt-1" style={{ color: "var(--muted-foreground)" }}>
-            Final time
-          </p>
-        </>
-      )}
+      <div className="flex-1 flex flex-col items-center justify-center px-5 py-6 text-center">
+        <p className="font-semibold">Finished</p>
+        {elapsedMs != null && (
+          <>
+            <p className="text-2xl font-bold tabular-nums mt-2" style={{ fontFamily: "Geist Variable, monospace" }}>
+              {formatTimeSmooth(elapsedMs)}
+            </p>
+            <p className="text-[11px] font-semibold uppercase tracking-widest mt-1" style={{ color: "var(--muted-foreground)" }}>
+              Final time
+            </p>
+          </>
+        )}
+      </div>
     </div>
   );
 }
@@ -141,7 +209,7 @@ export function JudgeTimerRow({ startedAt, finishedAt, timeCapSeconds }: JudgeTi
   const elapsed = useTickElapsed(startedAt ?? null, finishedAt);
   return (
     <div
-      className="rounded-xl px-4 py-3 flex items-center justify-between"
+      className="rounded-xl px-4 py-3 flex items-center justify-between animate-fade-up"
       style={{ background: "var(--card)", border: "1px solid var(--border)" }}
     >
       <div>

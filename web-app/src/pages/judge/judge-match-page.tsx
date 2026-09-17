@@ -15,7 +15,6 @@ import { JudgeSideChooser } from "@/components/judge/judge-side-chooser";
 import { JudgePanel } from "@/components/judge/judge-panel";
 import type { Side } from "@/components/judge/judge-utils";
 import { sideToLower } from "@/components/judge/judge-utils";
-import { useAuth } from "@/hooks/use-auth";
 
 interface JudgeSources {
   athletes: Athlete[];
@@ -38,12 +37,10 @@ export function JudgeMatchPage() {
     setErrorMessage(message);
   }, []);
 
-  const { currentMatch, progress, redReps, blueReps, startMatch, adjustReps, finishSide } = useMatchControl(
+  const { currentMatch, progress, redReps, blueReps, adjustReps, finishSide } = useMatchControl(
     Number.isFinite(id) ? id : 0,
     onServerError,
   );
-  const { user } = useAuth();
-  const isAdmin = user?.role === "ADMIN";
 
   useEffect(() => {
     let cancelled = false;
@@ -129,11 +126,10 @@ export function JudgeMatchPage() {
       <JudgeTopBar
         title={division ?? "Match"}
         status={currentMatch?.status ?? null}
-        onStart={isAdmin ? undefined : () => void run(startMatch)}
       />
 
-      <main className="flex-1 overflow-y-auto">
-        <div className="max-w-2xl mx-auto px-4 py-4 space-y-3">
+      <main className="flex-1 flex flex-col overflow-y-auto">
+        <div className="max-w-2xl w-full mx-auto px-4 py-4 flex flex-col flex-1 min-h-0 gap-3">
           {errorMessage && (
             <JudgeErrorBanner message={errorMessage} onDismiss={() => setErrorMessage(null)} />
           )}

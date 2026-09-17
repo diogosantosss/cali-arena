@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Plus, RefreshCw } from "lucide-react";
 import { MatchCard } from "./match-card";
 import { CreateMatchDialog } from "./create-match-dialog";
+import { Reveal } from "@/components/shared/reveal";
 
 interface BracketViewProps {
   brackets: Bracket[];
@@ -118,17 +119,18 @@ export function BracketView({
                 <p className="text-sm text-muted-foreground">No matches yet</p>
               </div>
             ) : (
-              <div className="space-y-2">
-                {bracketMatches.map((match) => (
-                  <MatchCard
-                    key={match.id}
-                    match={match}
-                    progress={progresses[match.id]}
-                    athletes={athletes}
-                    routines={routines}
-                    onStartMatch={onStartMatch}
-                    onDeleteMatch={(match) => setDeleteTarget(match)}
-                  />
+<div className="space-y-2">
+                {bracketMatches.map((match, i) => (
+                  <Reveal key={match.id} delay={Math.min(i, 5) * 0.03}>
+                    <MatchCard
+                      match={match}
+                      progress={progresses[match.id]}
+                      athletes={athletes}
+                      routines={routines}
+                      onStartMatch={onStartMatch}
+                      onDeleteMatch={(match) => setDeleteTarget(match)}
+                    />
+                  </Reveal>
                 ))}
               </div>
             )

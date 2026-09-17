@@ -3,7 +3,6 @@ import { ArrowLeft } from "lucide-react";
 import type { MatchStatus } from "@/data/matches";
 import { JudgeLogoutButton } from "./judge-logout-button";
 import { JudgeThemeToggle } from "./judge-theme-toggle";
-import { JudgeUserBadge } from "./judge-user-badge";
 
 const statusStyles: Record<MatchStatus, { label: string; color: string; bg: string }> = {
   PENDING: { label: "Pending", color: "var(--muted-foreground)", bg: "rgba(107,101,96,0.12)" },
@@ -13,16 +12,13 @@ const statusStyles: Record<MatchStatus, { label: string; color: string; bg: stri
   FINISHED: { label: "Finished", color: "#4a4a4e", bg: "rgba(74,74,78,0.12)" },
 };
 
-const startable: MatchStatus[] = ["PENDING", "READY", "PAUSED"];
-
 interface JudgeTopBarProps {
   title: string;
   status: MatchStatus | null;
   connectionLost?: boolean;
-  onStart?: () => void;
 }
 
-export function JudgeTopBar({ title, status, connectionLost, onStart }: JudgeTopBarProps) {
+export function JudgeTopBar({ title, status, connectionLost }: JudgeTopBarProps) {
   const s = status ? statusStyles[status] : null;
 
   return (
@@ -50,15 +46,7 @@ export function JudgeTopBar({ title, status, connectionLost, onStart }: JudgeTop
         )}
       </div>
 
-      {onStart && status && startable.includes(status) && (
-        <button
-          onClick={onStart}
-          className="px-4 py-1.5 rounded-lg text-sm font-semibold select-none touch-manipulation transition-colors active:opacity-80"
-          style={{ background: "var(--accent)", color: "var(--accent-foreground)", WebkitTapHighlightColor: "transparent" }}
-        >
-          Start
-        </button>
-      )}
+      
 
       {status && s && status !== "PENDING" && (
         <span className="text-[11px] px-2 py-0.5 rounded-full shrink-0" style={{ background: s.bg, color: s.color }}>
@@ -66,7 +54,6 @@ export function JudgeTopBar({ title, status, connectionLost, onStart }: JudgeTop
         </span>
       )}
 
-      <JudgeUserBadge />
       <JudgeThemeToggle />
       <JudgeLogoutButton />
     </div>

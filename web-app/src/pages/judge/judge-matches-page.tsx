@@ -4,6 +4,7 @@ import { RefreshCw } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useJudgeMatches } from "@/hooks/use-judge-matches";
 import { JudgeMatchCard } from "@/components/judge/judge-match-card";
+import { Reveal } from "@/components/shared/reveal";
 import { JudgeLogoutButton } from "@/components/judge/judge-logout-button";
 import { JudgeAdminDashboardButton } from "@/components/judge/judge-admin-dashboard-button";
 import { JudgeThemeToggle } from "@/components/judge/judge-theme-toggle";
@@ -87,7 +88,13 @@ export function JudgeMatchesPage() {
           </button>
         </div>
 
-        {error ? (
+        {loading ? (
+          <div className="space-y-3">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="rounded-2xl h-32 animate-pulse" style={{ background: "var(--secondary)" }} />
+            ))}
+          </div>
+        ) : error ? (
           <div className="rounded-xl px-5 py-8 text-center space-y-3" style={{ border: "1px solid var(--border)" }}>
             <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>{error}</p>
             <button
@@ -104,12 +111,13 @@ export function JudgeMatchesPage() {
           </p>
         ) : (
           <div className="space-y-3">
-            {filtered.map((item) => (
-              <JudgeMatchCard
-                key={item.match.id}
-                item={item}
-                onClick={() => navigate(`/judge/${item.match.id}`)}
-              />
+            {filtered.map((item, index) => (
+              <Reveal key={item.match.id} delay={index * 0.03}>
+                <JudgeMatchCard
+                  item={item}
+                  onClick={() => navigate(`/judge/${item.match.id}`)}
+                />
+              </Reveal>
             ))}
           </div>
         )}
