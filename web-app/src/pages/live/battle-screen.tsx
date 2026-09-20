@@ -47,6 +47,10 @@ export function BattleScreen({
   const redFinished = !!progress?.redFinishedAt;
   const blueFinished = !!progress?.blueFinishedAt;
 
+  const singleAthlete = (redAthlete != null) !== (blueAthlete != null);
+  const timeCapMs = routine?.timeCapSeconds ? routine.timeCapSeconds * 1000 : null;
+  const loneFinished = redAthlete != null ? redFinished : blueFinished;
+
   function finishMs(finishedAt: string) {
     if (!progress?.timerStartedAt) return 0;
     return new Date(finishedAt).getTime() - new Date(progress.timerStartedAt).getTime();
@@ -56,22 +60,25 @@ export function BattleScreen({
     return formatTime(Math.max(0, finishMs(finishedAt)));
   }
 
-  const redWon = redFinished && blueFinished
-    ? finishMs(progress!.redFinishedAt!) < finishMs(progress!.blueFinishedAt!)
-    : redFinished && !blueFinished;
+  const redWon = match.winnerAthleteId != null && match.winnerAthleteId === match.athleteRedId;
+  const blueWon = match.winnerAthleteId != null && match.winnerAthleteId === match.athleteBlueId;
 
-  const blueWon = redFinished && blueFinished
-    ? finishMs(progress!.blueFinishedAt!) < finishMs(progress!.redFinishedAt!)
-    : blueFinished && !redFinished;
+  const matchFinished = (redFinished && blueFinished) || (singleAthlete && loneFinished);
 
-  const matchFinished = redFinished && blueFinished;
-  const finalElapsedMs =
-    matchFinished && progress
-      ? Math.max(
-          progress.redFinishedAt ? finishMs(progress.redFinishedAt) : 0,
-          progress.blueFinishedAt ? finishMs(progress.blueFinishedAt) : 0
-        )
-      : elapsed;
+  const finalElapsedMs = (() => {
+    if (matchFinished && progress) {
+      const ms = Math.max(
+        redFinished && progress.redFinishedAt ? finishMs(progress.redFinishedAt) : 0,
+        blueFinished && progress.blueFinishedAt ? finishMs(progress.blueFinishedAt) : 0,
+      );
+      return singleAthlete && timeCapMs != null ? Math.min(ms, timeCapMs) : ms;
+    }
+    if (singleAthlete && timeCapMs != null && !loneFinished) {
+      // o único atleta ainda corre: congela o cronómetro no time cap
+      return Math.min(elapsed, timeCapMs);
+    }
+    return elapsed;
+  })();
 
   const timerColor = redWon || blueWon ? "var(--spec-green)" : "var(--spec-text-white)";
 
@@ -95,20 +102,24 @@ export function BattleScreen({
         </div>
 
         <div className="flex-1 grid grid-cols-3 px-24">
-          <AthletePanel
-            finishState={{
-              finished: redFinished,
-              won: redWon,
-              lost: blueWon,
-              str: redFinished ? finishTime(progress!.redFinishedAt!) : null,
-            }}
-            name={redAthlete?.name ?? "Red"}
-            color="var(--spec-red)"
-            currentExercise={redExercise}
-            currentReps={progress?.redCurrentReps ?? 0}
-            progress={redProgress}
-            nextExercise={redNextLabel}
-          />
+          {redAthlete ? (
+            <AthletePanel
+              finishState={{
+                finished: redFinished,
+                won: redWon,
+                lost: blueWon,
+                str: redFinished ? finishTime(progress!.redFinishedAt!) : null,
+              }}
+              name={redAthlete.name}
+              color="var(--spec-red)"
+              currentExercise={redExercise}
+              currentReps={progress?.redCurrentReps ?? 0}
+              progress={redProgress}
+              nextExercise={redNextLabel}
+            />
+          ) : (
+            <NoShowPanel color="var(--spec-red)" />
+          )}
 
           <div className="flex flex-col items-center">
             <p
@@ -145,20 +156,24 @@ export function BattleScreen({
             )}
           </div>
 
-          <AthletePanel
-            finishState={{
-              finished: blueFinished,
-              won: blueWon,
-              lost: redWon,
-              str: blueFinished ? finishTime(progress!.blueFinishedAt!) : null,
-            }}
-            name={blueAthlete?.name ?? "Blue"}
-            color="var(--spec-blue)"
-            currentExercise={blueExercise}
-            currentReps={progress?.blueCurrentReps ?? 0}
-            progress={blueProgress}
-            nextExercise={blueNextLabel}
-          />
+          {blueAthlete ? (
+            <AthletePanel
+              finishState={{
+                finished: blueFinished,
+                won: blueWon,
+                lost: redWon,
+                str: blueFinished ? finishTime(progress!.blueFinishedAt!) : null,
+              }}
+              name={blueAthlete.name}
+              color="var(--spec-blue)"
+              currentExercise={blueExercise}
+              currentReps={progress?.blueCurrentReps ?? 0}
+              progress={blueProgress}
+              nextExercise={blueNextLabel}
+            />
+          ) : (
+            <NoShowPanel color="var(--spec-blue)" />
+          )}
         </div>
       </div>
     </div>
@@ -242,6 +257,17 @@ function AthletePanel({
           Next: {nextExercise}
         </p>
       )}
+    </div>
+  );
+}
+
+function NoShowPanel({ color }: { color: string }) {
+  return (
+    <div className="mt-25 flex flex-col items-center pt-16">
+      <div className="flex items-center gap-3">
+        <span className="w-5 h-5 rounded-full" style={{ background: color }} />
+        <p className="font-cairo text-[3rem] font-bold leading-none text-white">No athlete</p>
+      </div>
     </div>
   );
 }

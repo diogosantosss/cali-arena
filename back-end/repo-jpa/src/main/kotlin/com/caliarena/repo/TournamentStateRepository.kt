@@ -5,4 +5,6 @@ import org.springframework.data.repository.CrudRepository
 
 interface TournamentStateRepository : CrudRepository<TournamentStateEntity, Int> {
     fun findByTournamentId(tournamentId: Int): TournamentStateEntity?
+
+    fun findByCurrentMatchId(currentMatchId: Int): TournamentStateEntity?
 }

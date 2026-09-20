@@ -49,6 +49,7 @@ export function JudgePanel({ side, match, progress, athlete, clubName, overview,
   const finishedIso = side === "RED" ? progress?.redFinishedAt : progress?.blueFinishedAt;
   const running = match.status === "RUNNING";
   const ended = match.status === "FINISHED";
+  const onlyAthlete = match.athleteRedId == null || match.athleteBlueId == null;
 
   const finishedElapsed = (() => {
     const end = finishedIso ?? (ended ? match.finishedAt : null);
@@ -113,7 +114,11 @@ export function JudgePanel({ side, match, progress, athlete, clubName, overview,
           <DialogHeader>
             <DialogTitle>Force finish athlete</DialogTitle>
             <DialogDescription>
-              Are you sure you want to finish <span className="font-semibold">{athlete.name}</span>? This will end the match and the opponent wins.
+              {onlyAthlete ? (
+                <>Are you sure you want to finish <span className="font-semibold">{athlete.name}</span>? There is no opponent, so the match ends without a winner.</>
+              ) : (
+                <>Are you sure you want to finish <span className="font-semibold">{athlete.name}</span>? This will end the match and the opponent wins.</>
+              )}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

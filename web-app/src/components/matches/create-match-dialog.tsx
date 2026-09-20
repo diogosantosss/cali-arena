@@ -21,10 +21,12 @@ interface CreateMatchDialogProps {
 
 type MatchForm = Omit<CreateMatchInput, "bracketId">;
 
+const NO_SHOW = "0";
+
 const initialForm: MatchForm = {
   routineId: 0,
-  athleteRedId: 0,
-  athleteBlueId: 0,
+  athleteRedId: null,
+  athleteBlueId: null,
 };
 
 export function CreateMatchDialog({ open, bracket, routines, athletes, onClose, onCreated }: CreateMatchDialogProps) {
@@ -32,11 +34,11 @@ export function CreateMatchDialog({ open, bracket, routines, athletes, onClose, 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  function setField<K extends keyof MatchForm>(field: K, value: number) {
+  function setField<K extends keyof MatchForm>(field: K, value: number | null) {
     setForm((current) => ({ ...current, [field]: value }));
   }
 
-  const isValid = form.routineId && form.athleteRedId && form.athleteBlueId;
+  const isValid = form.routineId !== 0 && (form.athleteRedId != null || form.athleteBlueId != null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -85,13 +87,14 @@ export function CreateMatchDialog({ open, bracket, routines, athletes, onClose, 
               Red athlete
             </Label>
             <Select
-              value={form.athleteRedId ? String(form.athleteRedId) : ""}
-              onValueChange={(v) => setField("athleteRedId", Number(v))}
+              value={form.athleteRedId == null ? NO_SHOW : String(form.athleteRedId)}
+              onValueChange={(v) => setField("athleteRedId", v === NO_SHOW ? null : Number(v))}
             >
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Select athlete" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value={NO_SHOW}>No show</SelectItem>
                 {athletes
                   .filter((a) => a.id !== form.athleteBlueId)
                   .map((a) => (
@@ -107,13 +110,14 @@ export function CreateMatchDialog({ open, bracket, routines, athletes, onClose, 
               Blue athlete
             </Label>
             <Select
-              value={form.athleteBlueId ? String(form.athleteBlueId) : ""}
-              onValueChange={(v) => setField("athleteBlueId", Number(v))}
+              value={form.athleteBlueId == null ? NO_SHOW : String(form.athleteBlueId)}
+              onValueChange={(v) => setField("athleteBlueId", v === NO_SHOW ? null : Number(v))}
             >
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Select athlete" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value={NO_SHOW}>No show</SelectItem>
                 {athletes
                   .filter((a) => a.id !== form.athleteRedId)
                   .map((a) => (

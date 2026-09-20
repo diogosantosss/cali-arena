@@ -5,7 +5,6 @@ import com.caliarena.domain.bracket.BracketStage
 import com.caliarena.domain.match.MatchProgress
 import com.caliarena.domain.match.MatchStatus
 import com.caliarena.domain.match.RepSide
-import com.caliarena.domain.match.StartedMatch
 import com.caliarena.domain.routine.ExerciseType
 import com.caliarena.repo.entities.athlete.AthleteEntity
 import com.caliarena.repo.entities.club.ClubEntity
@@ -46,6 +45,7 @@ class MatchServiceTest : ServiceTest() {
         lenient().whenever(transaction.tokens).thenReturn(tokens)
         lenient().whenever(transaction.athletes).thenReturn(athletes)
         lenient().whenever(transaction.brackets).thenReturn(brackets)
+        lenient().whenever(transaction.tournamentStates).thenReturn(tournamentStates)
 
         // relações do progresso resolvidas por id ao gravar
         lenient().whenever(exercises.findById(any())).thenAnswer { Optional.of(exerciseEntity(it.getArgument<Int>(0))) }
@@ -208,6 +208,7 @@ class MatchServiceTest : ServiceTest() {
             whenever(athletes.findById(10)).thenReturn(Optional.of(athleteEntity(10)))
             whenever(athletes.findById(20)).thenReturn(Optional.of(athleteEntity(20)))
             whenever(matches.save(any())).thenReturn(matchEntity(status = MatchStatus.PENDING))
+            whenever(exercises.findExercisesByRoutineId(2)).thenReturn(listOf(exerciseEntity(1)))
 
             val result = service.createMatch(1, 2, 10, 20)
 
@@ -217,6 +218,86 @@ class MatchServiceTest : ServiceTest() {
             verify(matches).save(captor.capture())
             assertEquals(MatchStatus.PENDING, captor.firstValue.status)
             assertEquals(2, captor.firstValue.routineId)
+
+            val progressCaptor = argumentCaptor<MatchProgressEntity>()
+            verify(matchProgresses).save(progressCaptor.capture())
+            assertNull(progressCaptor.firstValue.timerStartedAt)
+            assertEquals(MatchStatus.PENDING, progressCaptor.firstValue.match.status)
+            assertEquals(1, progressCaptor.firstValue.redCurrentExercise?.id)
+            assertEquals(1, progressCaptor.firstValue.blueCurrentExercise?.id)
+        }
+
+        @Test
+        fun `should fail when routine has no exercises`() {
+            stubBracketExists()
+            whenever(routines.findById(2)).thenReturn(Optional.of(mockRoutineEntity()))
+            whenever(athletes.findById(10)).thenReturn(Optional.of(athleteEntity(10)))
+            whenever(athletes.findById(20)).thenReturn(Optional.of(athleteEntity(20)))
+            whenever(exercises.findExercisesByRoutineId(2)).thenReturn(emptyList())
+
+            val result = service.createMatch(1, 2, 10, 20)
+
+            assertEquals(failure(ApiError.ROUTINE_NOT_FOUND), result)
+            verify(matches, never()).save(any())
+        }
+
+        @Test
+        fun `should fail when no athletes assigned`() {
+            stubBracketExists()
+            whenever(routines.findById(2)).thenReturn(Optional.of(mockRoutineEntity()))
+
+            val result = service.createMatch(1, 2, null, null)
+
+            assertEquals(failure(ApiError.ATHLETES_NOT_ASSIGNED), result)
+            verify(matches, never()).save(any())
+        }
+
+        @Test
+        fun `should succeed with only red athlete`() {
+            stubBracketExists()
+            whenever(routines.findById(2)).thenReturn(Optional.of(mockRoutineEntity()))
+            whenever(athletes.findById(10)).thenReturn(Optional.of(athleteEntity(10)))
+            whenever(matches.save(any())).thenReturn(matchEntity(status = MatchStatus.PENDING))
+            whenever(exercises.findExercisesByRoutineId(2)).thenReturn(listOf(exerciseEntity(1)))
+
+            val result = service.createMatch(1, 2, 10, null)
+
+            assertTrue(result is Either.Right)
+
+            val captor = argumentCaptor<MatchEntity>()
+            verify(matches).save(captor.capture())
+            assertEquals("athlete-10", captor.firstValue.athleteRed?.name)
+            assertNull(captor.firstValue.athleteBlue)
+        }
+
+        @Test
+        fun `should succeed with only blue athlete`() {
+            stubBracketExists()
+            whenever(routines.findById(2)).thenReturn(Optional.of(mockRoutineEntity()))
+            whenever(athletes.findById(20)).thenReturn(Optional.of(athleteEntity(20)))
+            whenever(matches.save(any())).thenReturn(matchEntity(status = MatchStatus.PENDING))
+            whenever(exercises.findExercisesByRoutineId(2)).thenReturn(listOf(exerciseEntity(1)))
+
+            val result = service.createMatch(1, 2, null, 20)
+
+            assertTrue(result is Either.Right)
+
+            val captor = argumentCaptor<MatchEntity>()
+            verify(matches).save(captor.capture())
+            assertNull(captor.firstValue.athleteRed)
+            assertEquals("athlete-20", captor.firstValue.athleteBlue?.name)
+        }
+
+        @Test
+        fun `should fail when the same athlete is on both sides`() {
+            stubBracketExists()
+            whenever(routines.findById(2)).thenReturn(Optional.of(mockRoutineEntity()))
+            whenever(athletes.findById(10)).thenReturn(Optional.of(athleteEntity(10)))
+
+            val result = service.createMatch(1, 2, 10, 10)
+
+            assertEquals(failure(ApiError.SAME_ATHLETE_ON_BOTH_SIDES), result)
+            verify(matches, never()).save(any())
         }
     }
 
@@ -232,14 +313,14 @@ class MatchServiceTest : ServiceTest() {
         }
 
         @Test
-        fun `should fail when progress already exists`() {
+        fun `should fail when progress not found`() {
             val match = matchEntity(status = MatchStatus.PENDING)
             whenever(matches.findById(1)).thenReturn(Optional.of(match))
-            whenever(matchProgresses.findByMatchId(1)).thenReturn(progOn(match, 1, 1))
+            whenever(matchProgresses.findByMatchId(1)).thenReturn(null)
 
             val result = service.startMatch(1)
 
-            assertEquals(failure(ApiError.PROGRESS_ALREADY_EXISTS), result)
+            assertEquals(failure(ApiError.PROGRESS_NOT_FOUND), result)
             verify(matches, never()).save(any())
         }
 
@@ -249,7 +330,6 @@ class MatchServiceTest : ServiceTest() {
             match.athleteRed = null
             match.athleteBlue = null
             whenever(matches.findById(1)).thenReturn(Optional.of(match))
-            whenever(matchProgresses.findByMatchId(1)).thenReturn(null)
 
             val result = service.startMatch(1)
 
@@ -261,7 +341,6 @@ class MatchServiceTest : ServiceTest() {
         fun `should fail when match already started`() {
             val match = matchEntity(status = MatchStatus.RUNNING)
             whenever(matches.findById(1)).thenReturn(Optional.of(match))
-            whenever(matchProgresses.findByMatchId(1)).thenReturn(null)
 
             val result = service.startMatch(1)
 
@@ -269,47 +348,56 @@ class MatchServiceTest : ServiceTest() {
         }
 
         @Test
-        fun `should fail when no exercises exist`() {
-            val match = matchEntity(status = MatchStatus.PENDING)
-            whenever(matches.findById(1)).thenReturn(Optional.of(match))
-            whenever(matchProgresses.findByMatchId(1)).thenReturn(null)
-            whenever(exercises.findExercisesByRoutineId(2)).thenReturn(emptyList())
-
-            val result = service.startMatch(1)
-
-            assertEquals(failure(ApiError.ROUTINE_NOT_FOUND), result)
-        }
-
-        @Test
-        fun `should succeed`() {
+        fun `should succeed with the progress created at match creation`() {
             val match = matchEntity(status = MatchStatus.PENDING)
             val firstExercise = exerciseEntity(1)
-            val progress =
+            val pendingProgress =
                 MatchProgressEntity(
                     match = match,
                     redCurrentExercise = firstExercise,
                     blueCurrentExercise = firstExercise,
-                    timerStartedAt = now.toEpochMilli(),
-                    updatedAt = now.epochSecond,
                 ).also { it.id = 1 }
 
             whenever(matches.findById(1)).thenReturn(Optional.of(match))
-            whenever(matchProgresses.findByMatchId(1)).thenReturn(null)
-            whenever(exercises.findExercisesByRoutineId(2)).thenReturn(listOf(firstExercise))
+            whenever(matchProgresses.findByMatchId(1)).thenReturn(pendingProgress)
             stubBracketExists()
-            whenever(matchProgresses.save(any())).thenReturn(progress)
+            stubUpdateProgressReturnsArg()
 
             val result = service.startMatch(1)
 
-            assertEquals(
-                success(StartedMatch(match = match.toDomain(), progress = progress.toDomain())),
-                result,
-            )
+            assertTrue(result is Either.Right)
+            val started = (result as Either.Right).value
+            assertEquals(now.toEpochMilli(), started.progress.timerStartedAt?.toEpochMilli())
+            assertEquals(firstExercise.id, started.progress.redCurrentExerciseId)
+            assertEquals(firstExercise.id, started.progress.blueCurrentExerciseId)
+            assertEquals(1, started.progress.id)
 
             val captor = argumentCaptor<MatchEntity>()
             verify(matches).save(captor.capture())
             assertEquals(MatchStatus.RUNNING, captor.firstValue.status)
             assertEquals(now.toEpochMilli(), captor.firstValue.startedAt)
+        }
+
+        @Test
+        fun `should succeed with only one athlete`() {
+            val match = matchEntity(status = MatchStatus.PENDING).apply { athleteBlue = null }
+            val firstExercise = exerciseEntity(1)
+            val pendingProgress =
+                MatchProgressEntity(
+                    match = match,
+                    redCurrentExercise = firstExercise,
+                    blueCurrentExercise = firstExercise,
+                ).also { it.id = 1 }
+
+            whenever(matches.findById(1)).thenReturn(Optional.of(match))
+            whenever(matchProgresses.findByMatchId(1)).thenReturn(pendingProgress)
+            stubBracketExists()
+            stubUpdateProgressReturnsArg()
+
+            val result = service.startMatch(1)
+
+            assertTrue(result is Either.Right)
+            assertEquals(MatchStatus.RUNNING, (result as Either.Right).value.match.status)
         }
     }
 
@@ -443,6 +531,66 @@ class MatchServiceTest : ServiceTest() {
             assertEquals(success(updated.toDomain()), result)
             verify(matches, never()).save(any())
         }
+
+        @Test
+        fun `should fail when updating an absent side`() {
+            val single = matchEntity(status = MatchStatus.RUNNING).apply { athleteBlue = null }
+            whenever(matches.findById(1)).thenReturn(Optional.of(single))
+            whenever(matchProgresses.findByMatchId(1)).thenReturn(progOn(single, 1, 1))
+
+            val result = service.updateAthletesReps(1, 5, 3)
+
+            assertEquals(failure(ApiError.ATHLETE_NOT_IN_MATCH), result)
+            verify(matchProgresses, never()).save(any())
+        }
+
+        @Test
+        fun `should finish the match when the only athlete completes`() {
+            val single = matchEntity(status = MatchStatus.RUNNING).apply { athleteBlue = null }
+            val progLast = progOn(single, redEx = 3, blueEx = 1, redReps = 8)
+            val updated =
+                progOn(single, redEx = null, blueEx = 1, redReps = 10)
+                    .apply {
+                        redFinishedAt = now.toEpochMilli()
+                        updatedAt = now.epochSecond
+                    }
+
+            whenever(matches.findById(1)).thenReturn(Optional.of(single))
+            whenever(matchProgresses.findByMatchId(1)).thenReturn(progLast)
+            whenever(exercises.findExercisesByRoutineId(2)).thenReturn(exsEntities)
+            whenever(matchProgresses.save(any())).thenReturn(updated)
+
+            val result = service.updateAthletesReps(1, 10, null)
+
+            assertEquals(success(updated.toDomain()), result)
+
+            val captor = argumentCaptor<MatchEntity>()
+            verify(matches, atLeastOnce()).save(captor.capture())
+            assertEquals(MatchStatus.FINISHED, captor.firstValue.status)
+            assertEquals(single.athleteRed, captor.firstValue.winnerAthlete)
+            assertEquals(now.toEpochMilli(), captor.firstValue.finishedAt)
+        }
+
+        @Test
+        fun `should finish single athlete match when the time cap expires`() {
+            val single = matchEntity(status = MatchStatus.RUNNING).apply { athleteBlue = null }
+            val prog = progOn(single, 1, 1).apply { timerStartedAt = now.minusSeconds(60).toEpochMilli() }
+            whenever(matches.findById(1)).thenReturn(Optional.of(single))
+            whenever(matchProgresses.findByMatchId(1)).thenReturn(prog)
+            whenever(routines.findById(2)).thenReturn(Optional.of(EnduranceRoutineEntity(2, "Routine", 30, now.epochSecond)))
+            stubUpdateProgressReturnsArg()
+
+            val result = service.updateAthletesReps(1, 5, null)
+
+            assertTrue(result is Either.Right)
+            assertEquals(now.minusSeconds(30).toEpochMilli(), (result as Either.Right).value.redFinishedAt?.toEpochMilli())
+
+            val captor = argumentCaptor<MatchEntity>()
+            verify(matches, atLeastOnce()).save(captor.capture())
+            assertEquals(MatchStatus.FINISHED, captor.firstValue.status)
+            assertNull(captor.firstValue.winnerAthlete)
+            assertEquals(now.minusSeconds(30).toEpochMilli(), captor.firstValue.finishedAt)
+        }
     }
 
     @Nested
@@ -516,6 +664,26 @@ class MatchServiceTest : ServiceTest() {
             verify(matches, atLeastOnce()).save(captor.capture())
             assertEquals(MatchStatus.FINISHED, captor.firstValue.status)
             assertEquals(running.athleteRed, captor.firstValue.winnerAthlete)
+        }
+
+        @Test
+        fun `should end the match without winner when the only athlete is force finished`() {
+            val single = matchEntity(status = MatchStatus.RUNNING).apply { athleteBlue = null }
+            whenever(matches.findById(1)).thenReturn(Optional.of(single))
+            whenever(matchProgresses.findByMatchId(1)).thenReturn(progOn(single, 1, 1))
+            stubBracketExists()
+            stubUpdateProgressReturnsArg()
+
+            val result = service.forceFinishSide(1, RepSide.RED)
+
+            assertTrue(result is Either.Right)
+
+            val captor = argumentCaptor<MatchEntity>()
+            verify(matches, atLeastOnce()).save(captor.capture())
+            val saved = captor.firstValue
+            assertEquals(MatchStatus.FINISHED, saved.status)
+            assertNull(saved.winnerAthlete)
+            assertEquals(now.toEpochMilli(), saved.finishedAt)
         }
     }
 
@@ -719,6 +887,26 @@ class MatchServiceTest : ServiceTest() {
             val result = service.getMatchProgress(1)
 
             assertEquals(success(progress.toDomain()), result)
+        }
+
+        @Test
+        fun `should mark single athlete finished when the time cap expired on read`() {
+            val single = matchEntity(status = MatchStatus.RUNNING).apply { athleteBlue = null }
+            val progress = progOn(single, 1, 1).apply { timerStartedAt = now.minusSeconds(60).toEpochMilli() }
+            whenever(matches.findById(1)).thenReturn(Optional.of(single))
+            whenever(matchProgresses.findByMatchId(1)).thenReturn(progress)
+            whenever(routines.findById(2)).thenReturn(Optional.of(EnduranceRoutineEntity(2, "Routine", 30, now.epochSecond)))
+            stubUpdateProgressReturnsArg()
+
+            val result = service.getMatchProgress(1)
+
+            assertTrue(result is Either.Right)
+            assertEquals(now.minusSeconds(30).toEpochMilli(), (result as Either.Right).value.redFinishedAt?.toEpochMilli())
+
+            val captor = argumentCaptor<MatchEntity>()
+            verify(matches, atLeastOnce()).save(captor.capture())
+            assertEquals(MatchStatus.FINISHED, captor.firstValue.status)
+            assertNull(captor.firstValue.winnerAthlete)
         }
     }
 

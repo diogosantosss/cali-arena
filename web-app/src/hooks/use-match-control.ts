@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import type { Client } from "@stomp/stompjs";
-import { ApiError } from "@/api/client";
 import { getErrorDescription } from "@/api/error-messages";
 import { matchesService } from "../services/matches.service";
 import { createJudgeClient, publishJudgeAction, type JudgeEvent } from "../services/matches-ws.service";
@@ -37,7 +36,6 @@ export function useMatchControl(
 
   const clientRef = useRef<Client | null>(null);
   const onServerErrorRef = useRef(onServerError);
-  onServerErrorRef.current = onServerError;
   const progressRef = useRef<MatchProgress | null>(null);
 
   const repsRef = useRef({ red: 0, blue: 0 });
@@ -50,8 +48,17 @@ export function useMatchControl(
   const lastSentRef = useRef({ red: 0, blue: 0 });
 
   useEffect(() => {
+    onServerErrorRef.current = onServerError;
     progressRef.current = progress;
-  });
+  }, [onServerError, progress]);
+
+  function applyProgress(loaded: MatchProgress) {
+    setProgress(loaded);
+    setRedReps(loaded.redCurrentReps);
+    setBlueReps(loaded.blueCurrentReps);
+    repsRef.current = { red: loaded.redCurrentReps, blue: loaded.blueCurrentReps };
+    lastSentRef.current = { red: loaded.redCurrentReps, blue: loaded.blueCurrentReps };
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -97,15 +104,15 @@ export function useMatchControl(
         if (!prev) return prev;
         return event.side === "RED"
           ? {
-              ...prev,
-              redCurrentReps: event.reps,
-              redCurrentExerciseId: event.exerciseId ?? prev.redCurrentExerciseId,
-            }
+            ...prev,
+            redCurrentReps: event.reps,
+            redCurrentExerciseId: event.exerciseId ?? prev.redCurrentExerciseId,
+          }
           : {
-              ...prev,
-              blueCurrentReps: event.reps,
-              blueCurrentExerciseId: event.exerciseId ?? prev.blueCurrentExerciseId,
-            };
+            ...prev,
+            blueCurrentReps: event.reps,
+            blueCurrentExerciseId: event.exerciseId ?? prev.blueCurrentExerciseId,
+          };
       });
     }
 
@@ -171,24 +178,18 @@ export function useMatchControl(
     };
   }, [matchId]);
 
-  function applyProgress(loaded: MatchProgress) {
-    setProgress(loaded);
-    setRedReps(loaded.redCurrentReps);
-    setBlueReps(loaded.blueCurrentReps);
-    repsRef.current = { red: loaded.redCurrentReps, blue: loaded.blueCurrentReps };
-    lastSentRef.current = { red: loaded.redCurrentReps, blue: loaded.blueCurrentReps };
-  }
-
+  /**
+   * Starts the match over the judge WebSocket. The progress was already
+   * created with the match, so the server simply arms the timer and the
+   * first exercises; the "STARTED" echo applies the full state locally.
+   */
   async function startMatch() {
     if (!matchId) return;
-    try {
-      const loaded = await matchesService.startMatch(matchId);
-      applyProgress(loaded);
-      const match = await matchesService.getMatchById(matchId);
-      setCurrentMatch(match);
-    } catch (err) {
-      throw normalize(err, "Failed to start match");
-    }
+    const sent = publishJudgeAction(clientRef.current, matchId, {
+      action: "START",
+      side: "RED",
+    });
+    if (!sent) throw new Error("Connection lost");
   }
 
   async function adjustReps(side: "red" | "blue", delta: number) {
@@ -233,7 +234,7 @@ export function useMatchControl(
     if (!matchId || !clientRef.current?.connected) {
       throw new Error("Connection lost");
     }
-    
+
     const sent = publishJudgeAction(clientRef.current, matchId, {
       action: "FINISH",
       side: side.toUpperCase() as "RED" | "BLUE",
@@ -243,8 +244,4 @@ export function useMatchControl(
   }
 
   return { currentMatch, progress, redReps, blueReps, startMatch, adjustReps, finishSide };
-}
-
-function normalize(err: unknown, fallback: string): string {
-  return err instanceof ApiError ? err.message : fallback;
 }
