@@ -570,27 +570,6 @@ class MatchServiceTest : ServiceTest() {
             assertEquals(single.athleteRed, captor.firstValue.winnerAthlete)
             assertEquals(now.toEpochMilli(), captor.firstValue.finishedAt)
         }
-
-        @Test
-        fun `should finish single athlete match when the time cap expires`() {
-            val single = matchEntity(status = MatchStatus.RUNNING).apply { athleteBlue = null }
-            val prog = progOn(single, 1, 1).apply { timerStartedAt = now.minusSeconds(60).toEpochMilli() }
-            whenever(matches.findById(1)).thenReturn(Optional.of(single))
-            whenever(matchProgresses.findByMatchId(1)).thenReturn(prog)
-            whenever(routines.findById(2)).thenReturn(Optional.of(EnduranceRoutineEntity(2, "Routine", 30, now.epochSecond)))
-            stubUpdateProgressReturnsArg()
-
-            val result = service.updateAthletesReps(1, 5, null)
-
-            assertTrue(result is Either.Right)
-            assertEquals(now.minusSeconds(30).toEpochMilli(), (result as Either.Right).value.redFinishedAt?.toEpochMilli())
-
-            val captor = argumentCaptor<MatchEntity>()
-            verify(matches, atLeastOnce()).save(captor.capture())
-            assertEquals(MatchStatus.FINISHED, captor.firstValue.status)
-            assertNull(captor.firstValue.winnerAthlete)
-            assertEquals(now.minusSeconds(30).toEpochMilli(), captor.firstValue.finishedAt)
-        }
     }
 
     @Nested
@@ -887,26 +866,6 @@ class MatchServiceTest : ServiceTest() {
             val result = service.getMatchProgress(1)
 
             assertEquals(success(progress.toDomain()), result)
-        }
-
-        @Test
-        fun `should mark single athlete finished when the time cap expired on read`() {
-            val single = matchEntity(status = MatchStatus.RUNNING).apply { athleteBlue = null }
-            val progress = progOn(single, 1, 1).apply { timerStartedAt = now.minusSeconds(60).toEpochMilli() }
-            whenever(matches.findById(1)).thenReturn(Optional.of(single))
-            whenever(matchProgresses.findByMatchId(1)).thenReturn(progress)
-            whenever(routines.findById(2)).thenReturn(Optional.of(EnduranceRoutineEntity(2, "Routine", 30, now.epochSecond)))
-            stubUpdateProgressReturnsArg()
-
-            val result = service.getMatchProgress(1)
-
-            assertTrue(result is Either.Right)
-            assertEquals(now.minusSeconds(30).toEpochMilli(), (result as Either.Right).value.redFinishedAt?.toEpochMilli())
-
-            val captor = argumentCaptor<MatchEntity>()
-            verify(matches, atLeastOnce()).save(captor.capture())
-            assertEquals(MatchStatus.FINISHED, captor.firstValue.status)
-            assertNull(captor.firstValue.winnerAthlete)
         }
     }
 

@@ -16,7 +16,6 @@ import com.caliarena.service.sse.SpectatorPublisher
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Service
 import java.time.Clock
-import java.time.Instant
 
 @Service
 class MatchService(
@@ -155,19 +154,6 @@ class MatchService(
                 return@run failure(ApiError.ATHLETE_NOT_IN_MATCH)
             }
 
-            expireSingleAthleteAtTimeCap(match, prog)?.let { expired ->
-                val tournamentId =
-                    brackets.findByIdOrNull(match.bracket.id)?.tournament?.id
-                        ?: return@run failure(ApiError.BRACKET_NOT_FOUND)
-
-                MatchUpdatedEvent(
-                    tournamentId = tournamentId,
-                    matchProgress = expired.toDomain(),
-                ).let { publisher.publish(it) }
-
-                return@run success(expired.toDomain())
-            }
-
             val progDomain = prog.toDomain()
 
             val exerciseDomains =
@@ -239,63 +225,6 @@ class MatchService(
             if (allFinished) listOfNotNull(redTime, blueTime).maxOrNull()?.toEpochMilli() else null
 
         matches.save(match)
-    }
-
-    /**
-     * Ends a match that has only one assigned athlete when its time cap
-     * expires before the routine is finished: the lone side is marked as
-     * finished at the cap and the match closes without a winner.
-     *
-     * Returns the saved [MatchProgressEntity] when the cap was hit, or `null`
-     * when the rule does not apply (two athletes, no cap, already finished).
-     */
-    private fun Transaction.expireSingleAthleteAtTimeCap(
-        match: MatchEntity,
-        prog: MatchProgressEntity,
-    ): MatchProgressEntity? {
-        if (match.status != MatchStatus.RUNNING) return null
-
-        val loneSide =
-            when {
-                match.athleteRed != null && match.athleteBlue == null -> RepSide.RED
-                match.athleteBlue != null && match.athleteRed == null -> RepSide.BLUE
-                else -> return null
-            }
-
-        val routine = routines.findByIdOrNull(match.routineId) ?: return null
-        val capSeconds = routine.timeCapSeconds ?: return null
-        val timerStartedAt = prog.timerStartedAt ?: return null
-
-        val progDomain = prog.toDomain()
-        val loneFinishedAt =
-            if (loneSide == RepSide.RED) progDomain.redFinishedAt else progDomain.blueFinishedAt
-        if (loneFinishedAt != null) return null
-
-        val capEnd = Instant.ofEpochMilli(timerStartedAt).plusSeconds(capSeconds.toLong())
-        if (clock.instant().isBefore(capEnd)) return null
-
-        val now = clock.instant()
-        val newProg =
-            progDomain.copy(
-                redCurrentExerciseId = if (loneSide == RepSide.RED) null else progDomain.redCurrentExerciseId,
-                redFinishedAt = if (loneSide == RepSide.RED) capEnd else progDomain.redFinishedAt,
-                blueCurrentExerciseId = if (loneSide == RepSide.BLUE) null else progDomain.blueCurrentExerciseId,
-                blueFinishedAt = if (loneSide == RepSide.BLUE) capEnd else progDomain.blueFinishedAt,
-                updatedAt = now,
-            )
-
-        val redExercise = newProg.redCurrentExerciseId?.let { exercises.findByIdOrNull(it) }
-        val blueExercise = newProg.blueCurrentExerciseId?.let { exercises.findByIdOrNull(it) }
-
-        val saved =
-            matchProgresses.save(newProg.fromDomain(match, redExercise, blueExercise))
-
-        match.status = MatchStatus.FINISHED
-        match.winnerAthlete = null
-        match.finishedAt = capEnd.toEpochMilli()
-        matches.save(match)
-
-        return saved
     }
 
     fun forceFinishSide(
@@ -397,8 +326,6 @@ class MatchService(
                 matches.findByIdOrNull(id)
                     ?: return@run failure(ApiError.MATCH_NOT_FOUND)
 
-            matchProgresses.findByMatchId(id)?.let { expireSingleAthleteAtTimeCap(match, it) }
-
             success(match.toDomain())
         }
 
@@ -420,8 +347,6 @@ class MatchService(
                 matchProgresses.findByMatchId(matchId)
                     ?: return@run failure(ApiError.PROGRESS_NOT_FOUND)
 
-            val expired = expireSingleAthleteAtTimeCap(match, progress)
-
-            success((expired ?: progress).toDomain())
+            success(progress.toDomain())
         }
 }

@@ -85,6 +85,14 @@ export function RoutineCard({ routine, currentGroupIndex, accentColor }: Routine
     return `${e.targetReps} ${e.name}${weight(e.addedWeight)}`;
   }
 
+  function exerciseTypeTag(group: RoutineGroup): string | null {
+    if (group.items.length > 1) return "SUPERSET";
+    const e = group.items[0];
+    if (e.type === "UNBROKEN") return "UNBROKEN";
+    if (e.type === "SUPERSET") return "SUPERSET";
+    return null;
+  }
+
   return (
     <div
       className="rounded-xl flex flex-col shrink-0 animate-fade-up"
@@ -113,6 +121,7 @@ export function RoutineCard({ routine, currentGroupIndex, accentColor }: Routine
         <div ref={scrollRef} className="px-3 py-2 max-h-40 overflow-y-auto space-y-1">
           {groups.map((group, i) => {
             const isCurrent = i === currentGroupIndex;
+            const typeTag = exerciseTypeTag(group);
             return (
               <div
                 key={group.order}
@@ -133,11 +142,19 @@ export function RoutineCard({ routine, currentGroupIndex, accentColor }: Routine
                   {i + 1}
                 </span>
                 <span
-                  className="truncate text-xs font-medium"
+                  className="flex-1 truncate text-xs font-medium"
                   style={{ color: isCurrent ? accentColor : "var(--foreground)" }}
                 >
                   {formatGroup(group)}
                 </span>
+                {typeTag && (
+                  <span
+                    className="text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider shrink-0"
+                    style={{ background: "rgba(224,200,80,0.14)", color: "var(--gold)" }}
+                  >
+                    {typeTag}
+                  </span>
+                )}
               </div>
             );
           })}

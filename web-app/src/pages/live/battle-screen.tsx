@@ -48,7 +48,6 @@ export function BattleScreen({
   const blueFinished = !!progress?.blueFinishedAt;
 
   const singleAthlete = (redAthlete != null) !== (blueAthlete != null);
-  const timeCapMs = routine?.timeCapSeconds ? routine.timeCapSeconds * 1000 : null;
   const loneFinished = redAthlete != null ? redFinished : blueFinished;
 
   function finishMs(finishedAt: string) {
@@ -67,15 +66,10 @@ export function BattleScreen({
 
   const finalElapsedMs = (() => {
     if (matchFinished && progress) {
-      const ms = Math.max(
+      return Math.max(
         redFinished && progress.redFinishedAt ? finishMs(progress.redFinishedAt) : 0,
         blueFinished && progress.blueFinishedAt ? finishMs(progress.blueFinishedAt) : 0,
       );
-      return singleAthlete && timeCapMs != null ? Math.min(ms, timeCapMs) : ms;
-    }
-    if (singleAthlete && timeCapMs != null && !loneFinished) {
-      // o único atleta ainda corre: congela o cronómetro no time cap
-      return Math.min(elapsed, timeCapMs);
     }
     return elapsed;
   })();
@@ -133,7 +127,7 @@ export function BattleScreen({
               {routine?.name ?? "—"}
             </p>
 
-            <div className="flex flex-col items-center gap-1 mt-6 font-cairo text-[2rem] font-semibold text-white">
+            <div className="flex flex-col items-center gap-0.1 mt-4 font-cairo text-[2rem] font-semibold text-white">
               {groups.map((group) => {
                 const hasRed = group.items.some((e) => e.id === progress?.redCurrentExerciseId);
                 const hasBlue = group.items.some((e) => e.id === progress?.blueCurrentExerciseId);
@@ -210,7 +204,7 @@ function AthletePanel({
         </p>
       </div>
 
-      <div className="flex flex-col items-center mt-28 gap-2">
+      <div className="flex flex-col items-center mt-[4.75rem] gap-2">
         {isFinished ? (
           <>
             <p className="font-cairo text-[2.25rem] font-bold" style={{ color: finishColor }}>
@@ -222,14 +216,24 @@ function AthletePanel({
           </>
         ) : (
           <>
-            <p className="font-cairo text-[3.75rem] font-bold leading-none text-white">
-              {currentExercise?.name ?? "—"}
-            </p>
-            {currentExercise?.addedWeight ? (
-              <p className="font-cairo text-[2.25rem] font-bold leading-none bg-gradient-to-r from-[var(--spec-accent)] to-[var(--spec-title-end)] bg-clip-text text-transparent">
-                with {currentExercise.addedWeight} kg
+            <div className="flex flex-col items-center gap-2 min-h-[6rem]">
+              <p className="font-cairo text-[3.75rem] font-bold leading-none text-white">
+                {currentExercise?.name ?? "—"}
+                {currentExercise?.addedWeight ? (
+                  <span className="ml-4 align-middle text-[2.25rem] font-bold bg-gradient-to-r from-[var(--spec-accent)] to-[var(--spec-title-end)] bg-clip-text text-transparent">
+                    ({currentExercise.addedWeight > 0 ? "+" : ""}
+                    {currentExercise.addedWeight}KG)
+                  </span>
+                ) : null}
               </p>
-            ) : null}
+              <p className="font-cairo text-[1.75rem] font-bold uppercase leading-none tracking-[0.25em] text-[var(--spec-gold)]">
+                {currentExercise?.type !== undefined && currentExercise.type !== "NORMAL"
+                  ? currentExercise.type === "SUPERSET"
+                    ? "Superset"
+                    : "Unbroken"
+                  : ""}
+              </p>
+            </div>
             <p className="font-cairo text-[3.75rem] font-bold leading-none mt-2 tabular-nums text-white">
               <span key={currentReps} className="inline-block animate-rep-pop">
                 {currentReps}
