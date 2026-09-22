@@ -59,8 +59,14 @@ export function BattleScreen({
     return formatTime(Math.max(0, finishMs(finishedAt)));
   }
 
-  const redWon = match.winnerAthleteId != null && match.winnerAthleteId === match.athleteRedId;
-  const blueWon = match.winnerAthleteId != null && match.winnerAthleteId === match.athleteBlueId;
+  const redWon =
+    (redFinished && blueFinished &&
+      new Date(progress!.redFinishedAt!).getTime() < new Date(progress!.blueFinishedAt!).getTime()) ||
+    (singleAthlete && redFinished);
+  const blueWon =
+    (redFinished && blueFinished &&
+      new Date(progress!.blueFinishedAt!).getTime() < new Date(progress!.redFinishedAt!).getTime()) ||
+    (singleAthlete && blueFinished);
 
   const matchFinished = (redFinished && blueFinished) || (singleAthlete && loneFinished);
 
@@ -133,9 +139,15 @@ export function BattleScreen({
                 const hasBlue = group.items.some((e) => e.id === progress?.blueCurrentExerciseId);
                 return (
                   <p key={group.order} className="flex items-center gap-3">
-                    <span className="w-4 h-4 rounded-full" style={{ background: "var(--spec-red)", visibility: hasRed ? "visible" : "hidden" }} />
+                    <span
+                      className="w-4 h-4 rounded-full transition-all duration-300"
+                      style={{ background: "var(--spec-red)", opacity: hasRed ? 1 : 0, transform: hasRed ? "scale(1)" : "scale(0.6)" }}
+                    />
                     <span>{group.label}</span>
-                    <span className="w-4 h-4 rounded-full" style={{ background: "var(--spec-blue)", visibility: hasBlue ? "visible" : "hidden" }} />
+                    <span
+                      className="w-4 h-4 rounded-full transition-all duration-300"
+                      style={{ background: "var(--spec-blue)", opacity: hasBlue ? 1 : 0, transform: hasBlue ? "scale(1)" : "scale(0.6)" }}
+                    />
                   </p>
                 );
               })}
@@ -216,7 +228,7 @@ function AthletePanel({
           </>
         ) : (
           <>
-            <div className="flex flex-col items-center gap-2 min-h-[6rem]">
+            <div key={currentExercise?.id ?? "none"} className="flex flex-col items-center gap-2 min-h-[6rem] animate-fade-scale">
               <p className="font-cairo text-[3.75rem] font-bold leading-none text-white">
                 {currentExercise?.name ?? "—"}
                 {currentExercise?.addedWeight ? (
@@ -257,7 +269,10 @@ function AthletePanel({
       </div>
 
       {nextExercise && !isFinished && (
-        <p className="mt-42 font-cairo text-[2.5rem] font-bold leading-none bg-gradient-to-r from-[var(--spec-accent)] to-[var(--spec-title-end)] bg-clip-text text-transparent">
+        <p
+          key={nextExercise}
+          className="mt-42 font-cairo text-[2.5rem] font-bold leading-none bg-gradient-to-r from-[var(--spec-accent)] to-[var(--spec-title-end)] bg-clip-text text-transparent animate-fade-scale"
+        >
           Next: {nextExercise}
         </p>
       )}
