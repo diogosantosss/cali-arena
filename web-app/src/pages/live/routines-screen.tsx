@@ -1,7 +1,24 @@
-import { routineGroups } from "@/utils/exercise-labels";
 import type { Routine, RoutineOverview } from "@/data/routines";
+import type { Exercise } from "@/data/routines";
 import type { ScreenRoutine } from "@/data/tournaments";
+import { routineGroups, exerciseAbbreviation } from "@/utils/exercise-labels";
 import { screenBackground } from "@/utils/screen-background";
+import { ScreenHeader } from "./screen-header";
+
+const ACCENT = "#e98a80";
+const DIVIDER = "#262629";
+
+interface RoutineExerciseLine {
+  label: string;
+  tag: "SUPERSET" | "UNBROKEN" | null;
+}
+
+interface RoutineCardData {
+  id: number;
+  title: string;
+  timeCap: string | null;
+  exercises: RoutineExerciseLine[];
+}
 
 export function RoutinesScreen({
   tournamentName,
@@ -18,64 +35,176 @@ export function RoutinesScreen({
     .filter((sr) => sr.isVisible)
     .sort((a, b) => a.displayOrder - b.displayOrder);
 
-  const compact = visible.length > 4;
-  const rowSize = Math.min(visible.length, 4);
-  const rows: ScreenRoutine[][] = [];
-  for (let i = 0; i < visible.length; i += rowSize) {
-    rows.push(visible.slice(i, i + rowSize));
-  }
+  const cards: RoutineCardData[] = visible.map((sr) => {
+    const routine = routines.find((r) => r.id === sr.routineId);
+    const overview = routine ? overviews[routine.name] : null;
+    const exercises = routineGroups(overview?.exercises ?? []).map((group): RoutineExerciseLine => {
+      if (group.items.length > 1) {
+        const [first, ...rest] = group.items;
+        return {
+          tag: "SUPERSET",
+          label: `${first.targetReps} ${exerciseAbbreviation(first.name)}${weightSuffix(
+            first.addedWeight,
+          )} - ${rest
+            .map((e) => `${e.targetReps} ${exerciseAbbreviation(e.name)}${weightSuffix(e.addedWeight)}`)
+            .join(" - ")}`,
+        };
+      }
+      const e = group.items[0];
+      return {
+        tag: e.type === "UNBROKEN" ? "UNBROKEN" : null,
+        label: `${e.targetReps} ${e.name}${weightSuffix(e.addedWeight)}`,
+      };
+    });
+    return {
+      id: sr.id,
+      title: sr.label ?? routine?.name ?? `Routine #${sr.routineId}`,
+      timeCap: routine?.timeCapSeconds != null ? timeCapLabel(routine.timeCapSeconds) : null,
+      exercises,
+    };
+  });
 
-  const headingClass = compact ? "text-[1.5rem] mb-4" : "text-[2rem] mb-8";
-  const groupClass = compact ? "space-y-1 text-[1.2rem]" : "space-y-2 text-[1.5rem]";
+  const compact = cards.length <= 4;
 
   return (
     <div className="min-h-screen flex flex-col" style={{ ...screenBackground, color: "white" }}>
-      <div className="text-center pt-20 pb-8 px-16">
-        <p className="font-cairo font-semibold leading-tight uppercase bg-gradient-to-r from-[var(--spec-accent)] to-[var(--spec-title-end)] bg-clip-text text-transparent text-6xl">
-          {tournamentName}
-        </p>
-      </div>
+      <ScreenHeader tournamentName={tournamentName} accent={ACCENT} />
 
-      {visible.length === 0 ? (
+      {cards.length === 0 ? (
         <div className="flex-1 flex items-center justify-center">
-          <p className="font-cairo text-[var(--spec-text-faint)] uppercase tracking-widest text-sm">No routines configured</p>
+          <p className="font-cairo text-[var(--spec-text-faint)] uppercase tracking-widest text-sm">
+            No routines configured
+          </p>
+        </div>
+      ) : compact ? (
+        <div className="flex-1 flex flex-col justify-center px-5 md:px-10 lg:px-14 pb-6">
+          <div className="flex flex-wrap justify-center gap-5 mb-20">
+            {cards.map((card, index) => (
+              <CardSlot key={card.id} index={index + 1} card={card} large />
+            ))}
+          </div>
         </div>
       ) : (
-        <div className={`flex-1 flex flex-col items-center justify-center px-16 ${compact ? "gap-y-10" : "gap-y-14"}`}>
-          {rows.map((row, rowIndex) => (
-            <div key={rowIndex} className="flex justify-center gap-x-12">
-              {row.map((sr) => {
-                const routine = routines.find((r) => r.id === sr.routineId);
-                const overview = routine ? overviews[routine.name] : null;
-                return (
-                  <div key={sr.id} className="flex flex-1 max-w-[40rem] flex-col items-center text-center px-4">
-                    <h2 className={`w-full whitespace-nowrap font-cairo font-bold uppercase tracking-widest text-white ${headingClass}`}>
-                      {sr.label ?? routine?.name ?? `Routine #${sr.routineId}`}
-                    </h2>
-                    <div className={groupClass}>
-                      {routineGroups(overview?.exercises ?? []).map((group) => (
-                        <p key={group.order} className="font-cairo font-semibold text-white">
-                          {group.label}
-                        </p>
-                      ))}
-                    </div>
-                    {routine?.timeCapSeconds && (
-                      <div className={`mx-auto mt-auto w-full ${compact ? "pt-6" : "pt-8"}`}>
-                        <div className={`mx-auto w-max rounded-[20px] ${compact ? "px-4 py-1.5" : "px-5 py-2"}`} style={{ background: "var(--spec-surface)" }}>
-                          <p className={`font-cairo font-semibold uppercase tracking-[0.2em] ${compact ? "text-xs" : "text-sm"}`} style={{ color: "var(--spec-accent-75)" }}>
-                            Time Cap — {Math.floor(routine.timeCapSeconds / 60)}M
-                            {routine.timeCapSeconds % 60 > 0 ? ` ${routine.timeCapSeconds % 60}S` : ""}
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          ))}
+        <div className="flex-1 px-5 md:px-10 lg:px-14 pb-10">
+          <div className="flex flex-wrap justify-center gap-4">
+            {cards.map((card, index) => (
+              <CardSlot key={card.id} index={index + 1} card={card} />
+            ))}
+          </div>
         </div>
       )}
     </div>
   );
+}
+
+function CardSlot({ index, card, large = false }: { index: number; card: RoutineCardData; large?: boolean }) {
+  return (
+    <div className="w-full md:w-[calc(50%-10px)] lg:w-[calc(25%-15px)] shrink-0">
+      <RoutineCard index={index} card={card} large={large} />
+    </div>
+  );
+}
+
+function RoutineCard({ index, card, large = false }: { index: number; card: RoutineCardData; large?: boolean }) {
+  return (
+    <div
+      className={`flex flex-col rounded-[12px] border border-[#242428] bg-[#141417] transition-all duration-300 hover:-translate-y-0.5 hover:border-[#3a3a3f] overflow-hidden h-full ${
+        large ? "p-5 gap-1" : "p-4"
+      }`}
+    >
+      <div className="flex items-start gap-3">
+        <span
+          className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full font-cairo font-bold tabular-nums ${
+            large ? "h-8 w-8 text-sm" : "text-xs"
+          }`}
+          style={{ background: "rgba(233, 138, 128, 0.12)", color: ACCENT }}
+        >
+          {String(index).padStart(2, "0")}
+        </span>
+        <h3
+          className={`font-cairo font-bold uppercase tracking-wider leading-snug text-white ${
+            large ? "text-lg" : "text-base"
+          }`}
+          style={{ overflowWrap: "anywhere" }}
+        >
+          {card.title}
+        </h3>
+      </div>
+
+      <div className="mt-2.5 h-px w-full" style={{ background: DIVIDER }} />
+
+      <div className="mt-4 flex-1 space-y-2">
+        {card.exercises.map((exercise, i) => (
+          <div key={i} className="flex items-baseline gap-3">
+            <span
+              className={`w-6 shrink-0 text-right font-cairo tabular-nums ${
+                large ? "text-sm" : "text-xs"
+              }`}
+              style={{ color: "var(--spec-text-dim)" }}
+            >
+              {String(i + 1).padStart(2, "0")}
+            </span>
+            <span
+              className={`min-w-0 flex-1 font-cairo text-white/85 ${
+                large ? "text-base" : "text-sm"
+              }`}
+              style={{ overflowWrap: "anywhere" }}
+            >
+              {exercise.label}
+            </span>
+            {exercise.tag && <ExerciseTag tag={exercise.tag} />}
+          </div>
+        ))}
+      </div>
+
+      {card.timeCap && (
+        <>
+          <div className="mt-4 h-px w-full" style={{ background: DIVIDER }} />
+          <div className="mt-3 flex items-center justify-between">
+            <span
+              className={`font-semibold uppercase tracking-[0.3em] ${
+                large ? "text-[0.65rem]" : "text-[0.6rem]"
+              }`}
+              style={{ color: "var(--spec-text-dim)" }}
+            >
+              Time Cap
+            </span>
+            <span
+              className={`rounded-full border px-2.5 py-0.5 font-cairo font-semibold tabular-nums ${
+                large ? "text-sm" : "text-[0.7rem]"
+              }`}
+              style={{ borderColor: "rgba(233, 138, 128, 0.4)", color: ACCENT }}
+            >
+              {card.timeCap}
+            </span>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function ExerciseTag({ tag }: { tag: Exercise["type"] }) {
+  const palette =
+    tag === "UNBROKEN"
+      ? { color: "#7eb8f7", bg: "rgba(126, 184, 247, 0.12)" }
+      : { color: "#f0c46a", bg: "rgba(240, 196, 106, 0.12)" };
+  return (
+    <span
+      className="shrink-0 rounded-full px-1.5 py-0.5 text-[0.55rem] font-semibold uppercase tracking-widest"
+      style={{ color: palette.color, background: palette.bg }}
+    >
+      {tag}
+    </span>
+  );
+}
+
+function weightSuffix(addedWeight: number | null | undefined): string {
+  return addedWeight == null ? "" : ` (+${addedWeight}KG)`;
+}
+
+function timeCapLabel(seconds: number): string {
+  const minutes = Math.floor(seconds / 60);
+  const rest = seconds % 60;
+  return rest > 0 ? `${minutes}M ${rest}S` : `${minutes} MIN`;
 }

@@ -10,6 +10,7 @@ import type { Match, MatchProgress } from "@/data/matches";
 import { screenBackground } from "@/utils/screen-background";
 import { formatTime } from "@/utils/format-time";
 import { useElapsedMs } from "@/hooks/use-elapsed-ms";
+import { ScreenHeader } from "./screen-header";
 
 export function BattleScreen({
   tournamentName,
@@ -95,11 +96,7 @@ export function BattleScreen({
       />
 
       <div className="relative z-10 flex flex-col min-h-screen">
-        <div className="text-center pt-20 pb-8 px-16">
-          <p className="font-cairo text-6xl font-semibold leading-tight uppercase bg-gradient-to-r from-[var(--spec-accent)] to-[var(--spec-title-end)] bg-clip-text text-transparent">
-            {tournamentName}
-          </p>
-        </div>
+        <ScreenHeader tournamentName={tournamentName} />
 
         <div className="flex-1 grid grid-cols-3 px-24">
           {redAthlete ? (

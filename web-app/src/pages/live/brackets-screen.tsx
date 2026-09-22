@@ -2,6 +2,7 @@ import { Fragment } from "react";
 import { ChevronRight, Crown, GitMerge, Network, Shuffle, Trophy } from "lucide-react";
 import type { BracketMatchSummary, BracketStage, TournamentBracketsSummary } from "@/data/tournaments";
 import { screenBackground } from "@/utils/screen-background";
+import { ScreenHeader } from "./screen-header";
 
 const bracketStageOrder: Record<BracketStage, number> = {
   QUALIFIERS: -1,
@@ -38,14 +39,7 @@ export function BracketsScreen({ tournamentName, summary }: {
 
   return (
     <div className="h-screen flex flex-col overflow-hidden" style={{ ...screenBackground, color: "white" }}>
-      <div className="text-center pt-10 px-16 shrink-0">
-        <p className="font-cairo text-6xl font-semibold leading-tight uppercase bg-gradient-to-r from-[var(--spec-accent)] to-[var(--spec-title-end)] bg-clip-text text-transparent">
-          {tournamentName}
-        </p>
-        <p className="mt-4 font-cairo text-[2rem] font-semibold uppercase tracking-widest text-[var(--spec-text-soft)]">
-          Brackets · {summary.division}
-        </p>
-      </div>
+      <ScreenHeader tournamentName={tournamentName} subtitle={`Brackets · ${summary.division}`} />
 
       {columns.length === 0 ? (
         <div className="flex-1 flex items-center justify-center">

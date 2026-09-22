@@ -1,6 +1,7 @@
 import { Medal, Trophy } from "lucide-react";
 import type { BracketLeaderboard } from "@/data/tournaments";
 import { screenBackground } from "@/utils/screen-background";
+import { ScreenHeader } from "./screen-header";
 
 const podiumMeta = [
   {
@@ -42,14 +43,10 @@ export function LeaderboardScreen({
 
   return (
     <div className="min-h-screen flex flex-col" style={{ ...screenBackground, color: "white" }}>
-      <div className="text-center pt-16 px-16 shrink-0">
-        <p className="font-cairo text-6xl font-semibold leading-tight uppercase bg-gradient-to-r from-[var(--spec-accent)] to-[var(--spec-title-end)] bg-clip-text text-transparent">
-          {tournamentName}
-        </p>
-        <p className="mt-4 font-cairo text-[2rem] font-semibold uppercase tracking-widest text-[var(--spec-text-soft)]">
-          Best times — {leaderboard.stage} · {leaderboard.division}
-        </p>
-      </div>
+      <ScreenHeader
+        tournamentName={tournamentName}
+        subtitle={`Best times — ${leaderboard.stage} · ${leaderboard.division}`}
+      />
 
       {entries.length === 0 ? (
         <div className="flex-1 flex items-center justify-center">
