@@ -32,13 +32,13 @@ function useElapsedMs(startedAt: string | null): number {
       return () => clearTimeout(reset);
     }
     const start = new Date(startedAt).getTime();
-    const tick = () => setElapsed(Date.now() - start);
-    const first = setTimeout(tick, 0);
-    const interval = setInterval(tick, 250);
-    return () => {
-      clearTimeout(first);
-      clearInterval(interval);
+    let frame = 0;
+    const tick = () => {
+      setElapsed(Date.now() - start);
+      frame = requestAnimationFrame(tick);
     };
+    tick();
+    return () => cancelAnimationFrame(frame);
   }, [startedAt]);
 
   return elapsed;
@@ -137,29 +137,46 @@ export function BattlePanel({ matchId, athletes, routines, overviews, onError }:
 
   return (
     <div className="rounded-lg" style={{ background: "var(--background)", border: "1px solid var(--border)" }}>
-      <div className="flex items-center justify-between px-5 py-4">
-        <div className="flex items-center gap-3">
-          <span className="text-sm font-bold" style={{ color: "var(--foreground)" }}>Match #{matchId}</span>
-          <span className="text-xs hidden sm:block" style={{ color: "var(--muted-foreground)" }}>
-            {routine?.name}
-          </span>
+      <div className="flex items-center justify-between gap-4 px-5 py-4">
+        <div className="flex items-center gap-3 min-w-0">
           {matchStatus && (
-            <span className="text-[11px] px-2 py-0.5 rounded-full" style={{ background: matchStatus.bg, color: matchStatus.color }}>
+            <span className="text-[11px] px-2 py-0.5 rounded-full shrink-0" style={{ background: matchStatus.bg, color: matchStatus.color }}>
               {matchStatus.label}
+            </span>
+          )}
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="w-2 h-2 rounded-full shrink-0" style={{ background: "#e05555", boxShadow: "0 0 8px rgba(224,85,85,0.8)" }} />
+            <span className="text-sm font-semibold truncate" style={{ color: redAthlete ? "var(--foreground)" : "var(--faint)" }}>
+              {redAthlete?.name ?? "Not assigned"}
+            </span>
+            <span className="text-xs shrink-0" style={{ color: "var(--faint)" }}>vs</span>
+            <span className="text-sm font-semibold truncate" style={{ color: blueAthlete ? "var(--foreground)" : "var(--faint)" }}>
+              {blueAthlete?.name ?? "Not assigned"}
+            </span>
+            <span className="w-2 h-2 rounded-full shrink-0" style={{ background: "#5588e0", boxShadow: "0 0 8px rgba(85,136,224,0.8)" }} />
+          </div>
+          {routine?.name && (
+            <span className="text-xs hidden lg:block shrink-0" style={{ color: "var(--muted-foreground)" }}>
+              {routine.name}
             </span>
           )}
         </div>
 
-        <div className="flex items-center gap-4">
-          <p
-            className="text-xl font-bold tabular-nums hidden sm:block"
-            style={{
-              color: redFinished || blueFinished ? "#4ade80" : "var(--foreground)",
-              fontFamily: "Geist Variable, monospace",
-            }}
-          >
-            {isRunning || matchFinished ? formatTime(displayElapsed()) : "–:–"}
-          </p>
+        <div className="flex items-center gap-4 shrink-0">
+          <div className="text-right hidden sm:block">
+            <p className="text-[10px] uppercase tracking-widest" style={{ color: "var(--faint)" }}>
+              {matchFinished ? "Final time" : isRunning ? "Elapsed" : "Clock"}
+            </p>
+            <p
+              className="text-lg font-bold tabular-nums leading-tight"
+              style={{
+                color: redFinished || blueFinished ? "#4ade80" : "var(--foreground)",
+                fontFamily: "Geist Variable, monospace",
+              }}
+            >
+              {isRunning || matchFinished ? formatTime(displayElapsed()) : "–:–"}
+            </p>
+          </div>
           {!isRunning && currentMatch?.status !== "FINISHED" && (
             <button
               onClick={() => void run(startMatch)}
@@ -248,53 +265,85 @@ export function BattlePanel({ matchId, athletes, routines, overviews, onError }:
 
       {exercises.length > 0 && (
         <div style={{ borderTop: "1px solid var(--border)" }} className="px-5 py-4">
-          <div className="flex flex-wrap gap-2">
+          <div className="flex items-center gap-2 mb-3">
+            <p className="text-[10px] uppercase tracking-widest" style={{ color: "var(--faint)" }}>
+              Routine
+            </p>
+            <h4 className="text-sm font-semibold truncate" style={{ color: "var(--foreground)" }}>
+              {routine?.name}
+            </h4>
+            {routine?.timeCapSeconds && (
+              <span
+                className="ml-auto shrink-0 text-[10px] uppercase tracking-widest px-2 py-0.5 rounded-full"
+                style={{ background: "var(--accent-08)", color: "var(--accent)", border: "1px solid var(--accent-18)" }}
+              >
+                Time cap — {Math.floor(routine.timeCapSeconds / 60)}m
+                {routine.timeCapSeconds % 60 > 0 ? ` ${routine.timeCapSeconds % 60}s` : ""}
+              </span>
+            )}
+          </div>
+          <div className="space-y-2">
             {groups.map((group, i) => {
               const hasRed = group.items.some((e) => e.id === redExercise?.id);
               const hasBlue = group.items.some((e) => e.id === blueExercise?.id);
+              const isGoal = i === groups.length - 1;
+              const type = group.items[0]?.type;
               return (
-                <span
-                  key={group.order}
-                  className="text-xs px-2.5 py-1 rounded-full"
-                  style={{
-                    background:
-                      hasRed && hasBlue
-                        ? "linear-gradient(90deg, rgba(224,85,85,0.4) 0%, rgba(224,85,85,0.12) 50%, rgba(85,136,224,0.12) 50%, rgba(85,136,224,0.4) 100%)"
-                        : hasRed
-                          ? "rgba(224,85,85,0.14)"
-                          : hasBlue
-                            ? "rgba(85,136,224,0.14)"
-                            : "var(--secondary)",
-                    color:
-                      hasRed && hasBlue
-                        ? "#ffffff"
-                        : hasRed
-                          ? "#e05555"
-                          : hasBlue
-                            ? "#5588e0"
-                            : "var(--muted-foreground)",
-                    border:
-                      hasRed && hasBlue
-                        ? "1px solid rgba(160,120,220,0.4)"
-                        : hasRed
-                          ? "1px solid rgba(224,85,85,0.45)"
-                          : hasBlue
-                            ? "1px solid rgba(85,136,224,0.45)"
-                            : "1px solid var(--border)",
-                  }}
-                >
-                  {group.label}
-                  {i === groups.length - 1 ? " — goal" : ""}
-                </span>
+                <div key={group.order} className="flex items-center gap-3 min-w-0">
+                  <span
+                    className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0"
+                    style={{ background: "var(--secondary)", color: "var(--muted-foreground)", border: "1px solid var(--border)" }}
+                  >
+                    {i + 1}
+                  </span>
+                  <span
+                    className="text-sm truncate"
+                    style={{ color: isGoal ? "var(--foreground)" : "var(--secondary-foreground)", fontWeight: isGoal ? 600 : 400 }}
+                  >
+                    {group.label}
+                  </span>
+                  {type && type !== "NORMAL" && (
+                    <span
+                      className="shrink-0 text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded"
+                      style={
+                        type === "SUPERSET"
+                          ? { background: "rgba(240,196,106,0.12)", color: "#f0c46a", border: "1px solid rgba(240,196,106,0.25)" }
+                          : { background: "rgba(126,184,247,0.12)", color: "#7eb8f7", border: "1px solid rgba(126,184,247,0.25)" }
+                      }
+                    >
+                      {type}
+                    </span>
+                  )}
+                  {isGoal && (
+                    <span
+                      className="shrink-0 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded"
+                      style={{ background: "var(--accent-12)", color: "var(--accent)" }}
+                    >
+                      Goal
+                    </span>
+                  )}
+                  <span className="flex items-center gap-1.5 shrink-0 ml-auto">
+                    {hasRed && redAthlete && (
+                      <span
+                        className="text-[10px] font-semibold px-1.5 py-0.5 rounded"
+                        style={{ background: "rgba(224,85,85,0.14)", color: "#e05555", border: "1px solid rgba(224,85,85,0.35)" }}
+                      >
+                        {redAthlete.name}
+                      </span>
+                    )}
+                    {hasBlue && blueAthlete && (
+                      <span
+                        className="text-[10px] font-semibold px-1.5 py-0.5 rounded"
+                        style={{ background: "rgba(85,136,224,0.14)", color: "#5588e0", border: "1px solid rgba(85,136,224,0.35)" }}
+                      >
+                        {blueAthlete.name}
+                      </span>
+                    )}
+                  </span>
+                </div>
               );
             })}
           </div>
-          {routine?.timeCapSeconds && (
-            <p className="text-[11px] mt-3 tracking-widest uppercase" style={{ color: "var(--faint)" }}>
-              Time cap — {Math.floor(routine.timeCapSeconds / 60)}m
-              {routine.timeCapSeconds % 60 > 0 ? ` ${routine.timeCapSeconds % 60}s` : ""}
-            </p>
-          )}
         </div>
       )}
 
@@ -373,7 +422,7 @@ function RepControl({
   dot: string;
   finished: boolean;
   finishTime: string | null;
-  exercise: { name: string; targetReps: number; addedWeight?: number | null } | undefined;
+  exercise: Exercise | undefined;
   reps: number;
   disabled: boolean;
   onAdjust: (delta: number) => void;
@@ -382,24 +431,69 @@ function RepControl({
   repIncrementStyle: React.CSSProperties;
   repDecrementStyle: React.CSSProperties;
 }) {
+  const target = exercise?.targetReps ?? 0;
+  const pct = finished ? 100 : target > 0 ? Math.min(100, Math.round((reps / target) * 100)) : 0;
+
   return (
-    <div className="rounded-lg px-4 py-3" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
-      <div className="flex items-center gap-2">
-        <span className="w-2.5 h-2.5 rounded-full" style={{ background: dot }} />
-        <p className="text-sm font-semibold" style={{ color: "var(--foreground)" }}>{label}</p>
+    <div
+      className="rounded-xl px-4 py-4"
+      style={{ background: "var(--card)", border: "1px solid var(--border)", borderTop: `2px solid ${dot}` }}
+    >
+      <div className="flex items-center gap-2 min-w-0">
+        <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: dot, boxShadow: `0 0 8px ${dot}` }} />
+        <p className="text-sm font-semibold truncate" style={{ color: "var(--foreground)" }}>{label}</p>
       </div>
 
-      <p className="text-[11px] mt-2 uppercase tracking-widest" style={{ color: finished ? "#4ade80" : "var(--muted-foreground)" }}>
-        {finished ? (finishTime ? `Finished — ${finishTime}` : "Finished") : exercise?.name ?? "—"}
-        {!finished && exercise?.addedWeight ? ` (with ${exercise.addedWeight} kg)` : ""}
-      </p>
+      {finished ? (
+        <p className="text-sm font-semibold mt-2" style={{ color: "#4ade80" }}>
+          {finishTime ? `Finished — ${finishTime}` : "Finished"}
+        </p>
+      ) : (
+        <div className="flex items-center gap-2 mt-2 min-w-0">
+          <p className="text-lg font-semibold truncate" style={{ color: "var(--secondary-foreground)" }}>
+            {exercise?.name ?? "—"}
+          </p>
+          {exercise && exercise.type !== "NORMAL" && (
+            <span
+              className="shrink-0 text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded"
+              style={
+                exercise.type === "SUPERSET"
+                  ? { background: "rgba(240,196,106,0.12)", color: "#f0c46a", border: "1px solid rgba(240,196,106,0.25)" }
+                  : { background: "rgba(126,184,247,0.12)", color: "#7eb8f7", border: "1px solid rgba(126,184,247,0.25)" }
+              }
+            >
+              {exercise.type}
+            </span>
+          )}
+        </div>
+      )}
 
-      <p className="text-2xl font-bold tabular-nums mt-1" style={{ color: finished ? "#4ade80" : "var(--accent)", fontFamily: "Geist Variable, monospace" }}>
-        {reps}
-        <span className="text-sm font-medium" style={{ color: "var(--faint)" }}>/{exercise?.targetReps ?? "—"}</span>
-      </p>
+      {!finished && exercise?.addedWeight ? (
+        <p className="text-[10px] uppercase tracking-widest mt-1.5" style={{ color: "var(--accent)" }}>
+          +{exercise.addedWeight} kg
+        </p>
+      ) : null}
 
-      <div className="flex items-center gap-2 mt-3">
+      <div className="flex items-baseline gap-1.5 mt-2.5">
+        <p
+          className="text-3xl font-bold tabular-nums leading-none"
+          style={{ color: finished ? "#4ade80" : "var(--foreground)", fontFamily: "Geist Variable, monospace" }}
+        >
+          {reps}
+        </p>
+        {target > 0 && (
+          <p className="text-sm font-medium" style={{ color: "var(--faint)" }}>/ {target}</p>
+        )}
+      </div>
+
+      <div className="h-1.5 rounded-full mt-2.5 overflow-hidden" style={{ background: "var(--secondary)" }}>
+        <div
+          className="h-full rounded-full transition-all duration-300"
+          style={{ width: `${pct}%`, background: dot, boxShadow: `0 0 10px ${dot}` }}
+        />
+      </div>
+
+      <div className="flex items-center gap-1.5 mt-4">
         <button className={`${repButton} px-2.5`} disabled={disabled || finished} style={repDecrementStyle} onClick={() => onAdjust(-1)}>−1</button>
         <button className={repButton} disabled={disabled || finished} style={repIncrementStyle} onClick={() => onAdjust(1)}>+1</button>
         <button className={repButton} disabled={disabled || finished} style={repIncrementStyle} onClick={() => onAdjust(2)}>+2</button>

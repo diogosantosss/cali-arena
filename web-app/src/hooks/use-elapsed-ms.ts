@@ -5,10 +5,17 @@ export function useElapsedMs(timerStartedAt: string | null): number {
 
   useEffect(() => {
     if (!timerStartedAt) return;
-    const interval = setInterval(() => {
-      setElapsed(Date.now() - new Date(timerStartedAt).getTime());
-    }, 50);
-    return () => clearInterval(interval);
+
+    const start = new Date(timerStartedAt).getTime();
+
+    let frame = 0;
+    const tick = () => {
+      setElapsed(Date.now() - start);
+      frame = requestAnimationFrame(tick);
+    };
+    tick();
+    
+    return () => cancelAnimationFrame(frame);
   }, [timerStartedAt]);
 
   return elapsed;
