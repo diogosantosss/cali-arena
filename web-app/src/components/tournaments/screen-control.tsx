@@ -3,34 +3,37 @@ import { ApiError } from "@/api/client";
 import type { Athlete } from "@/data/athletes";
 import type { Routine, RoutineOverview } from "@/data/routines";
 import { tournamentsService } from "@/services/tournaments.service";
-import type { Bracket, ScreenState, TournamentState } from "@/data/tournaments";
+import type { Bracket, BracketStage, ScreenState, TournamentState } from "@/data/tournaments";
 import { BattlePanel } from "@/components/matches/battle-panel";
 import type { Match } from "@/data/matches";
 import { ScreenRoutinesPanel } from "./screen-routines-panel";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Check,
-  ClipboardList,
   ExternalLink,
-  Hourglass,
   Loader2,
-  MonitorPlay,
   Network,
   Swords,
   Trophy,
-  type LucideIcon,
 } from "lucide-react";
 
-const screenOptions: { value: ScreenState; label: string; icon: LucideIcon }[] = [
-  { value: "WAITING", label: "Waiting", icon: Hourglass },
-  { value: "ROUTINES", label: "Routines", icon: ClipboardList },
-  { value: "BATTLE", label: "Battle", icon: Swords },
-  { value: "LEADERBOARD", label: "Leaderboard", icon: Trophy },
-  { value: "BRACKETS", label: "Brackets", icon: Network },
+const screenOptions: { value: ScreenState; label: string }[] = [
+  { value: "WAITING", label: "Waiting" },
+  { value: "ROUTINES", label: "Routines" },
+  { value: "BATTLE", label: "Battle" },
+  { value: "LEADERBOARD", label: "Leaderboard" },
+  { value: "BRACKETS", label: "Brackets" },
 ];
 
 const screenLabel = (screen: ScreenState) =>
   screenOptions.find((option) => option.value === screen)?.label ?? screen;
+
+const stageLabel: Record<BracketStage, string> = {
+  QUALIFIERS: "Qualifiers",
+  QUARTERFINALS: "Quarterfinals",
+  SEMIFINALS: "Semifinals",
+  FINALS: "Finals",
+};
 
 interface ScreenControlProps {
   tournamentId: number;
@@ -133,9 +136,9 @@ export function ScreenControl({
       case "BATTLE": {
         const match = matches.find((m) => m.id === ui.matchId);
         if (!match) return null;
-        const red = athletes.find((a) => a.id === match.athleteRedId)?.name ?? "Red";
-        const blue = athletes.find((a) => a.id === match.athleteBlueId)?.name ?? "Blue";
-        return `#${match.id} · ${red} vs ${blue}`;
+        const red = athletes.find((a) => a.id === match.athleteRedId)?.name ?? "Not assigned";
+        const blue = athletes.find((a) => a.id === match.athleteBlueId)?.name ?? "Not assigned";
+        return `${red} vs ${blue}`;
       }
       case "LEADERBOARD": {
         const bracket = brackets.find((b) => b.id === ui.bracketId);
@@ -177,26 +180,38 @@ export function ScreenControl({
 
   return (
     <div className="rounded-lg overflow-hidden" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
-      <div className="flex items-center justify-between px-5 py-4">
-        <div>
+      <div className="flex items-center justify-between gap-3 px-5 py-4">
+        <div className="min-w-0">
           <p className="text-xs tracking-widest uppercase" style={{ color: "var(--muted-foreground)" }}>
             Screen control
           </p>
           <h3
-            className="text-xl leading-tight mt-1"
+            className="text-xl leading-tight mt-1 flex items-center gap-2.5"
             style={{ fontFamily: "DM Serif Display, Georgia, serif", color: "var(--foreground)" }}
           >
             Spectator screen
+            <span className="flex items-center gap-1.5 mt-0.5 select-none">
+              <span
+                className="w-1.5 h-1.5 rounded-full"
+                style={{ background: isDirty ? "var(--muted-foreground)" : "var(--accent)" }}
+              />
+              <span
+                className="text-[10px] uppercase tracking-widest font-sans"
+                style={{ color: isDirty ? "var(--muted-foreground)" : "var(--accent)" }}
+              >
+                {isDirty ? "Pending" : "Live"}
+              </span>
+            </span>
           </h3>
         </div>
         <a
           href={`/screen/${tournamentId}`}
           target="_blank"
           rel="noreferrer"
-          className="flex items-center gap-1.5 px-2.5 py-1 rounded text-[11px] font-medium transition-colors"
-          style={{ background: "var(--secondary)", color: "var(--secondary-foreground)", border: "1px solid var(--border)" }}
+          className="flex items-center gap-1.5 text-[11px] font-medium shrink-0 transition-colors"
+          style={{ color: "var(--muted-foreground)" }}
           onMouseEnter={(e) => (e.currentTarget.style.color = "var(--accent)")}
-          onMouseLeave={(e) => (e.currentTarget.style.color = "var(--secondary-foreground)")}
+          onMouseLeave={(e) => (e.currentTarget.style.color = "var(--muted-foreground)")}
         >
           <ExternalLink className="w-3 h-3" />
           Open screen
@@ -209,13 +224,13 @@ export function ScreenControl({
             Screen
           </p>
           <div className="flex flex-wrap items-center gap-1 p-1 rounded-lg" style={{ background: "var(--secondary)", border: "1px solid var(--border)" }}>
-            {screenOptions.map(({ value, label, icon: Icon }) => {
+            {screenOptions.map(({ value, label }) => {
               const active = ui.screen === value;
               return (
                 <button
                   key={value}
                   onClick={() => dispatch({ type: "setScreen", screen: value })}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors"
+                  className="px-3 py-1.5 rounded-md text-xs font-medium transition-colors"
                   style={{
                     background: active ? "var(--accent)" : "transparent",
                     color: active ? "var(--accent-foreground)" : "var(--secondary-foreground)",
@@ -233,7 +248,6 @@ export function ScreenControl({
                     }
                   }}
                 >
-                  <Icon className="w-3.5 h-3.5" />
                   {label}
                 </button>
               );
@@ -257,9 +271,11 @@ export function ScreenControl({
                   {readyMatches.map((m) => {
                     const red = athletes.find((a) => a.id === m.athleteRedId);
                     const blue = athletes.find((a) => a.id === m.athleteBlueId);
+                    const bracket = brackets.find((b) => b.id === m.bracketId);
+                    const label = `${red?.name ?? "Not assigned"} vs ${blue?.name ?? "Not assigned"}`;
                     return (
                       <SelectItem key={m.id} value={String(m.id)} className="text-xs" style={{ color: "var(--secondary-foreground)" }}>
-                        #{m.id} — {red?.name ?? "Red"} vs {blue?.name ?? "Blue"}
+                        {bracket ? `${stageLabel[bracket.stage]} — ${label}` : label}
                       </SelectItem>
                     );
                   })}
@@ -319,7 +335,7 @@ export function ScreenControl({
             {ui.loading ? (
               <>
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                Updating…
+                Applying…
               </>
             ) : justApplied ? (
               <>
@@ -327,33 +343,29 @@ export function ScreenControl({
                 Applied
               </>
             ) : (
-              <>
-                <MonitorPlay className="w-3.5 h-3.5" />
-                Update screen
-              </>
+              "Update screen"
             )}
           </button>
         </div>
 
         <div
-          className="flex items-center gap-2.5 text-xs rounded-lg px-3 py-2"
-          style={{ background: "var(--background)", border: "1px solid var(--border)" }}
+          className="flex items-center gap-2 text-[11px] px-3 py-2 rounded-lg truncate"
+          style={{ background: "var(--background)", border: "1px solid var(--border)", color: "var(--muted-foreground)" }}
         >
-          <span className="w-2 h-2 rounded-full animate-pulse shrink-0" style={{ background: "var(--accent)" }} />
-          <span className="uppercase tracking-widest text-[10px]" style={{ color: "var(--muted-foreground)" }}>
-            {isDirty ? "Will show" : "Currently live"}
-          </span>
-          <span className="font-medium truncate" style={{ color: "var(--foreground)" }}>
-            {screenLabel(ui.screen)}
-            {pendingDetail && <span> · {pendingDetail}</span>}
-          </span>
-          {isDirty && (
-            <span
-              className="ml-auto shrink-0 text-[10px] px-2 py-0.5 rounded-full uppercase tracking-wider"
-              style={{ background: "var(--accent-12)", color: "var(--accent)" }}
-            >
-              Not applied
-            </span>
+          {isDirty ? (
+            <>
+              <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: "var(--muted-foreground)" }} />
+              <span>
+                Will show <span className="font-medium" style={{ color: "var(--foreground)" }}>{screenLabel(ui.screen)}{pendingDetail && <> · {pendingDetail}</>}</span> — press update to go live
+              </span>
+            </>
+          ) : (
+            <>
+              <span className="w-1.5 h-1.5 rounded-full shrink-0 animate-pulse" style={{ background: "var(--accent)" }} />
+              <span>
+                Live now — <span className="font-medium" style={{ color: "var(--foreground)" }}>{screenLabel(ui.screen)}{pendingDetail && <> · {pendingDetail}</>}</span>
+              </span>
+            </>
           )}
         </div>
 

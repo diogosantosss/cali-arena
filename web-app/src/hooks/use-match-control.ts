@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import type { Client } from "@stomp/stompjs";
-import { ApiError } from "@/api/client";
 import { getErrorDescription } from "@/api/error-messages";
 import { matchesService } from "../services/matches.service";
 import { createJudgeClient, publishJudgeAction, type JudgeEvent } from "../services/matches-ws.service";
@@ -37,10 +36,29 @@ export function useMatchControl(
 
   const clientRef = useRef<Client | null>(null);
   const onServerErrorRef = useRef(onServerError);
-  onServerErrorRef.current = onServerError;
+  const progressRef = useRef<MatchProgress | null>(null);
 
   const repsRef = useRef({ red: 0, blue: 0 });
-  repsRef.current = { red: redReps, blue: blueReps };
+
+  /**
+   * Highest rep count this client has published for each side. The tap base
+   * is always max(repsRef, lastSentRef) so a stale echo that reverts
+   * display cannot make the next tap repeat a value.
+   */
+  const lastSentRef = useRef({ red: 0, blue: 0 });
+
+  useEffect(() => {
+    onServerErrorRef.current = onServerError;
+    progressRef.current = progress;
+  }, [onServerError, progress]);
+
+  function applyProgress(loaded: MatchProgress) {
+    setProgress(loaded);
+    setRedReps(loaded.redCurrentReps);
+    setBlueReps(loaded.blueCurrentReps);
+    repsRef.current = { red: loaded.redCurrentReps, blue: loaded.blueCurrentReps };
+    lastSentRef.current = { red: loaded.redCurrentReps, blue: loaded.blueCurrentReps };
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -61,21 +79,40 @@ export function useMatchControl(
     }
 
     function applyReps(event: Extract<JudgeEvent, { type: "REPS" }>) {
-      if (event.side === "RED") setRedReps(event.reps);
-      else setBlueReps(event.reps);
+      const side = event.side === "RED" ? "red" : "blue";
+      const lastSent = lastSentRef.current[side];
+      const currentExerciseId =
+        side === "red" ? progressRef.current?.redCurrentExerciseId : progressRef.current?.blueCurrentExerciseId;
+      const exerciseChanged =
+        event.exerciseId != null && event.exerciseId !== currentExerciseId;
+
+      if (exerciseChanged) {
+        // Exercise advanced (server reset reps to 0). Apply the new state
+        // and reset refs so the next tap starts from the correct base.
+        lastSentRef.current[side] = event.reps;
+        repsRef.current[side] = event.reps;
+        if (event.side === "RED") setRedReps(event.reps);
+        else setBlueReps(event.reps);
+      } else if (event.reps >= lastSent) {
+        // Same exercise, forward movement — apply the confirmed value.
+        if (event.side === "RED") setRedReps(event.reps);
+        else setBlueReps(event.reps);
+      }
+      // else: stale echo that would revert the display — silently ignored.
+
       setProgress((prev) => {
         if (!prev) return prev;
         return event.side === "RED"
           ? {
-              ...prev,
-              redCurrentReps: event.reps,
-              redCurrentExerciseId: event.exerciseId ?? prev.redCurrentExerciseId,
-            }
+            ...prev,
+            redCurrentReps: event.reps,
+            redCurrentExerciseId: event.exerciseId ?? prev.redCurrentExerciseId,
+          }
           : {
-              ...prev,
-              blueCurrentReps: event.reps,
-              blueCurrentExerciseId: event.exerciseId ?? prev.blueCurrentExerciseId,
-            };
+            ...prev,
+            blueCurrentReps: event.reps,
+            blueCurrentExerciseId: event.exerciseId ?? prev.blueCurrentExerciseId,
+          };
       });
     }
 
@@ -141,36 +178,35 @@ export function useMatchControl(
     };
   }, [matchId]);
 
-  function applyProgress(loaded: MatchProgress) {
-    setProgress(loaded);
-    setRedReps(loaded.redCurrentReps);
-    setBlueReps(loaded.blueCurrentReps);
-  }
-
+  /**
+   * Starts the match over the judge WebSocket. The progress was already
+   * created with the match, so the server simply arms the timer and the
+   * first exercises; the "STARTED" echo applies the full state locally.
+   */
   async function startMatch() {
     if (!matchId) return;
-    try {
-      const loaded = await matchesService.startMatch(matchId);
-      applyProgress(loaded);
-      const match = await matchesService.getMatchById(matchId);
-      setCurrentMatch(match);
-    } catch (err) {
-      throw normalize(err, "Failed to start match");
-    }
+    const sent = publishJudgeAction(clientRef.current, matchId, {
+      action: "START",
+      side: "RED",
+    });
+    if (!sent) throw new Error("Connection lost");
   }
 
   async function adjustReps(side: "red" | "blue", delta: number) {
     if (!matchId) return;
-    if ((side === "red" && progress?.redFinishedAt) || (side === "blue" && progress?.blueFinishedAt)) {
+
+    if ((side === "red" && progressRef.current?.redFinishedAt) || (side === "blue" && progressRef.current?.blueFinishedAt)) {
       return;
     }
-    const base = repsRef.current[side];
+
+    const base = Math.max(repsRef.current[side], lastSentRef.current[side]);
     if (base === 0 && delta < 0) return;
     const next = Math.max(0, base + delta);
     if (next === base) return;
 
     // optimistic bump; confirmation comes through the topic echo
     repsRef.current[side] = next;
+    lastSentRef.current[side] = next;
     if (side === "red") setRedReps(next);
     else setBlueReps(next);
 
@@ -179,8 +215,10 @@ export function useMatchControl(
       side: side.toUpperCase() as "RED" | "BLUE",
       reps: next,
     });
+
     if (!sent) {
       repsRef.current[side] = base;
+      lastSentRef.current[side] = base;
       if (side === "red") setRedReps(base);
       else setBlueReps(base);
       throw new Error("Connection lost");
@@ -196,16 +234,14 @@ export function useMatchControl(
     if (!matchId || !clientRef.current?.connected) {
       throw new Error("Connection lost");
     }
+
     const sent = publishJudgeAction(clientRef.current, matchId, {
       action: "FINISH",
       side: side.toUpperCase() as "RED" | "BLUE",
     });
+
     if (!sent) throw new Error("Connection lost");
   }
 
   return { currentMatch, progress, redReps, blueReps, startMatch, adjustReps, finishSide };
-}
-
-function normalize(err: unknown, fallback: string): string {
-  return err instanceof ApiError ? err.message : fallback;
 }

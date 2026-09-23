@@ -37,11 +37,12 @@ export function createJudgeClient(
   return client;
 }
 
-export type JudgeAction = "ADJUST" | "FINISH";
+export type JudgeAction = "ADJUST" | "FINISH" | "START";
 
 export type JudgeActionPayload =
   | { action: "ADJUST"; side: "RED" | "BLUE"; reps: number }
-  | { action: "FINISH"; side: "RED" | "BLUE" };
+  | { action: "FINISH"; side: "RED" | "BLUE" }
+  | { action: "START"; side: "RED" | "BLUE" };
 
 export function publishJudgeAction(
   client: Client | null,

@@ -6,7 +6,7 @@ enum class RepSide { RED, BLUE }
 
 enum class JudgeOutputType { STARTED, REPS, FINISHED, ERROR }
 
-enum class JudgeActionType { ADJUST, FINISH }
+enum class JudgeActionType { START, ADJUST, FINISH }
 
 data class JudgeActionInput(
     val action: JudgeActionType,

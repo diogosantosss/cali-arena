@@ -15,9 +15,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, MapPin, CalendarDays } from "lucide-react";
 
 const statusStyles: Record<Tournament["status"], { label: string; color: string; bg: string }> = {
-  DRAFT:    { label: "Draft",    color: "var(--muted-foreground)", bg: "rgba(107,101,96,0.12)" },
-  READY:    { label: "Ready",    color: "#7eb8f7", bg: "rgba(126,184,247,0.12)" },
-  LIVE:     { label: "Live",     color: "var(--accent)", bg: "var(--accent-12)" },
+  DRAFT: { label: "Draft", color: "var(--muted-foreground)", bg: "rgba(107,101,96,0.12)" },
+  READY: { label: "Ready", color: "#7eb8f7", bg: "rgba(126,184,247,0.12)" },
+  LIVE: { label: "Live", color: "var(--accent)", bg: "var(--accent-12)" },
   FINISHED: { label: "Finished", color: "#4a4a4e", bg: "rgba(74,74,78,0.12)" },
 };
 
@@ -37,16 +37,16 @@ interface DetailState {
 type Action =
   | { type: "loadStart" }
   | {
-      type: "loadSuccess";
-      tournament: Tournament;
-      state: TournamentState | null;
-      brackets: Bracket[];
-      matches: Match[];
-      progresses: Record<number, MatchProgress>;
-      athletes: Athlete[];
-      routines: Routine[];
-      overviews: Record<string, RoutineOverview>;
-    }
+    type: "loadSuccess";
+    tournament: Tournament;
+    state: TournamentState | null;
+    brackets: Bracket[];
+    matches: Match[];
+    progresses: Record<number, MatchProgress>;
+    athletes: Athlete[];
+    routines: Routine[];
+    overviews: Record<string, RoutineOverview>;
+  }
   | { type: "loadError"; message: string }
   | { type: "stateUpdated"; state: TournamentState }
   | { type: "bracketCreated"; bracket: Bracket }

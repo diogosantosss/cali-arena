@@ -57,6 +57,21 @@ class BracketController(
                 onError = { it.toResponseEntity() },
             )
 
+    @GetMapping("/{bracketId}")
+    fun getBracketById(
+        @PathVariable bracketId: Int,
+    ): ResponseEntity<Any> =
+        bracketService
+            .getBracketById(bracketId)
+            .toResponse(
+                onSuccess = { bracket ->
+                    ResponseEntity
+                        .status(HttpStatus.OK)
+                        .body(bracket)
+                },
+                onError = { it.toResponseEntity() },
+            )
+
     @GetMapping("/tournament/{tournamentId}/division/{division}")
     fun getBracketsByTournamentAndDivision(
         @PathVariable tournamentId: Int,

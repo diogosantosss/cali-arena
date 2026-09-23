@@ -26,8 +26,8 @@ class MatchService(
     fun createMatch(
         bracketId: Int,
         routineId: Int,
-        athleteRedId: Int,
-        athleteBlueId: Int,
+        athleteRedId: Int?,
+        athleteBlueId: Int?,
     ): Either<ApiError, Match> =
         trxManager.run {
             val bracket =
@@ -37,13 +37,33 @@ class MatchService(
             routines.findByIdOrNull(routineId)
                 ?: return@run failure(ApiError.ROUTINE_NOT_FOUND)
 
+            if (athleteRedId == null && athleteBlueId == null) {
+                return@run failure(ApiError.ATHLETES_NOT_ASSIGNED)
+            }
+
             val red =
-                athletes.findByIdOrNull(athleteRedId)
-                    ?: return@run failure(ApiError.ATHLETE_NOT_FOUND)
+                athleteRedId?.let { id ->
+                    athletes.findByIdOrNull(id)
+                        ?: return@run failure(ApiError.ATHLETE_NOT_FOUND)
+                }
 
             val blue =
-                athletes.findByIdOrNull(athleteBlueId)
-                    ?: return@run failure(ApiError.ATHLETE_NOT_FOUND)
+                athleteBlueId?.let { id ->
+                    athletes.findByIdOrNull(id)
+                        ?: return@run failure(ApiError.ATHLETE_NOT_FOUND)
+                }
+
+            if (red != null && red == blue) {
+                return@run failure(ApiError.SAME_ATHLETE_ON_BOTH_SIDES)
+            }
+
+            val firstExercise =
+                exercises
+                    .findExercisesByRoutineId(routineId)
+                    .minWithOrNull(compareBy({ it.exerciseOrder }, { it.supersetOrder ?: 0 }))
+                    ?: return@run failure(ApiError.ROUTINE_NOT_FOUND)
+
+            val now = clock.instant()
 
             val match =
                 matches.save(
@@ -53,9 +73,18 @@ class MatchService(
                         athleteRed = red,
                         athleteBlue = blue,
                         status = MatchStatus.PENDING,
-                        createdAt = clock.instant().epochSecond,
+                        createdAt = now.epochSecond,
                     ),
                 )
+
+            matchProgresses.save(
+                MatchProgressEntity(
+                    match = match,
+                    redCurrentExercise = firstExercise,
+                    blueCurrentExercise = firstExercise,
+                    updatedAt = now.epochSecond,
+                ),
+            )
 
             success(match.toDomain())
         }
@@ -66,11 +95,11 @@ class MatchService(
                 matches.findByIdOrNull(matchId)
                     ?: return@run failure(ApiError.MATCH_NOT_FOUND)
 
-            if (matchProgresses.findByMatchId(matchId) != null) {
-                return@run failure(ApiError.PROGRESS_ALREADY_EXISTS)
-            }
+            val tournamentId =
+                brackets.findByIdOrNull(match.bracket.id)?.tournament?.id
+                    ?: return@run failure(ApiError.BRACKET_NOT_FOUND)
 
-            if (match.athleteRed == null || match.athleteBlue == null) {
+            if (match.athleteRed == null && match.athleteBlue == null) {
                 return@run failure(ApiError.ATHLETES_NOT_ASSIGNED)
             }
 
@@ -78,40 +107,26 @@ class MatchService(
                 return@run failure(ApiError.MATCH_ALREADY_STARTED)
             }
 
-            val firstExercise =
-                exercises
-                    .findExercisesByRoutineId(match.routineId)
-                    .minWithOrNull(compareBy({ it.exerciseOrder }, { it.supersetOrder ?: 0 }))
-                    ?: return@run failure(ApiError.ROUTINE_NOT_FOUND)
+            val prog =
+                matchProgresses.findByMatchId(matchId)
+                    ?: return@run failure(ApiError.PROGRESS_NOT_FOUND)
 
-            val nowMillis = clock.instant().toEpochMilli()
-            val nowSeconds = clock.instant().epochSecond
+            val now = clock.instant()
 
             match.status = MatchStatus.RUNNING
-            match.startedAt = nowMillis
+            match.startedAt = now.toEpochMilli()
             matches.save(match)
 
-            val progress =
-                matchProgresses.save(
-                    MatchProgressEntity(
-                        match = match,
-                        redCurrentExercise = firstExercise,
-                        blueCurrentExercise = firstExercise,
-                        timerStartedAt = nowMillis,
-                        updatedAt = nowSeconds,
-                    ),
-                )
-
-            val tournamentId =
-                brackets.findByIdOrNull(match.bracket.id)?.tournament?.id
-                    ?: return@run failure(ApiError.BRACKET_NOT_FOUND)
+            prog.timerStartedAt = now.toEpochMilli()
+            prog.updatedAt = now.epochSecond
+            val updatedProg = matchProgresses.save(prog).toDomain()
 
             MatchUpdatedEvent(
                 tournamentId = tournamentId,
-                matchProgress = progress.toDomain(),
+                matchProgress = updatedProg,
             ).let { publisher.publish(it) }
 
-            success(StartedMatch(match = match.toDomain(), progress = progress.toDomain()))
+            success(StartedMatch(match = match.toDomain(), progress = updatedProg))
         }
 
     fun updateAthletesReps(
@@ -131,6 +146,13 @@ class MatchService(
             val prog =
                 matchProgresses.findByMatchId(matchId)
                     ?: return@run failure(ApiError.PROGRESS_NOT_FOUND)
+
+            if (redReps != null && match.athleteRed == null) {
+                return@run failure(ApiError.ATHLETE_NOT_IN_MATCH)
+            }
+            if (blueReps != null && match.athleteBlue == null) {
+                return@run failure(ApiError.ATHLETE_NOT_IN_MATCH)
+            }
 
             val progDomain = prog.toDomain()
 
@@ -170,6 +192,41 @@ class MatchService(
             success(updated)
         }
 
+    private fun Transaction.applyFinishTransition(
+        match: MatchEntity,
+        before: MatchProgress,
+        updated: MatchProgress,
+    ) {
+        val (redTime, blueTime) = updated.redFinishedAt to updated.blueFinishedAt
+
+        val newFinish =
+            (redTime != null && before.redFinishedAt == null) ||
+                (blueTime != null && before.blueFinishedAt == null)
+
+        if (!newFinish) return
+
+        val hasRed = match.athleteRed != null
+        val hasBlue = match.athleteBlue != null
+        val allFinished = (!hasRed || redTime != null) && (!hasBlue || blueTime != null)
+
+        val redWon =
+            when {
+                !allFinished -> redTime != null
+                !hasRed -> false
+                !hasBlue -> true
+                else -> !redTime!!.isAfter(blueTime!!)
+            }
+
+        match.status = if (allFinished) MatchStatus.FINISHED else MatchStatus.RUNNING
+
+        match.winnerAthlete = if (redWon) match.athleteRed else match.athleteBlue
+
+        match.finishedAt =
+            if (allFinished) listOfNotNull(redTime, blueTime).maxOrNull()?.toEpochMilli() else null
+
+        matches.save(match)
+    }
+
     fun forceFinishSide(
         matchId: Int,
         side: RepSide,
@@ -191,8 +248,17 @@ class MatchService(
 
             val isRed = side == RepSide.RED
 
+            if (isRed && match.athleteRed == null) {
+                return@run failure(ApiError.ATHLETE_NOT_IN_MATCH)
+            }
+
+            if (!isRed && match.athleteBlue == null) {
+                return@run failure(ApiError.ATHLETE_NOT_IN_MATCH)
+            }
+
+            val opponentAthlete = if (isRed) match.athleteBlue else match.athleteRed
             val opponentFinishedAt = if (isRed) progDomain.blueFinishedAt else progDomain.redFinishedAt
-            if (opponentFinishedAt == null) {
+            if (opponentAthlete != null && opponentFinishedAt == null) {
                 return@run failure(ApiError.OPPONENT_NOT_FINISHED)
             }
 
@@ -231,40 +297,6 @@ class MatchService(
             success(updated)
         }
 
-    private fun Transaction.applyFinishTransition(
-        match: MatchEntity,
-        before: MatchProgress,
-        updated: MatchProgress,
-    ) {
-        val redFinishedAt = updated.redFinishedAt
-        val blueFinishedAt = updated.blueFinishedAt
-
-        val newFinish =
-            (redFinishedAt != null && before.redFinishedAt == null) ||
-                (blueFinishedAt != null && before.blueFinishedAt == null)
-
-        if (!newFinish) return
-
-        val matchFinished = redFinishedAt != null && blueFinishedAt != null
-        val redWon =
-            if (matchFinished) {
-                !redFinishedAt.isAfter(blueFinishedAt)
-            } else {
-                redFinishedAt != null
-            }
-
-        match.status = if (matchFinished) MatchStatus.FINISHED else MatchStatus.RUNNING
-        match.winnerAthlete =
-            if (redWon) match.athleteRed else match.athleteBlue
-        match.finishedAt =
-            if (matchFinished) {
-                (if (redWon) blueFinishedAt else redFinishedAt).toEpochMilli()
-            } else {
-                null
-            }
-        matches.save(match)
-    }
-
     fun getAllMatches(): Either<ApiError, List<Match>> =
         trxManager.run {
             success(matches.findAll().map(MatchEntity::toDomain))
@@ -275,6 +307,12 @@ class MatchService(
             val match =
                 matches.findByIdOrNull(matchId)
                     ?: return@run failure(ApiError.MATCH_NOT_FOUND)
+
+            val state = tournamentStates.findByCurrentMatchId(matchId)
+            if (state != null) {
+                state.currentMatch = null
+                tournamentStates.save(state)
+            }
 
             matchProgresses.findByMatchId(matchId)?.let { matchProgresses.delete(it) }
             matches.delete(match)
@@ -301,8 +339,9 @@ class MatchService(
 
     fun getMatchProgress(matchId: Int): Either<ApiError, MatchProgress> =
         trxManager.run {
-            matches.findByIdOrNull(matchId)
-                ?: return@run failure(ApiError.MATCH_NOT_FOUND)
+            val match =
+                matches.findByIdOrNull(matchId)
+                    ?: return@run failure(ApiError.MATCH_NOT_FOUND)
 
             val progress =
                 matchProgresses.findByMatchId(matchId)

@@ -32,6 +32,10 @@ export const matchesService = {
     return apiClient.get(`/matches/${matchId}/progress`);
   },
 
+  getMatches(): Promise<Match[]> {
+    return apiClient.get("/matches");
+  },
+
   getMatchesByBracketId(bracketId: number): Promise<Match[]> {
     return apiClient.get(`/matches/bracket/${bracketId}`);
   },

@@ -5,8 +5,8 @@ export interface Match {
   bracketId: number;
   routineId: number;
 
-  athleteRedId: number;
-  athleteBlueId: number;
+  athleteRedId: number | null;
+  athleteBlueId: number | null;
 
   winnerAthleteId: number | null;
 
@@ -20,8 +20,8 @@ export interface CreateMatchInput {
   bracketId: number;
   routineId: number;
 
-  athleteRedId: number;
-  athleteBlueId: number;
+  athleteRedId: number | null;
+  athleteBlueId: number | null;
 }
 
 export interface UpdateRepsInput {
