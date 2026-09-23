@@ -4,7 +4,7 @@ import { ApiError } from "@/api/client";
 import { loadTheme } from "@/theme/theme";
 import { useSpectatorSSE } from "@/hooks/use-spectator-sse";
 import { tournamentsService } from "@/services/tournaments.service";
-import type { BracketLeaderboard, ScreenRoutine, Tournament, TournamentBracketsSummary, TournamentState } from "@/data/tournaments";
+import type { BracketLeaderboard, BracketStage, ScreenRoutine, Tournament, TournamentBracketsSummary, TournamentState } from "@/data/tournaments";
 import { routinesService } from "@/services/routines.service";
 import type { Routine, RoutineOverview } from "@/data/routines";
 import type { Athlete } from "@/data/athletes";
@@ -28,6 +28,7 @@ interface State {
   overviews: Record<string, RoutineOverview>;
   currentMatch: Match | null;
   matchProgress: MatchProgress | null;
+  currentStage: BracketStage | null;
   leaderboard: BracketLeaderboard | null;
   bracketSummary: TournamentBracketsSummary | null;
   athletes: Athlete[];
@@ -44,6 +45,7 @@ type Action =
   | { type: "setOverview"; routineName: string; overview: RoutineOverview }
   | { type: "setCurrentMatch"; match: Match }
   | { type: "setMatchProgress"; progress: MatchProgress | null }
+  | { type: "setCurrentStage"; stage: BracketStage | null }
   | { type: "setLeaderboard"; leaderboard: BracketLeaderboard | null }
   | { type: "setBracketSummary"; summary: TournamentBracketsSummary | null }
   | { type: "resetMatchData" }
@@ -58,6 +60,7 @@ const initialState: State = {
   overviews: {},
   currentMatch: null,
   matchProgress: null,
+  currentStage: null,
   leaderboard: null,
   bracketSummary: null,
   athletes: [],
@@ -84,6 +87,7 @@ function reducer(state: State, action: Action): State {
     case "setOverview": return { ...state, overviews: { ...state.overviews, [action.routineName]: action.overview } };
     case "setCurrentMatch": return { ...state, currentMatch: action.match };
     case "setMatchProgress": return { ...state, matchProgress: action.progress };
+    case "setCurrentStage": return { ...state, currentStage: action.stage };
     case "setLeaderboard": return { ...state, leaderboard: action.leaderboard };
     case "setBracketSummary": return { ...state, bracketSummary: action.summary };
     case "resetMatchData": return { ...state, currentMatch: null, matchProgress: null };
@@ -238,6 +242,24 @@ export function ScreenPage() {
     };
   }, [currentMatchId]);
 
+  const bracketId = state.currentMatch?.bracketId ?? null;
+  useEffect(() => {
+    if (!bracketId) {
+      dispatch({ type: "setCurrentStage", stage: null });
+      return;
+    }
+    let cancelled = false;
+    tournamentsService
+      .getBracketById(bracketId)
+      .then((bracket) => {
+        if (!cancelled) dispatch({ type: "setCurrentStage", stage: bracket.stage });
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [bracketId]);
+
   const handleSSEEvent = useCallback((event: SpectatorEvent) => {
     switch (event.action) {
       case "TOURNAMENT_STATE_UPDATED": {
@@ -292,6 +314,7 @@ export function ScreenPage() {
         athletes={state.athletes}
         routines={state.routines}
         overviews={state.overviews}
+        stage={state.currentStage}
       />
     );
   }

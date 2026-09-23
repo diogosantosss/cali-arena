@@ -7,10 +7,18 @@ import {
 } from "@/utils/exercise-labels";
 import type { Athlete } from "@/data/athletes";
 import type { Match, MatchProgress } from "@/data/matches";
+import type { BracketStage } from "@/data/tournaments";
 import { screenBackground } from "@/utils/screen-background";
 import { formatTime } from "@/utils/format-time";
 import { useElapsedMs } from "@/hooks/use-elapsed-ms";
 import { ScreenHeader } from "./screen-header";
+
+const bracketStageLabel: Record<BracketStage, string> = {
+  QUALIFIERS: "Qualifiers",
+  QUARTERFINALS: "Quarterfinals",
+  SEMIFINALS: "Semifinals",
+  FINALS: "Finals",
+};
 
 export function BattleScreen({
   tournamentName,
@@ -19,6 +27,7 @@ export function BattleScreen({
   athletes,
   routines,
   overviews,
+  stage,
 }: {
   tournamentName: string;
   match: Match;
@@ -26,6 +35,7 @@ export function BattleScreen({
   athletes: Athlete[];
   routines: Routine[];
   overviews: Record<string, RoutineOverview>;
+  stage: BracketStage | null | undefined;
 }) {
   const elapsed = useElapsedMs(progress?.timerStartedAt ?? null);
 
@@ -120,41 +130,54 @@ export function BattleScreen({
 
           <div className="flex flex-col items-center">
             <p
-              className="pt-16 font-cairo text-[6rem] font-bold leading-none tabular-nums transition-colors duration-700"
+              className="pt-10 font-cairo text-[6rem] font-bold leading-none tabular-nums transition-colors duration-700"
               style={{ color: timerColor }}
             >
               {formatTime(finalElapsedMs)}
             </p>
-
-            <p className="mt-16 font-cairo text-[2.5rem] font-bold leading-none text-white">
-              {routine?.name ?? "—"}
+            <p className="mt-3 font-cairo text-sm uppercase tracking-[0.5em] text-[var(--spec-text-grey)]">
+              Round Time
             </p>
 
-            <div className="flex flex-col items-center gap-0.1 mt-4 font-cairo text-[2rem] font-semibold text-white">
-              {groups.map((group) => {
-                const hasRed = group.items.some((e) => e.id === progress?.redCurrentExerciseId);
-                const hasBlue = group.items.some((e) => e.id === progress?.blueCurrentExerciseId);
-                return (
-                  <p key={group.order} className="flex items-center gap-3">
-                    <span
-                      className="w-4 h-4 rounded-full transition-all duration-300"
-                      style={{ background: "var(--spec-red)", opacity: hasRed ? 1 : 0, transform: hasRed ? "scale(1)" : "scale(0.6)" }}
-                    />
-                    <span>{group.label}</span>
-                    <span
-                      className="w-4 h-4 rounded-full transition-all duration-300"
-                      style={{ background: "var(--spec-blue)", opacity: hasBlue ? 1 : 0, transform: hasBlue ? "scale(1)" : "scale(0.6)" }}
-                    />
-                  </p>
-                );
-              })}
+            <div className="mt-14 flex flex-col items-center">
+              <p className="font-cairo text-[2.5rem] font-bold uppercase leading-none tracking-[0.12em] text-white">
+                {stage ? bracketStageLabel[stage] : routine?.name ?? "—"}
+              </p>
+
+              <div className="flex flex-col items-center gap-1 mt-7 font-cairo text-[1.75rem] font-semibold">
+                {groups.map((group) => {
+                  const hasRed = group.items.some((e) => e.id === progress?.redCurrentExerciseId);
+                  const hasBlue = group.items.some((e) => e.id === progress?.blueCurrentExerciseId);
+                  const isCurrent = hasRed || hasBlue;
+                  return (
+                    <p
+                      key={group.order}
+                      className="flex items-center gap-3 transition-opacity duration-300"
+                      style={{ opacity: isCurrent ? 1 : 0.4 }}
+                    >
+                      <span
+                        className="w-4 h-4 rounded-full transition-all duration-300"
+                        style={{ background: "var(--spec-red)", opacity: hasRed ? 1 : 0, transform: hasRed ? "scale(1)" : "scale(0.6)" }}
+                      />
+                      <span className="text-white">{group.label}</span>
+                      <span
+                        className="w-4 h-4 rounded-full transition-all duration-300"
+                        style={{ background: "var(--spec-blue)", opacity: hasBlue ? 1 : 0, transform: hasBlue ? "scale(1)" : "scale(0.6)" }}
+                      />
+                    </p>
+                  );
+                })}
+              </div>
             </div>
 
             {routine && (
-              <div className="mt-10 rounded-[20px] bg-[var(--spec-surface)] px-8 py-3">
-                <p className="font-cairo text-[2.25rem] font-bold text-white whitespace-nowrap">
-                  Time Cap: {routine.timeCapSeconds ? `${Math.floor(routine.timeCapSeconds / 60)}’${routine.timeCapSeconds % 60 > 0 ? ` ${routine.timeCapSeconds % 60}”` : ""}` : "—"}
-                </p>
+              <div className="mt-10 flex items-baseline gap-4">
+                <span className="font-cairo text-base uppercase leading-none tracking-[0.35em] text-[var(--spec-text-grey)]">
+                  Time Cap
+                </span>
+                <span className="font-cairo text-[2.25rem] font-bold leading-none text-[var(--spec-text-soft)] whitespace-nowrap">
+                  {routine.timeCapSeconds ? `${Math.floor(routine.timeCapSeconds / 60)}’${routine.timeCapSeconds % 60 > 0 ? ` ${routine.timeCapSeconds % 60}”` : ""}` : "—"}
+                </span>
               </div>
             )}
           </div>
@@ -206,9 +229,12 @@ function AthletePanel({
 
   return (
     <div className="mt-25 flex flex-col items-center pt-16">
-      <div className="flex items-center gap-3">
-        <span className="w-5 h-5 rounded-full" style={{ background: color }} />
-        <p className="font-cairo text-[3rem] font-bold text-white leading-none">
+      <div className="flex items-center gap-4">
+        <span
+          className="h-6 w-6 rounded-full"
+          style={{ background: color, boxShadow: `0 0 24px ${color}` }}
+        />
+        <p className="font-cairo text-[3.5rem] font-bold text-white leading-none">
           {name}
         </p>
       </div>
@@ -229,49 +255,65 @@ function AthletePanel({
               <p className="font-cairo text-[3.75rem] font-bold leading-none text-white">
                 {currentExercise?.name ?? "—"}
                 {currentExercise?.addedWeight ? (
-                  <span className="ml-4 align-middle text-[2.25rem] font-bold bg-gradient-to-r from-[var(--spec-accent)] to-[var(--spec-title-end)] bg-clip-text text-transparent">
-                    ({currentExercise.addedWeight > 0 ? "+" : ""}
-                    {currentExercise.addedWeight}KG)
+                  <span
+                    className="ml-4 inline-block align-middle rounded-full border px-4 py-1 font-cairo text-[1.25rem] font-bold text-[var(--spec-accent)]"
+                    style={{ background: "var(--spec-accent-12)", borderColor: "var(--spec-accent-22)" }}
+                  >
+                    {currentExercise.addedWeight > 0 ? "+" : ""}
+                    {currentExercise.addedWeight}KG
                   </span>
                 ) : null}
               </p>
-              <p className="font-cairo text-[1.75rem] font-bold uppercase leading-none tracking-[0.25em] text-[var(--spec-gold)]">
-                {currentExercise?.type !== undefined && currentExercise.type !== "NORMAL"
-                  ? currentExercise.type === "SUPERSET"
-                    ? "Superset"
-                    : "Unbroken"
-                  : ""}
-              </p>
+              {currentExercise?.type !== undefined && currentExercise.type !== "NORMAL" && (
+                <p
+                  className="font-cairo text-[1.75rem] font-bold uppercase leading-none tracking-[0.25em]"
+                  style={{ color: currentExercise.type === "SUPERSET" ? "#f0c46a" : "#7eb8f7" }}
+                >
+                  {currentExercise.type === "SUPERSET" ? "Superset" : "Unbroken"}
+                </p>
+              )}
             </div>
-            <p className="font-cairo text-[3.75rem] font-bold leading-none mt-2 tabular-nums text-white">
-              <span key={currentReps} className="inline-block animate-rep-pop">
+            <div className="flex items-baseline gap-2 mt-2 font-cairo tabular-nums">
+              <span key={currentReps} className="inline-block text-[3.5rem] font-bold leading-none text-white animate-rep-pop">
                 {currentReps}
               </span>
-              /{currentExercise?.targetReps ?? "—"}
-            </p>
+              <span className="text-[2rem] font-bold leading-none text-[var(--spec-text-grey)]">/</span>
+              <span className="text-[2.25rem] font-bold leading-none text-[var(--spec-text-soft)]">
+                {currentExercise?.targetReps ?? "—"}
+              </span>
+            </div>
           </>
         )}
       </div>
 
       <div className="mt-6 flex w-96 items-center gap-3">
-        <div className="flex-1 h-3 rounded-full overflow-hidden" style={{ background: "var(--spec-track)" }}>
+        <div className="flex-1 h-2.5 rounded-full overflow-hidden" style={{ background: "var(--spec-track)" }}>
           <div
             className="h-full rounded-full transition-all duration-300"
-            style={{ width: `${pct}%`, background: color }}
+            style={{ width: `${pct}%`, background: color, boxShadow: `0 0 14px ${color}` }}
           />
         </div>
-        <span className="font-cairo text-[1.75rem] font-bold tabular-nums text-white">
-          {pct}%
-        </span>
+        <div className="flex flex-col items-end leading-none">
+          <span className="font-cairo text-[1.5rem] font-bold tabular-nums text-white">
+            {pct}%
+          </span>
+          {!isFinished && (
+            <span className="mt-1 font-cairo text-sm tabular-nums text-[var(--spec-text-grey)]">
+              {progress.fraction}
+            </span>
+          )}
+        </div>
       </div>
 
       {nextExercise && !isFinished && (
-        <p
-          key={nextExercise}
-          className="mt-42 font-cairo text-[2.5rem] font-bold leading-none bg-gradient-to-r from-[var(--spec-accent)] to-[var(--spec-title-end)] bg-clip-text text-transparent animate-fade-scale"
-        >
-          Next: {nextExercise}
-        </p>
+        <div key={nextExercise} className="mt-42 flex items-baseline gap-4 animate-fade-scale">
+          <span className="font-cairo text-base uppercase leading-none tracking-[0.35em] text-[var(--spec-text-grey)]">
+            Next
+          </span>
+          <span className="font-cairo text-[2.25rem] font-bold leading-none text-[var(--spec-text-soft)]">
+            {nextExercise}
+          </span>
+        </div>
       )}
     </div>
   );
