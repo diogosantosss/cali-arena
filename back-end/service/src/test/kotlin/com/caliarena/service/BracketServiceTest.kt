@@ -14,6 +14,8 @@ import com.caliarena.repo.entities.match.MatchProgressEntity
 import com.caliarena.repo.entities.tournament.BracketEntity
 import com.caliarena.repo.entities.tournament.TournamentEntity
 import com.caliarena.repo.trx.Transaction
+import com.caliarena.service.mapper.BracketLeaderboardMapper
+import com.caliarena.service.mapper.BracketSummaryMapper
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
@@ -44,7 +46,13 @@ class BracketServiceTest : ServiceTest() {
             }.whenever(trxManager)
             .run<Any>(any())
 
-        service = BracketService(trxManager, clock)
+        service =
+            BracketService(
+                trxManager,
+                clock,
+                BracketLeaderboardMapper(),
+                BracketSummaryMapper(),
+            )
     }
 
     private val now = clock.instant()

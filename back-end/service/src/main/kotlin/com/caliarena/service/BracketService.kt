@@ -8,6 +8,8 @@ import com.caliarena.domain.bracket.TournamentBracketsResponse
 import com.caliarena.repo.entities.match.MatchEntity
 import com.caliarena.repo.entities.tournament.BracketEntity
 import com.caliarena.repo.trx.TransactionManager
+import com.caliarena.service.mapper.BracketLeaderboardMapper
+import com.caliarena.service.mapper.BracketSummaryMapper
 import jakarta.inject.Named
 import org.springframework.data.repository.findByIdOrNull
 import java.time.Clock
@@ -16,6 +18,8 @@ import java.time.Clock
 class BracketService(
     private val trx: TransactionManager,
     private val clock: Clock,
+    private val leaderboardMapper: BracketLeaderboardMapper,
+    private val summaryMapper: BracketSummaryMapper,
 ) {
     fun createBracket(
         tournamentId: Int,
@@ -83,7 +87,12 @@ class BracketService(
             val divisionName = division.trim()
             if (divisionName.isEmpty()) return@run failure(ApiError.INVALID_BRACKET_DIVISION)
 
-            success(brackets.findByTournamentIdAndDivision(tournamentId, divisionName).map(BracketEntity::toDomain))
+            val brackets =
+                brackets
+                    .findByTournamentIdAndDivision(tournamentId, divisionName)
+                    .map(BracketEntity::toDomain)
+
+            success(brackets)
         }
 
     fun getBracketOverview(
@@ -101,7 +110,11 @@ class BracketService(
 
             val overview =
                 bracketList.map { bracket ->
-                    val matches = matches.findByBracketId(bracket.id).map(MatchEntity::toDomain)
+                    val matches =
+                        matches
+                            .findByBracketId(bracket.id)
+                            .map(MatchEntity::toDomain)
+
                     BracketOverview(bracket = bracket.toDomain(), matches = matches)
                 }
 
@@ -111,7 +124,7 @@ class BracketService(
     fun getBracketLeaderboard(bracketId: Int): Either<ApiError, BracketLeaderboard> =
         trx.run {
             val leaderboard =
-                buildLeaderboard(bracketId)
+                leaderboardMapper.build(this, bracketId)
                     ?: return@run failure(ApiError.BRACKET_NOT_FOUND)
 
             success(leaderboard)
@@ -122,14 +135,15 @@ class BracketService(
         division: String,
     ): Either<ApiError, TournamentBracketsResponse> =
         trx.run {
-            val divisionName = division.trim()
-            if (divisionName.isEmpty()) return@run failure(ApiError.INVALID_BRACKET_DIVISION)
-
             tournaments.findByIdOrNull(tournamentId)
                 ?: return@run failure(ApiError.TOURNAMENT_NOT_FOUND)
 
-            val summary = buildBracketsSummary(tournamentId, divisionName)
+            val divisionName =
+                division.trimOrNull()
+                    ?: return@run failure(ApiError.INVALID_BRACKET_DIVISION)
 
-            success(summary)
+            success(summaryMapper.build(this, tournamentId, divisionName))
         }
+
+    private fun String.trimOrNull(): String? = trim().takeUnless { it.isEmpty() }
 }
