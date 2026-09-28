@@ -13,81 +13,17 @@ import com.caliarena.repo.entities.tournament.BracketEntity
 import com.caliarena.repo.entities.tournament.TournamentEntity
 import com.caliarena.repo.entities.tournament.TournamentStateEntity
 import com.caliarena.repo.trx.Transaction
-import com.caliarena.repo.trx.TransactionManagerJpa
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
-import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
-import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.data.repository.findByIdOrNull
-import java.time.Instant
-import java.time.temporal.ChronoUnit
 
-@SpringBootTest(classes = [TestConfig::class])
-class TournamentRepositoryTest {
-    @Autowired
-    lateinit var trx: TransactionManagerJpa
-
-    private val now = Instant.now().truncatedTo(ChronoUnit.SECONDS)
-
-    @BeforeEach
-    fun cleanup() {
-        trx.run {
-            matchProgresses.deleteAll()
-            matches.deleteAll()
-            screenRoutines.deleteAll()
-            tournamentStates.deleteAll()
-            brackets.deleteAll()
-            tournaments.deleteAll()
-            exercises.deleteAll()
-            routines.deleteAll()
-            tokens.deleteAll()
-            users.deleteAll()
-            athletes.deleteAll()
-            clubs.deleteAll()
-        }
-    }
-
-    private fun Transaction.newTournament(status: TournamentStatus = TournamentStatus.DRAFT): TournamentEntity =
-        tournaments.save(TournamentEntity(name = "t-${System.nanoTime()}", status = status, createdAt = now.epochSecond))
-
-    private fun Transaction.newBracket(
-        tournament: TournamentEntity,
-        division: String = "ELITE MALE",
-        stage: BracketStage = BracketStage.QUALIFIERS,
-    ): BracketEntity =
-        brackets.save(BracketEntity(tournament = tournament, division = division, stage = stage, createdAt = now.epochSecond))
-
-    private fun Transaction.newAthlete(name: String): AthleteEntity {
-        val club = clubs.save(ClubEntity(name = "club-$name-${System.nanoTime()}", createdAt = now.epochSecond))
-        return athletes.save(AthleteEntity(name = name, gender = GenderType.MALE, club = club, createdAt = now.epochSecond))
-    }
-
-    private fun Transaction.newRunningMatch(tournament: TournamentEntity): MatchEntity {
-        val bracket = newBracket(tournament)
-        val red = newAthlete("red-${System.nanoTime()}")
-        val blue = newAthlete("blue-${System.nanoTime()}")
-        val routine =
-            routines.save(EnduranceRoutineEntity(name = "rt-${System.nanoTime()}", timeCapSeconds = 60, createdAt = now.epochSecond))
-
-        return matches.save(
-            MatchEntity(
-                bracket = bracket,
-                routineId = routine.id,
-                athleteRed = red,
-                athleteBlue = blue,
-                status = MatchStatus.RUNNING,
-                createdAt = now.epochSecond,
-            ),
-        )
-    }
-
+class TournamentRepositoryTest : AbstractRepositoryTest() {
     @Nested
     inner class Tournaments {
         @Test
@@ -99,11 +35,11 @@ class TournamentRepositoryTest {
                             name = "Nationals",
                             location = "Lisboa",
                             status = TournamentStatus.LIVE,
-                            createdAt = now.epochSecond,
+                            createdAt = now().epochSecond,
                         ),
                     )
 
-                assertNotEqualsZero(created.id)
+                assertNotEquals(0, created.id)
                 assertEquals("Nationals", created.name)
                 assertEquals("Lisboa", created.location)
                 assertEquals(TournamentStatus.LIVE, created.status)
@@ -164,7 +100,7 @@ class TournamentRepositoryTest {
                 val tournament = newTournament()
                 val created = newBracket(tournament)
 
-                assertNotEqualsZero(created.id)
+                assertNotEquals(0, created.id)
                 assertEquals(tournament.id, brackets.findByIdOrNull(created.id)?.tournament?.id)
             }
 
@@ -204,7 +140,7 @@ class TournamentRepositoryTest {
                 val tournament = newTournament()
                 val state =
                     tournamentStates.save(
-                        TournamentStateEntity(tournament = tournament, currentScreen = ScreenState.BATTLE, updatedAt = now.epochSecond),
+                        TournamentStateEntity(tournament = tournament, currentScreen = ScreenState.BATTLE, updatedAt = now().epochSecond),
                     )
 
                 val found = tournamentStates.findByTournamentId(tournament.id)
@@ -226,7 +162,7 @@ class TournamentRepositoryTest {
                         tournament = tournament,
                         currentScreen = ScreenState.BATTLE,
                         currentMatch = match,
-                        updatedAt = now.epochSecond,
+                        updatedAt = now().epochSecond,
                     ),
                 )
 
@@ -242,7 +178,7 @@ class TournamentRepositoryTest {
                 val tournament = newTournament()
                 val state =
                     tournamentStates.save(
-                        TournamentStateEntity(tournament = tournament, currentScreen = ScreenState.WAITING, updatedAt = now.epochSecond),
+                        TournamentStateEntity(tournament = tournament, currentScreen = ScreenState.WAITING, updatedAt = now().epochSecond),
                     )
 
                 state.currentScreen = ScreenState.BATTLE
@@ -256,7 +192,7 @@ class TournamentRepositoryTest {
             trx.run {
                 val tournament = newTournament()
                 tournamentStates.save(
-                    TournamentStateEntity(tournament = tournament, currentScreen = ScreenState.WAITING, updatedAt = now.epochSecond),
+                    TournamentStateEntity(tournament = tournament, currentScreen = ScreenState.WAITING, updatedAt = now().epochSecond),
                 )
 
                 // simula o comportamento do service: atualizar o estado existente
@@ -269,7 +205,37 @@ class TournamentRepositoryTest {
             }
     }
 
-    private fun assertNotEqualsZero(id: Int) {
-        assertNotEquals(0, id)
+    private fun Transaction.newTournament(status: TournamentStatus = TournamentStatus.DRAFT): TournamentEntity =
+        tournaments.save(TournamentEntity(name = "t-${System.nanoTime()}", status = status, createdAt = now().epochSecond))
+
+    private fun Transaction.newBracket(
+        tournament: TournamentEntity,
+        division: String = "ELITE MALE",
+        stage: BracketStage = BracketStage.QUALIFIERS,
+    ): BracketEntity =
+        brackets.save(BracketEntity(tournament = tournament, division = division, stage = stage, createdAt = now().epochSecond))
+
+    private fun Transaction.newAthlete(name: String): AthleteEntity {
+        val club = clubs.save(ClubEntity(name = "club-$name-${System.nanoTime()}", createdAt = now().epochSecond))
+        return athletes.save(AthleteEntity(name = name, gender = GenderType.MALE, club = club, createdAt = now().epochSecond))
+    }
+
+    private fun Transaction.newRunningMatch(tournament: TournamentEntity): MatchEntity {
+        val bracket = newBracket(tournament)
+        val red = newAthlete("red-${System.nanoTime()}")
+        val blue = newAthlete("blue-${System.nanoTime()}")
+        val routine =
+            routines.save(EnduranceRoutineEntity(name = "rt-${System.nanoTime()}", timeCapSeconds = 60, createdAt = now().epochSecond))
+
+        return matches.save(
+            MatchEntity(
+                bracket = bracket,
+                routineId = routine.id,
+                athleteRed = red,
+                athleteBlue = blue,
+                status = MatchStatus.RUNNING,
+                createdAt = now().epochSecond,
+            ),
+        )
     }
 }

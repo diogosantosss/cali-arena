@@ -4,70 +4,16 @@ import com.caliarena.domain.user.UserRole
 import com.caliarena.repo.entities.user.TokenEntity
 import com.caliarena.repo.entities.user.UserEntity
 import com.caliarena.repo.trx.Transaction
-import com.caliarena.repo.trx.TransactionManagerJpa
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
-import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
-import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.data.repository.findByIdOrNull
 import java.time.Instant
-import java.time.temporal.ChronoUnit
 
-@SpringBootTest(classes = [TestConfig::class])
-class UserRepositoryTest {
-    @Autowired
-    lateinit var trx: TransactionManagerJpa
-
-    @BeforeEach
-    fun cleanup() {
-        trx.run {
-            matchProgresses.deleteAll()
-            matches.deleteAll()
-            screenRoutines.deleteAll()
-            tournamentStates.deleteAll()
-            brackets.deleteAll()
-            tournaments.deleteAll()
-            tokens.deleteAll()
-            users.deleteAll()
-            athletes.deleteAll()
-            clubs.deleteAll()
-        }
-    }
-
-    private fun now() = Instant.now().truncatedTo(ChronoUnit.SECONDS)
-
-    private fun Transaction.newUser(username: String = "user-${System.nanoTime()}"): UserEntity =
-        users.save(
-            UserEntity(
-                username = username,
-                password = "hashed_pw",
-                role = UserRole.JUDGE,
-                createdAt = now().epochSecond,
-            ),
-        )
-
-    private fun Transaction.createToken(
-        user: UserEntity,
-        validation: String,
-        lastUsedAt: Instant = now(),
-    ): TokenEntity {
-        val token =
-            TokenEntity(
-                tokenValidation = validation,
-                user = user,
-                createdAt = lastUsedAt.epochSecond,
-                lastUsedAt = lastUsedAt.epochSecond,
-            )
-        // mesmo comportamento do service: manter apenas (max - 1) tokens antes de inserir o novo
-        tokens.deleteOldestTokensExceeding(user.id, 1)
-        return tokens.save(token)
-    }
-
+class UserRepositoryTest : AbstractRepositoryTest() {
     @Nested
     inner class CreateUser {
         @Test
@@ -239,5 +185,32 @@ class UserRepositoryTest {
             trx.run {
                 assertEquals(0, tokens.deleteByTokenValidation("does-not-exist"))
             }
+    }
+
+    private fun Transaction.newUser(username: String = "user-${System.nanoTime()}"): UserEntity =
+        users.save(
+            UserEntity(
+                username = username,
+                password = "hashed_pw",
+                role = UserRole.JUDGE,
+                createdAt = now().epochSecond,
+            ),
+        )
+
+    private fun Transaction.createToken(
+        user: UserEntity,
+        validation: String,
+        lastUsedAt: Instant = now(),
+    ): TokenEntity {
+        val token =
+            TokenEntity(
+                tokenValidation = validation,
+                user = user,
+                createdAt = lastUsedAt.epochSecond,
+                lastUsedAt = lastUsedAt.epochSecond,
+            )
+        // mesmo comportamento do service: manter apenas (max - 1) tokens antes de inserir o novo
+        tokens.deleteOldestTokensExceeding(user.id, 1)
+        return tokens.save(token)
     }
 }

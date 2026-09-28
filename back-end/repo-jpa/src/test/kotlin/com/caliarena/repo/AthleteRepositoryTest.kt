@@ -4,53 +4,16 @@ import com.caliarena.domain.athlete.GenderType
 import com.caliarena.repo.entities.athlete.AthleteEntity
 import com.caliarena.repo.entities.club.ClubEntity
 import com.caliarena.repo.trx.Transaction
-import com.caliarena.repo.trx.TransactionManagerJpa
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
-import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
-import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.data.repository.findByIdOrNull
-import java.time.Instant
-import java.time.temporal.ChronoUnit
 
-@SpringBootTest(classes = [TestConfig::class])
-class AthleteRepositoryTest {
-    @Autowired
-    lateinit var trx: TransactionManagerJpa
-
-    @BeforeEach
-    fun cleanup() {
-        trx.run {
-            matchProgresses.deleteAll()
-            matches.deleteAll()
-            screenRoutines.deleteAll()
-            tournamentStates.deleteAll()
-            brackets.deleteAll()
-            tournaments.deleteAll()
-            tokens.deleteAll()
-            users.deleteAll()
-            athletes.deleteAll()
-            clubs.deleteAll()
-        }
-    }
-
-    private fun now() = Instant.now().truncatedTo(ChronoUnit.SECONDS)
-
-    private fun Transaction.newClub(name: String = "club-${System.nanoTime()}"): ClubEntity =
-        clubs.save(ClubEntity(name = name, createdAt = now().epochSecond))
-
-    private fun Transaction.newAthlete(
-        name: String = "athlete-${System.nanoTime()}",
-        gender: GenderType = GenderType.MALE,
-        club: ClubEntity = newClub(),
-    ): AthleteEntity = athletes.save(AthleteEntity(name = name, gender = gender, club = club, createdAt = now().epochSecond))
-
+class AthleteRepositoryTest : AbstractRepositoryTest() {
     @Nested
     inner class Create {
         @Test
@@ -59,7 +22,7 @@ class AthleteRepositoryTest {
                 val club = newClub()
                 val created = newAthlete(name = "Diogo", gender = GenderType.MALE, club = club)
 
-                assertNotEqualsZero(created.id)
+                assertNotEquals(0, created.id)
                 assertEquals("Diogo", created.name)
                 assertEquals(GenderType.MALE, created.gender)
                 assertEquals(club.id, created.club!!.id)
@@ -154,7 +117,12 @@ class AthleteRepositoryTest {
             }
     }
 
-    private fun assertNotEqualsZero(id: Int) {
-        assertNotEquals(0, id)
-    }
+    private fun Transaction.newClub(name: String = "club-${System.nanoTime()}"): ClubEntity =
+        clubs.save(ClubEntity(name = name, createdAt = now().epochSecond))
+
+    private fun Transaction.newAthlete(
+        name: String = "athlete-${System.nanoTime()}",
+        gender: GenderType = GenderType.MALE,
+        club: ClubEntity = newClub(),
+    ): AthleteEntity = athletes.save(AthleteEntity(name = name, gender = gender, club = club, createdAt = now().epochSecond))
 }

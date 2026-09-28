@@ -1,74 +1,20 @@
 package com.caliarena.repo
 
+import com.caliarena.repo.entities.routine.EnduranceRoutineEntity
 import com.caliarena.repo.entities.routine.ScreenRoutineEntity
+import com.caliarena.repo.entities.tournament.TournamentEntity
 import com.caliarena.repo.trx.Transaction
-import com.caliarena.repo.trx.TransactionManagerJpa
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
-import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
-import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.data.repository.findByIdOrNull
-import java.time.Instant
-import java.time.temporal.ChronoUnit
 
-@SpringBootTest(classes = [TestConfig::class])
-class ScreenRoutineRepositoryTest {
-    @Autowired
-    lateinit var trx: TransactionManagerJpa
-
-    private val now = Instant.now().truncatedTo(ChronoUnit.SECONDS)
-
-    private fun Transaction.newTournament(): com.caliarena.repo.entities.tournament.TournamentEntity =
-        tournaments.save(
-            com.caliarena.repo.entities.tournament
-                .TournamentEntity(name = "t-${System.nanoTime()}", createdAt = now.epochSecond),
-        )
-
-    private fun Transaction.newRoutineEntity(): com.caliarena.repo.entities.routine.EnduranceRoutineEntity =
-        routines.save(
-            com.caliarena.repo.entities.routine.EnduranceRoutineEntity(
-                name = "sr-${System.nanoTime()}",
-                timeCapSeconds = 600,
-                createdAt = now.epochSecond,
-            ),
-        )
-
-    private fun Transaction.newScreenRoutine(
-        tournament: com.caliarena.repo.entities.tournament.TournamentEntity,
-        displayOrder: Int = 1,
-        label: String? = null,
-    ): ScreenRoutineEntity {
-        val routine = newRoutineEntity()
-        return screenRoutines.save(
-            ScreenRoutineEntity(
-                tournamentId = tournament.id,
-                routineId = routine.id,
-                displayOrder = displayOrder,
-                label = label,
-                createdAt = now.epochSecond,
-                updatedAt = now.epochSecond,
-            ),
-        )
-    }
-
-    @BeforeEach
-    fun cleanup() {
-        trx.run {
-            matchProgresses.deleteAll()
-            matches.deleteAll()
-            screenRoutines.deleteAll()
-            exercises.deleteAll()
-            routines.deleteAll()
-        }
-    }
-
+class ScreenRoutineRepositoryTest : AbstractRepositoryTest() {
     @Nested
     inner class Create {
         @Test
@@ -77,7 +23,7 @@ class ScreenRoutineRepositoryTest {
                 val tournament = newTournament()
                 val created = newScreenRoutine(tournament = tournament, displayOrder = 2, label = "WOD A")
 
-                assertNotEqualsZero(created.id)
+                assertNotEquals(0, created.id)
                 assertEquals(tournament.id, created.tournamentId)
                 assertEquals(2, created.displayOrder)
                 assertTrue(created.isVisible)
@@ -146,7 +92,7 @@ class ScreenRoutineRepositoryTest {
                 created.isVisible = false
                 created.displayOrder = 4
                 created.label = "after"
-                created.updatedAt = now.plusSeconds(30).epochSecond
+                created.updatedAt = now().plusSeconds(30).epochSecond
                 screenRoutines.save(created)
 
                 val updated = screenRoutines.findByIdOrNull(created.id)!!
@@ -169,7 +115,35 @@ class ScreenRoutineRepositoryTest {
             }
     }
 
-    private fun assertNotEqualsZero(id: Int) {
-        assertNotEquals(0, id)
+    private fun Transaction.newTournament(): TournamentEntity =
+        tournaments.save(
+            TournamentEntity(name = "t-${System.nanoTime()}", createdAt = now().epochSecond),
+        )
+
+    private fun Transaction.newRoutineEntity(): EnduranceRoutineEntity =
+        routines.save(
+            EnduranceRoutineEntity(
+                name = "sr-${System.nanoTime()}",
+                timeCapSeconds = 600,
+                createdAt = now().epochSecond,
+            ),
+        )
+
+    private fun Transaction.newScreenRoutine(
+        tournament: TournamentEntity,
+        displayOrder: Int = 1,
+        label: String? = null,
+    ): ScreenRoutineEntity {
+        val routine = newRoutineEntity()
+        return screenRoutines.save(
+            ScreenRoutineEntity(
+                tournamentId = tournament.id,
+                routineId = routine.id,
+                displayOrder = displayOrder,
+                label = label,
+                createdAt = now().epochSecond,
+                updatedAt = now().epochSecond,
+            ),
+        )
     }
 }

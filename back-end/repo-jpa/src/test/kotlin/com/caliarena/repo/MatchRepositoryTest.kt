@@ -13,111 +13,16 @@ import com.caliarena.repo.entities.routine.ExerciseEntity
 import com.caliarena.repo.entities.tournament.BracketEntity
 import com.caliarena.repo.entities.tournament.TournamentEntity
 import com.caliarena.repo.trx.Transaction
-import com.caliarena.repo.trx.TransactionManagerJpa
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
-import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
-import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.data.repository.findByIdOrNull
-import java.time.Instant
-import java.time.temporal.ChronoUnit
 
-@SpringBootTest(classes = [TestConfig::class])
-class MatchRepositoryTest {
-    @Autowired
-    lateinit var trx: TransactionManagerJpa
-
-    @BeforeEach
-    fun cleanup() {
-        trx.run {
-            matchProgresses.deleteAll()
-            matches.deleteAll()
-            screenRoutines.deleteAll()
-            exercises.deleteAll()
-            routines.deleteAll()
-            tournamentStates.deleteAll()
-            brackets.deleteAll()
-            tournaments.deleteAll()
-            tokens.deleteAll()
-            users.deleteAll()
-            athletes.deleteAll()
-            clubs.deleteAll()
-        }
-    }
-
-    private fun now() = Instant.now().truncatedTo(ChronoUnit.SECONDS)
-
-    private fun Transaction.newMatch(status: MatchStatus = MatchStatus.RUNNING): MatchEntity {
-        val club = clubs.save(ClubEntity(name = "club-${System.nanoTime()}", createdAt = now().epochSecond))
-        val red =
-            athletes.save(
-                AthleteEntity(name = "red-${System.nanoTime()}", gender = GenderType.MALE, club = club, createdAt = now().epochSecond),
-            )
-        val blue =
-            athletes.save(
-                AthleteEntity(name = "blue-${System.nanoTime()}", gender = GenderType.MALE, club = club, createdAt = now().epochSecond),
-            )
-        val tournament = tournaments.save(TournamentEntity(name = "t-${System.nanoTime()}", createdAt = now().epochSecond))
-        val bracket =
-            brackets.save(
-                BracketEntity(
-                    tournament = tournament,
-                    division = "ELITE MALE",
-                    stage = BracketStage.QUALIFIERS,
-                    createdAt = now().epochSecond,
-                ),
-            )
-        val routine =
-            routines.save(
-                EnduranceRoutineEntity(name = "mr-${System.nanoTime()}", timeCapSeconds = 600, createdAt = now().epochSecond),
-            )
-        return matches.save(
-            MatchEntity(
-                bracket = bracket,
-                routineId = routine.id,
-                athleteRed = red,
-                athleteBlue = blue,
-                status = status,
-                createdAt = now().epochSecond,
-            ),
-        )
-    }
-
-    private fun Transaction.newExercise(): ExerciseEntity {
-        val routine =
-            routines.save(
-                EnduranceRoutineEntity(name = "r-${System.nanoTime()}", timeCapSeconds = 600, createdAt = now().epochSecond),
-            )
-        return exercises.save(
-            ExerciseEntity(
-                routine = routine,
-                name = "ex-${System.nanoTime()}",
-                targetReps = 10,
-                exerciseOrder = 1,
-                type = ExerciseType.NORMAL,
-            ),
-        )
-    }
-
-    private fun Transaction.newProgress(match: MatchEntity): MatchProgressEntity {
-        val exercise = newExercise()
-        return matchProgresses.save(
-            MatchProgressEntity(
-                match = match,
-                redCurrentExercise = exercise,
-                blueCurrentExercise = exercise,
-                timerStartedAt = now().epochSecond,
-                updatedAt = now().epochSecond,
-            ),
-        )
-    }
-
+class MatchRepositoryTest : AbstractRepositoryTest() {
     @Nested
     inner class Matches {
         @Test
@@ -188,7 +93,7 @@ class MatchRepositoryTest {
 
                 val progress = newProgress(match)
 
-                assertNotEqualsZero(progress.id)
+                assertNotEquals(0, progress.id)
                 assertEquals(match.id, progress.match.id)
             }
 
@@ -236,7 +141,68 @@ class MatchRepositoryTest {
             }
     }
 
-    private fun assertNotEqualsZero(id: Int) {
-        assertNotEquals(0, id)
+    private fun Transaction.newMatch(status: MatchStatus = MatchStatus.RUNNING): MatchEntity {
+        val club = clubs.save(ClubEntity(name = "club-${System.nanoTime()}", createdAt = now().epochSecond))
+        val red =
+            athletes.save(
+                AthleteEntity(name = "red-${System.nanoTime()}", gender = GenderType.MALE, club = club, createdAt = now().epochSecond),
+            )
+        val blue =
+            athletes.save(
+                AthleteEntity(name = "blue-${System.nanoTime()}", gender = GenderType.MALE, club = club, createdAt = now().epochSecond),
+            )
+        val tournament = tournaments.save(TournamentEntity(name = "t-${System.nanoTime()}", createdAt = now().epochSecond))
+        val bracket =
+            brackets.save(
+                BracketEntity(
+                    tournament = tournament,
+                    division = "ELITE MALE",
+                    stage = BracketStage.QUALIFIERS,
+                    createdAt = now().epochSecond,
+                ),
+            )
+        val routine =
+            routines.save(
+                EnduranceRoutineEntity(name = "mr-${System.nanoTime()}", timeCapSeconds = 600, createdAt = now().epochSecond),
+            )
+        return matches.save(
+            MatchEntity(
+                bracket = bracket,
+                routineId = routine.id,
+                athleteRed = red,
+                athleteBlue = blue,
+                status = status,
+                createdAt = now().epochSecond,
+            ),
+        )
+    }
+
+    private fun Transaction.newExercise(): ExerciseEntity {
+        val routine =
+            routines.save(
+                EnduranceRoutineEntity(name = "r-${System.nanoTime()}", timeCapSeconds = 600, createdAt = now().epochSecond),
+            )
+        return exercises.save(
+            ExerciseEntity(
+                routine = routine,
+                name = "ex-${System.nanoTime()}",
+                targetReps = 10,
+                exerciseOrder = 1,
+                type = ExerciseType.NORMAL,
+            ),
+        )
+    }
+
+    private fun Transaction.newProgress(match: MatchEntity): MatchProgressEntity {
+        val exercise = newExercise()
+        return matchProgresses.save(
+            MatchProgressEntity(
+                match = match,
+                redCurrentExercise = exercise,
+                blueCurrentExercise = exercise,
+                timerStartedAt = now().epochSecond,
+                updatedAt = now().epochSecond,
+            ),
+        )
     }
 }
