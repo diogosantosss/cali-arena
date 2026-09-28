@@ -6,6 +6,7 @@ import java.time.Instant
 data class BracketMatchSummary(
     val matchId: Int,
     val startedAt: Instant?,
+    // add athlete team later for better looking ui
     val athleteRed: String,
     val athleteBlue: String,
     val winner: String,
