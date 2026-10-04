@@ -1,7 +1,5 @@
 package com.caliarena.repo
 
-import com.caliarena.repo.entities.club.ClubEntity
-import com.caliarena.repo.trx.Transaction
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
@@ -96,9 +94,4 @@ class ClubRepositoryTest : AbstractRepositoryTest() {
                 assertNull(clubs.findByIdOrNull(created.id))
             }
     }
-
-    private fun Transaction.newClub(
-        name: String = "club-${System.nanoTime()}",
-        shortName: String? = null,
-    ): ClubEntity = clubs.save(ClubEntity(name = name, shortName = shortName, createdAt = now().epochSecond))
 }

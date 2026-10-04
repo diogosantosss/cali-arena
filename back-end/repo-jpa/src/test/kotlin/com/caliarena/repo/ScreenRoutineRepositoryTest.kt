@@ -1,9 +1,5 @@
 package com.caliarena.repo
 
-import com.caliarena.repo.entities.routine.EnduranceRoutineEntity
-import com.caliarena.repo.entities.routine.ScreenRoutineEntity
-import com.caliarena.repo.entities.tournament.TournamentEntity
-import com.caliarena.repo.trx.Transaction
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotEquals
@@ -113,37 +109,5 @@ class ScreenRoutineRepositoryTest : AbstractRepositoryTest() {
 
                 assertNull(screenRoutines.findByIdOrNull(created.id))
             }
-    }
-
-    private fun Transaction.newTournament(): TournamentEntity =
-        tournaments.save(
-            TournamentEntity(name = "t-${System.nanoTime()}", createdAt = now().epochSecond),
-        )
-
-    private fun Transaction.newRoutineEntity(): EnduranceRoutineEntity =
-        routines.save(
-            EnduranceRoutineEntity(
-                name = "sr-${System.nanoTime()}",
-                timeCapSeconds = 600,
-                createdAt = now().epochSecond,
-            ),
-        )
-
-    private fun Transaction.newScreenRoutine(
-        tournament: TournamentEntity,
-        displayOrder: Int = 1,
-        label: String? = null,
-    ): ScreenRoutineEntity {
-        val routine = newRoutineEntity()
-        return screenRoutines.save(
-            ScreenRoutineEntity(
-                tournamentId = tournament.id,
-                routineId = routine.id,
-                displayOrder = displayOrder,
-                label = label,
-                createdAt = now().epochSecond,
-                updatedAt = now().epochSecond,
-            ),
-        )
     }
 }

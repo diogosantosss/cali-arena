@@ -1,9 +1,6 @@
 package com.caliarena.repo
 
 import com.caliarena.domain.athlete.GenderType
-import com.caliarena.repo.entities.athlete.AthleteEntity
-import com.caliarena.repo.entities.club.ClubEntity
-import com.caliarena.repo.trx.Transaction
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
@@ -116,13 +113,4 @@ class AthleteRepositoryTest : AbstractRepositoryTest() {
                 assertNull(athletes.findByIdOrNull(created.id))
             }
     }
-
-    private fun Transaction.newClub(name: String = "club-${System.nanoTime()}"): ClubEntity =
-        clubs.save(ClubEntity(name = name, createdAt = now().epochSecond))
-
-    private fun Transaction.newAthlete(
-        name: String = "athlete-${System.nanoTime()}",
-        gender: GenderType = GenderType.MALE,
-        club: ClubEntity = newClub(),
-    ): AthleteEntity = athletes.save(AthleteEntity(name = name, gender = gender, club = club, createdAt = now().epochSecond))
 }

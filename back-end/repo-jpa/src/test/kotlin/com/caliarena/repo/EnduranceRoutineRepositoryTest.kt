@@ -1,9 +1,5 @@
 package com.caliarena.repo
 
-import com.caliarena.domain.routine.ExerciseType
-import com.caliarena.repo.entities.routine.EnduranceRoutineEntity
-import com.caliarena.repo.entities.routine.ExerciseEntity
-import com.caliarena.repo.trx.Transaction
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotEquals
@@ -145,21 +141,4 @@ class EnduranceRoutineRepositoryTest : AbstractRepositoryTest() {
                 assertTrue(exercises.findExercisesByRoutineId(routine.id).isEmpty())
             }
     }
-
-    private fun Transaction.newRoutine(name: String = "routine-${System.nanoTime()}"): EnduranceRoutineEntity =
-        routines.save(EnduranceRoutineEntity(name = name, timeCapSeconds = 600, createdAt = now().epochSecond))
-
-    private fun Transaction.newExercise(
-        routine: EnduranceRoutineEntity,
-        order: Int = 1,
-    ): ExerciseEntity =
-        exercises.save(
-            ExerciseEntity(
-                routine = routine,
-                name = "ex-$order",
-                targetReps = 10,
-                exerciseOrder = order,
-                type = ExerciseType.NORMAL,
-            ),
-        )
 }

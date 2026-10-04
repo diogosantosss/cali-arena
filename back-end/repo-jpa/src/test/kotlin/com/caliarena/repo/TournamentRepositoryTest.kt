@@ -1,18 +1,9 @@
 package com.caliarena.repo
 
-import com.caliarena.domain.athlete.GenderType
-import com.caliarena.domain.bracket.BracketStage
-import com.caliarena.domain.match.MatchStatus
 import com.caliarena.domain.tournament.ScreenState
 import com.caliarena.domain.tournament.TournamentStatus
-import com.caliarena.repo.entities.athlete.AthleteEntity
-import com.caliarena.repo.entities.club.ClubEntity
-import com.caliarena.repo.entities.match.MatchEntity
-import com.caliarena.repo.entities.routine.EnduranceRoutineEntity
-import com.caliarena.repo.entities.tournament.BracketEntity
 import com.caliarena.repo.entities.tournament.TournamentEntity
 import com.caliarena.repo.entities.tournament.TournamentStateEntity
-import com.caliarena.repo.trx.Transaction
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotEquals
@@ -203,39 +194,5 @@ class TournamentRepositoryTest : AbstractRepositoryTest() {
                 assertEquals(ScreenState.ROUTINES, tournamentStates.findByTournamentId(tournament.id)?.currentScreen)
                 assertFalse(tournamentStates.findAll().count { it.tournament.id == tournament.id } > 1)
             }
-    }
-
-    private fun Transaction.newTournament(status: TournamentStatus = TournamentStatus.DRAFT): TournamentEntity =
-        tournaments.save(TournamentEntity(name = "t-${System.nanoTime()}", status = status, createdAt = now().epochSecond))
-
-    private fun Transaction.newBracket(
-        tournament: TournamentEntity,
-        division: String = "ELITE MALE",
-        stage: BracketStage = BracketStage.QUALIFIERS,
-    ): BracketEntity =
-        brackets.save(BracketEntity(tournament = tournament, division = division, stage = stage, createdAt = now().epochSecond))
-
-    private fun Transaction.newAthlete(name: String): AthleteEntity {
-        val club = clubs.save(ClubEntity(name = "club-$name-${System.nanoTime()}", createdAt = now().epochSecond))
-        return athletes.save(AthleteEntity(name = name, gender = GenderType.MALE, club = club, createdAt = now().epochSecond))
-    }
-
-    private fun Transaction.newRunningMatch(tournament: TournamentEntity): MatchEntity {
-        val bracket = newBracket(tournament)
-        val red = newAthlete("red-${System.nanoTime()}")
-        val blue = newAthlete("blue-${System.nanoTime()}")
-        val routine =
-            routines.save(EnduranceRoutineEntity(name = "rt-${System.nanoTime()}", timeCapSeconds = 60, createdAt = now().epochSecond))
-
-        return matches.save(
-            MatchEntity(
-                bracket = bracket,
-                routineId = routine.id,
-                athleteRed = red,
-                athleteBlue = blue,
-                status = MatchStatus.RUNNING,
-                createdAt = now().epochSecond,
-            ),
-        )
     }
 }
