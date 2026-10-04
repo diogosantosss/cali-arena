@@ -35,4 +35,4 @@ jobs:
         run: ./gradlew ktlintCheck
 
       - name: Run tests
-        run: ./gradlew :http:test :service:test :repo-jpa:test --rerun-tasks
+        run: ./gradlew :http:test :service:test :repo-jpa:test

@@ -21,6 +21,7 @@ interface SpectatorEventBase {
 export interface TournamentStateUpdatedEvent extends SpectatorEventBase {
   action: "TOURNAMENT_STATE_UPDATED";
   state: TournamentState;
+  currentMatchId: number | null;
   leaderboard: BracketLeaderboard | null;
   bracketSummary: TournamentBracketsSummary | null;
 }

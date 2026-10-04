@@ -44,7 +44,11 @@ export default defineConfig({
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         navigateFallback: '/index.html',
-        navigateFallbackDenylist: [/^\/api/, /^\/ws/],
+        // The live screens are consumed by the OBS browser source. If the service
+        // worker answers their navigations from the precache, OBS renders a stale
+        // build and never recovers until the cache is invalidated. Always hit the
+        // network for these.
+        navigateFallbackDenylist: [/^\/api/, /^\/ws/, /^\/overlay/, /^\/screen/],
         skipWaiting: true,
         clientsClaim: true
       },
