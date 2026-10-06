@@ -5,6 +5,7 @@ import com.caliarena.domain.bracket.BracketLeaderboard
 import com.caliarena.domain.bracket.BracketOverview
 import com.caliarena.domain.bracket.BracketStage
 import com.caliarena.domain.bracket.TournamentBracketsResponse
+import com.caliarena.domain.user.User
 import com.caliarena.repo.entities.match.MatchEntity
 import com.caliarena.repo.entities.tournament.BracketEntity
 import com.caliarena.repo.trx.TransactionManager
@@ -22,6 +23,7 @@ class BracketService(
     private val summaryMapper: BracketSummaryMapper,
 ) {
     fun createBracket(
+        user: User,
         tournamentId: Int,
         division: String,
         stage: String,
@@ -30,6 +32,10 @@ class BracketService(
             val tournament =
                 tournaments.findByIdOrNull(tournamentId)
                     ?: return@run failure(ApiError.TOURNAMENT_NOT_FOUND)
+
+            if (!canManageTournament(user, tournamentId)) {
+                return@run failure(ApiError.NOT_AUTHORIZED)
+            }
 
             val divisionName = division.trim()
             if (divisionName.isEmpty()) return@run failure(ApiError.INVALID_BRACKET_DIVISION)

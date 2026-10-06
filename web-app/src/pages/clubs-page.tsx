@@ -9,6 +9,7 @@ import { ListToolbar } from "@/components/shared/list-toolbar";
 import { ManagementList } from "@/components/shared/management-list";
 import { ListRow } from "@/components/shared/list-row";
 import { formatDate } from "@/utils/format";
+import { usePermissions } from "@/hooks/use-permissions";
 import { clubsService } from "@/services/clubs.service";
 import type { CreateClubInput } from "@/data/clubs";
 import { Building2, CalendarDays } from "lucide-react";
@@ -18,6 +19,7 @@ const initialForm: CreateClubInput = { name: "", shortName: "" };
 export function ClubsPage() {
   const loadClubs = useCallback(() => clubsService.getClubs(), []);
   const { items, loading, error, reload } = useCollection(loadClubs, "Failed to load clubs");
+  const { canManageGlobalData, isAdmin } = usePermissions();
 
   const [formOpen, setFormOpen] = useState(false);
   const [form, setForm] = useState<CreateClubInput>(initialForm);
@@ -57,13 +59,16 @@ export function ClubsPage() {
     <div className="max-w-5xl mx-auto space-y-10">
       <PageHeader
         title="Clubs"
+        eyebrow={isAdmin ? "Management" : "Directory"}
         action={
-          <ToggleButton
-            open={formOpen}
-            onClick={() => setFormOpen(!formOpen)}
-            icon={Building2}
-            label="New club"
-          />
+          canManageGlobalData ? (
+            <ToggleButton
+              open={formOpen}
+              onClick={() => setFormOpen(!formOpen)}
+              icon={Building2}
+              label="New club"
+            />
+          ) : undefined
         }
       />
 

@@ -10,4 +10,5 @@ data class Tournament(
     val endDate: Instant?,
     val status: TournamentStatus,
     val createdAt: Instant,
+    val hostId: Int? = null,
 )

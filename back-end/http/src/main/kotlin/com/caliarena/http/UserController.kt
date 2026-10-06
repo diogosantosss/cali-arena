@@ -37,13 +37,24 @@ class UserController(
                 },
         )
 
+    @GetMapping("/judges")
+    @RequiresRole([UserRole.ADMIN, UserRole.HOST])
+    fun getJudges(): ResponseEntity<Any> =
+        ResponseEntity.ok(
+            userService
+                .getUsersByRole(UserRole.JUDGE)
+                .map { u ->
+                    UserInfoOutput(u.id, u.username, u.role, u.createdAt)
+                },
+        )
+
     @PostMapping
     @RequiresRole([UserRole.ADMIN])
     fun createUser(
         @RequestBody userInput: CreateUserInput,
     ): ResponseEntity<Any> =
         userService
-            .createUser(userInput.username, userInput.password)
+            .createUser(userInput.username, userInput.password, userInput.role)
             .toResponse(
                 onSuccess = { user ->
                     ResponseEntity

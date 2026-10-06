@@ -90,19 +90,19 @@ class UserControllerTest {
         @Test
         fun `should create user successfully`() {
             val created = user(id = 1, username = "diogo")
-            whenever(userService.createUser("diogo", "Password1")).thenReturn(success(created))
+            whenever(userService.createUser("diogo", "Password1", UserRole.JUDGE)).thenReturn(success(created))
 
             val response = controller.createUser(CreateUserInput(username = "diogo", password = "Password1"))
 
             assertEquals(HttpStatus.CREATED, response.statusCode)
             assertEquals("/api/users/1", response.headers.getFirst("Location"))
             assertEquals(UserInfoOutput(1, "diogo", UserRole.JUDGE, now), response.body)
-            verify(userService).createUser("diogo", "Password1")
+            verify(userService).createUser("diogo", "Password1", UserRole.JUDGE)
         }
 
         @Test
         fun `should return bad request when password is insecure`() {
-            whenever(userService.createUser("diogo", "123")).thenReturn(failure(ApiError.INSECURE_PASSWORD))
+            whenever(userService.createUser("diogo", "123", UserRole.JUDGE)).thenReturn(failure(ApiError.INSECURE_PASSWORD))
 
             val response = controller.createUser(CreateUserInput(username = "diogo", password = "123"))
 
@@ -111,7 +111,7 @@ class UserControllerTest {
 
         @Test
         fun `should return conflict when username is already used`() {
-            whenever(userService.createUser("diogo", "Password1")).thenReturn(failure(ApiError.ALREADY_USED_USERNAME))
+            whenever(userService.createUser("diogo", "Password1", UserRole.JUDGE)).thenReturn(failure(ApiError.ALREADY_USED_USERNAME))
 
             val response = controller.createUser(CreateUserInput(username = "diogo", password = "Password1"))
 

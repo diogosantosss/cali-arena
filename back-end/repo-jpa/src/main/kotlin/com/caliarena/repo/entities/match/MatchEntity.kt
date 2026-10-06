@@ -15,6 +15,8 @@ import jakarta.persistence.Id
 import jakarta.persistence.JoinColumn
 import jakarta.persistence.ManyToOne
 import jakarta.persistence.Table
+import org.hibernate.annotations.OnDelete
+import org.hibernate.annotations.OnDeleteAction
 import java.time.Instant
 
 @Entity
@@ -25,6 +27,7 @@ class MatchEntity(
     var id: Int = 0,
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "bracket_id", nullable = false)
+    @OnDelete(action = OnDeleteAction.CASCADE)
     var bracket: BracketEntity = BracketEntity(),
     @Column(name = "routine_id", nullable = false)
     var routineId: Int = 0,

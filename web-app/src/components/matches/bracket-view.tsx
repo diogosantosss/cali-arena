@@ -5,7 +5,6 @@ import type { Bracket, BracketStage } from "@/data/tournaments";
 import type { Match, MatchProgress } from "@/data/matches";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge as ShadcnBadge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Plus, RefreshCw } from "lucide-react";
 import { MatchCard } from "./match-card";
@@ -22,7 +21,8 @@ interface BracketViewProps {
   onCreateBracket: (division: string, stage: BracketStage) => void;
   onMatchCreated: (match: Match) => void;
   onStartMatch: (match: Match) => void;
-  onDeleteMatch: (match: Match) => void;
+  /** Optional: deleting a match is admin-only, so hosts get no delete affordance. */
+  onDeleteMatch?: (match: Match) => void | Promise<void>;
 }
 
 const stages: BracketStage[] = ["QUALIFIERS", "QUARTERFINALS", "SEMIFINALS", "FINALS"];
@@ -66,7 +66,7 @@ export function BracketView({
   }
 
   async function confirmDelete() {
-    if (!deleteTarget) return;
+    if (!deleteTarget || !onDeleteMatch) return;
     setDeleteSaving(true);
     try {
       await onDeleteMatch(deleteTarget);
@@ -77,50 +77,75 @@ export function BracketView({
   }
 
   function renderStages(division: string) {
-    return stages.map((stage) => {
-      const bracket = getBracket(division, stage);
-      const bracketMatches = bracket ? getMatchesForBracket(bracket.id) : [];
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-x-6 gap-y-8">
+        {stages.map((stage) => {
+          const bracket = getBracket(division, stage);
+          const bracketMatches = bracket ? getMatchesForBracket(bracket.id) : [];
+          const decided = bracketMatches.filter((m) => m.status === "FINISHED").length;
+          const complete = bracketMatches.length > 0 && decided === bracketMatches.length;
+          const pct = bracketMatches.length > 0 ? Math.round((decided / bracketMatches.length) * 100) : 0;
 
-      return (
-        <div key={stage} className="space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <h3 className="text-sm font-medium">{stageLabels[stage]}</h3>
-              {bracket && (
-                <ShadcnBadge variant="outline" className="text-xs">
-                  {bracketMatches.length} matches
-                </ShadcnBadge>
-              )}
-            </div>
-            {bracket ? (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setCreateMatchFor(bracket)}
-              >
-                <Plus className="w-3.5 h-3.5 mr-1" />
-                Add match
-              </Button>
-            ) : (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => onCreateBracket(division, stage)}
-              >
-                <Plus className="w-3.5 h-3.5 mr-1" />
-                Create bracket
-              </Button>
-            )}
-          </div>
-
-          {bracket ? (
-            bracketMatches.length === 0 ? (
-              <div className="flex items-center justify-center h-20 border border-dashed rounded-lg">
-                <p className="text-sm text-muted-foreground">No matches yet</p>
+          return (
+            <div key={stage} className="min-w-0">
+              <div className="flex items-center justify-between gap-2 pt-1 pb-2" style={{ borderBottom: "1px solid var(--border)" }}>
+                <h3
+                  className="text-xs font-semibold uppercase tracking-widest"
+                  style={{ color: complete ? "var(--accent)" : "var(--foreground)" }}
+                >
+                  {stageLabels[stage]}
+                </h3>
+                <div className="flex items-center gap-2">
+                  {bracket && (
+                    <span className="text-[10px] font-semibold tabular-nums" style={{ color: complete ? "var(--accent)" : "var(--faint)" }}>
+                      {decided}/{bracketMatches.length}
+                    </span>
+                  )}
+                  {bracket ? (
+                    <button
+                      title="Add match"
+                      onClick={() => setCreateMatchFor(bracket)}
+                      className="p-1 rounded transition-colors"
+                      style={{ color: "var(--muted-foreground)", border: "1px solid var(--border)", background: "var(--secondary)" }}
+                      onMouseEnter={(e) => (e.currentTarget.style.color = "var(--accent)")}
+                      onMouseLeave={(e) => (e.currentTarget.style.color = "var(--muted-foreground)")}
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                    </button>
+                  ) : (
+                    <button
+                      title={`Create ${stageLabels[stage]} bracket`}
+                      onClick={() => onCreateBracket(division, stage)}
+                      className="p-1 rounded transition-colors"
+                      style={{ color: "var(--muted-foreground)", border: "1px dashed var(--border)", background: "transparent" }}
+                      onMouseEnter={(e) => (e.currentTarget.style.color = "var(--accent)")}
+                      onMouseLeave={(e) => (e.currentTarget.style.color = "var(--muted-foreground)")}
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
               </div>
-            ) : (
-<div className="space-y-2">
-                {bracketMatches.map((match, i) => (
+
+              {bracket && bracketMatches.length > 0 && (
+                <div className="h-0.5 mt-1.5 mb-1 overflow-hidden rounded-full" style={{ background: "var(--secondary)" }}>
+                  <div
+                    className="h-full transition-all duration-300"
+                    style={{ width: `${pct}%`, background: "var(--accent)", boxShadow: "0 0 8px var(--accent)" }}
+                  />
+                </div>
+              )}
+
+              {!bracket ? (
+                <div className="py-6">
+                  <p className="text-sm" style={{ color: "var(--faint)" }}>No bracket yet</p>
+                </div>
+              ) : bracketMatches.length === 0 ? (
+                <div className="py-6">
+                  <p className="text-sm" style={{ color: "var(--faint)" }}>No matches yet</p>
+                </div>
+              ) : (
+                bracketMatches.map((match, i) => (
                   <Reveal key={match.id} delay={Math.min(i, 5) * 0.03}>
                     <MatchCard
                       match={match}
@@ -128,20 +153,16 @@ export function BracketView({
                       athletes={athletes}
                       routines={routines}
                       onStartMatch={onStartMatch}
-                      onDeleteMatch={(match) => setDeleteTarget(match)}
+                      onDeleteMatch={onDeleteMatch && ((match) => setDeleteTarget(match))}
                     />
                   </Reveal>
-                ))}
-              </div>
-            )
-          ) : (
-            <div className="flex items-center justify-center h-20 border border-dashed rounded-lg">
-              <p className="text-sm text-muted-foreground">No bracket created yet</p>
+                ))
+              )}
             </div>
-          )}
-        </div>
-      );
-    });
+          );
+        })}
+      </div>
+    );
   }
 
   return (
@@ -235,7 +256,7 @@ export function BracketView({
       )}
 
       <Dialog
-        open={deleteTarget != null}
+        open={deleteTarget != null && onDeleteMatch != null}
         onOpenChange={(open) => {
           if (!open) setDeleteTarget(null);
         }}

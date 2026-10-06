@@ -8,6 +8,7 @@ import com.caliarena.http.model.PROBLEM_MEDIA_TYPE
 import com.caliarena.http.model.ProblemBody
 import com.caliarena.http.model.tournament.CreateTournamentInput
 import com.caliarena.http.model.tournament.UpdateScreenInput
+import com.caliarena.http.model.tournament.UpdateTournamentStatusInput
 import com.caliarena.service.ApiError
 import com.caliarena.service.TournamentService
 import com.caliarena.service.failure
@@ -31,6 +32,8 @@ class TournamentControllerTest {
     private lateinit var tournamentService: TournamentService
 
     private lateinit var controller: TournamentController
+
+    private val authUser = authenticatedUser()
 
     private val now = Instant.parse("2025-01-01T00:00:00Z")
 
@@ -130,9 +133,9 @@ class TournamentControllerTest {
     inner class GetAllTournaments {
         @Test
         fun `should get all tournaments`() {
-            whenever(tournamentService.getAllTournaments()).thenReturn(listOf(tournament()))
+            whenever(tournamentService.getAllTournaments(authUser.user)).thenReturn(listOf(tournament()))
 
-            val response = controller.getTournaments()
+            val response = controller.getTournaments(authUser)
 
             assertEquals(HttpStatus.OK, response.statusCode)
             assertEquals(listOf(tournament()), response.body)
@@ -202,58 +205,125 @@ class TournamentControllerTest {
         @Test
         fun `should update screen successfully`() {
             val state = tournamentState()
-            whenever(tournamentService.updateScreen(1, "BATTLE", 1, null, null)).thenReturn(success(state))
+            whenever(tournamentService.updateScreen(authUser.user, 1, "BATTLE", 1, null, null)).thenReturn(success(state))
 
-            val response = controller.updateScreen(1, input)
+            val response = controller.updateScreen(authUser, 1, input)
 
             assertEquals(HttpStatus.OK, response.statusCode)
             assertEquals(state, response.body)
-            verify(tournamentService).updateScreen(1, "BATTLE", 1, null, null)
+            verify(tournamentService).updateScreen(authUser.user, 1, "BATTLE", 1, null, null)
         }
 
         @Test
         fun `should return not found when tournament does not exist`() {
-            whenever(tournamentService.updateScreen(99, "BATTLE", 1, null, null)).thenReturn(failure(ApiError.TOURNAMENT_NOT_FOUND))
+            whenever(
+                tournamentService.updateScreen(authUser.user, 99, "BATTLE", 1, null, null),
+            ).thenReturn(failure(ApiError.TOURNAMENT_NOT_FOUND))
 
-            val response = controller.updateScreen(99, input)
+            val response = controller.updateScreen(authUser, 99, input)
 
             assertProblem(response, HttpStatus.NOT_FOUND, "tournament-not-found")
         }
 
         @Test
         fun `should return bad request when screen state is invalid`() {
-            whenever(tournamentService.updateScreen(1, "BATTLE", 1, null, null)).thenReturn(failure(ApiError.INVALID_SCREEN_STATE))
+            whenever(
+                tournamentService.updateScreen(authUser.user, 1, "BATTLE", 1, null, null),
+            ).thenReturn(failure(ApiError.INVALID_SCREEN_STATE))
 
-            val response = controller.updateScreen(1, input)
+            val response = controller.updateScreen(authUser, 1, input)
 
             assertProblem(response, HttpStatus.BAD_REQUEST, "invalid-screen-state")
         }
 
         @Test
         fun `should return not found when bracket does not exist`() {
-            whenever(tournamentService.updateScreen(1, "BATTLE", 1, null, null)).thenReturn(failure(ApiError.BRACKET_NOT_FOUND))
+            whenever(
+                tournamentService.updateScreen(authUser.user, 1, "BATTLE", 1, null, null),
+            ).thenReturn(failure(ApiError.BRACKET_NOT_FOUND))
 
-            val response = controller.updateScreen(1, input)
+            val response = controller.updateScreen(authUser, 1, input)
 
             assertProblem(response, HttpStatus.NOT_FOUND, "bracket-not-found")
         }
 
         @Test
         fun `should return bad request when division is invalid`() {
-            whenever(tournamentService.updateScreen(1, "BATTLE", 1, null, null)).thenReturn(failure(ApiError.INVALID_BRACKET_DIVISION))
+            whenever(
+                tournamentService.updateScreen(authUser.user, 1, "BATTLE", 1, null, null),
+            ).thenReturn(failure(ApiError.INVALID_BRACKET_DIVISION))
 
-            val response = controller.updateScreen(1, input)
+            val response = controller.updateScreen(authUser, 1, input)
 
             assertProblem(response, HttpStatus.BAD_REQUEST, "invalid-bracket-division")
         }
 
         @Test
         fun `should return not found when tournament state does not exist`() {
-            whenever(tournamentService.updateScreen(1, "BATTLE", 1, null, null)).thenReturn(failure(ApiError.TOURNAMENT_STATE_NOT_FOUND))
+            whenever(
+                tournamentService.updateScreen(authUser.user, 1, "BATTLE", 1, null, null),
+            ).thenReturn(failure(ApiError.TOURNAMENT_STATE_NOT_FOUND))
 
-            val response = controller.updateScreen(1, input)
+            val response = controller.updateScreen(authUser, 1, input)
 
             assertProblem(response, HttpStatus.NOT_FOUND, "tournament-state-not-found")
+        }
+    }
+
+    @Nested
+    inner class UpdateStatus {
+        @Test
+        fun `should update status successfully`() {
+            val updated = tournament().copy(status = TournamentStatus.LIVE)
+            whenever(tournamentService.updateTournamentStatus(authUser.user, 1, "LIVE")).thenReturn(success(updated))
+
+            val response = controller.updateTournamentStatus(authUser, 1, UpdateTournamentStatusInput(status = "LIVE"))
+
+            assertEquals(HttpStatus.OK, response.statusCode)
+            assertEquals(updated, response.body)
+        }
+
+        @Test
+        fun `should return forbidden when the user does not host the tournament`() {
+            whenever(tournamentService.updateTournamentStatus(authUser.user, 1, "LIVE")).thenReturn(failure(ApiError.NOT_AUTHORIZED))
+
+            val response = controller.updateTournamentStatus(authUser, 1, UpdateTournamentStatusInput(status = "LIVE"))
+
+            assertProblem(response, HttpStatus.FORBIDDEN, "not-authorized")
+        }
+
+        @Test
+        fun `should return bad request when the status is invalid`() {
+            whenever(
+                tournamentService.updateTournamentStatus(authUser.user, 1, "NOPE"),
+            ).thenReturn(failure(ApiError.INVALID_TOURNAMENT_STATUS))
+
+            val response = controller.updateTournamentStatus(authUser, 1, UpdateTournamentStatusInput(status = "NOPE"))
+
+            assertProblem(response, HttpStatus.BAD_REQUEST, "invalid-tournament-status")
+        }
+    }
+
+    @Nested
+    inner class DeleteTournament {
+        @Test
+        fun `should delete tournament successfully`() {
+            whenever(tournamentService.deleteTournament(1)).thenReturn(success(Unit))
+
+            val response = controller.deleteTournament(1)
+
+            assertEquals(HttpStatus.NO_CONTENT, response.statusCode)
+            assertEquals(null, response.body)
+            verify(tournamentService).deleteTournament(1)
+        }
+
+        @Test
+        fun `should return not found when tournament does not exist`() {
+            whenever(tournamentService.deleteTournament(99)).thenReturn(failure(ApiError.TOURNAMENT_NOT_FOUND))
+
+            val response = controller.deleteTournament(99)
+
+            assertProblem(response, HttpStatus.NOT_FOUND, "tournament-not-found")
         }
     }
 }

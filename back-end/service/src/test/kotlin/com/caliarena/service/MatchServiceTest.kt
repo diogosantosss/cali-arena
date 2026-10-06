@@ -2,6 +2,7 @@ package com.caliarena.service
 
 import com.caliarena.domain.athlete.GenderType
 import com.caliarena.domain.bracket.BracketStage
+import com.caliarena.domain.match.Match
 import com.caliarena.domain.match.MatchProgress
 import com.caliarena.domain.match.MatchStatus
 import com.caliarena.domain.match.RepSide
@@ -13,6 +14,8 @@ import com.caliarena.repo.entities.match.MatchProgressEntity
 import com.caliarena.repo.entities.routine.EnduranceRoutineEntity
 import com.caliarena.repo.entities.routine.ExerciseEntity
 import com.caliarena.repo.entities.tournament.BracketEntity
+import com.caliarena.repo.entities.tournament.TournamentEntity
+import com.caliarena.repo.entities.tournament.TournamentJudgeEntity
 import com.caliarena.repo.trx.Transaction
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
@@ -87,7 +90,15 @@ class MatchServiceTest : ServiceTest() {
             ExerciseEntity(6, routineForExercises, "Pull up", 10, null, 4, 3, ExerciseType.SUPERSET),
         )
 
-    private fun bracketEntity(id: Int = 1) = BracketEntity(id = id, stage = BracketStage.QUALIFIERS, createdAt = now.epochSecond)
+    private fun tournamentEntity(
+        id: Int = 1,
+        hostId: Int? = null,
+    ) = TournamentEntity(id = id, hostId = hostId, createdAt = now.epochSecond)
+
+    private fun bracketEntity(
+        id: Int = 1,
+        tournament: TournamentEntity = tournamentEntity(),
+    ) = BracketEntity(id = id, tournament = tournament, stage = BracketStage.QUALIFIERS, createdAt = now.epochSecond)
 
     private fun athleteEntity(
         id: Int,
@@ -161,7 +172,7 @@ class MatchServiceTest : ServiceTest() {
         fun `should fail when bracket not found`() {
             whenever(brackets.findById(1)).thenReturn(Optional.empty())
 
-            val result = service.createMatch(1, 2, 10, 20)
+            val result = service.createMatch(adminUser, 1, 2, 10, 20)
 
             assertEquals(failure(ApiError.BRACKET_NOT_FOUND), result)
             verify(matches, never()).save(any())
@@ -172,7 +183,7 @@ class MatchServiceTest : ServiceTest() {
             stubBracketExists()
             whenever(routines.findById(2)).thenReturn(Optional.empty())
 
-            val result = service.createMatch(1, 2, 10, 20)
+            val result = service.createMatch(adminUser, 1, 2, 10, 20)
 
             assertEquals(failure(ApiError.ROUTINE_NOT_FOUND), result)
             verify(matches, never()).save(any())
@@ -184,7 +195,7 @@ class MatchServiceTest : ServiceTest() {
             whenever(routines.findById(2)).thenReturn(Optional.of(mockRoutineEntity()))
             whenever(athletes.findById(10)).thenReturn(Optional.empty())
 
-            val result = service.createMatch(1, 2, 10, 20)
+            val result = service.createMatch(adminUser, 1, 2, 10, 20)
 
             assertEquals(failure(ApiError.ATHLETE_NOT_FOUND), result)
         }
@@ -196,7 +207,7 @@ class MatchServiceTest : ServiceTest() {
             whenever(athletes.findById(10)).thenReturn(Optional.of(athleteEntity(10)))
             whenever(athletes.findById(20)).thenReturn(Optional.empty())
 
-            val result = service.createMatch(1, 2, 10, 20)
+            val result = service.createMatch(adminUser, 1, 2, 10, 20)
 
             assertEquals(failure(ApiError.ATHLETE_NOT_FOUND), result)
         }
@@ -210,7 +221,7 @@ class MatchServiceTest : ServiceTest() {
             whenever(matches.save(any())).thenReturn(matchEntity(status = MatchStatus.PENDING))
             whenever(exercises.findExercisesByRoutineId(2)).thenReturn(listOf(exerciseEntity(1)))
 
-            val result = service.createMatch(1, 2, 10, 20)
+            val result = service.createMatch(adminUser, 1, 2, 10, 20)
 
             assertTrue(result is Either.Right)
 
@@ -235,7 +246,7 @@ class MatchServiceTest : ServiceTest() {
             whenever(athletes.findById(20)).thenReturn(Optional.of(athleteEntity(20)))
             whenever(exercises.findExercisesByRoutineId(2)).thenReturn(emptyList())
 
-            val result = service.createMatch(1, 2, 10, 20)
+            val result = service.createMatch(adminUser, 1, 2, 10, 20)
 
             assertEquals(failure(ApiError.ROUTINE_NOT_FOUND), result)
             verify(matches, never()).save(any())
@@ -246,7 +257,7 @@ class MatchServiceTest : ServiceTest() {
             stubBracketExists()
             whenever(routines.findById(2)).thenReturn(Optional.of(mockRoutineEntity()))
 
-            val result = service.createMatch(1, 2, null, null)
+            val result = service.createMatch(adminUser, 1, 2, null, null)
 
             assertEquals(failure(ApiError.ATHLETES_NOT_ASSIGNED), result)
             verify(matches, never()).save(any())
@@ -260,7 +271,7 @@ class MatchServiceTest : ServiceTest() {
             whenever(matches.save(any())).thenReturn(matchEntity(status = MatchStatus.PENDING))
             whenever(exercises.findExercisesByRoutineId(2)).thenReturn(listOf(exerciseEntity(1)))
 
-            val result = service.createMatch(1, 2, 10, null)
+            val result = service.createMatch(adminUser, 1, 2, 10, null)
 
             assertTrue(result is Either.Right)
 
@@ -278,7 +289,7 @@ class MatchServiceTest : ServiceTest() {
             whenever(matches.save(any())).thenReturn(matchEntity(status = MatchStatus.PENDING))
             whenever(exercises.findExercisesByRoutineId(2)).thenReturn(listOf(exerciseEntity(1)))
 
-            val result = service.createMatch(1, 2, null, 20)
+            val result = service.createMatch(adminUser, 1, 2, null, 20)
 
             assertTrue(result is Either.Right)
 
@@ -294,7 +305,7 @@ class MatchServiceTest : ServiceTest() {
             whenever(routines.findById(2)).thenReturn(Optional.of(mockRoutineEntity()))
             whenever(athletes.findById(10)).thenReturn(Optional.of(athleteEntity(10)))
 
-            val result = service.createMatch(1, 2, 10, 10)
+            val result = service.createMatch(adminUser, 1, 2, 10, 10)
 
             assertEquals(failure(ApiError.SAME_ATHLETE_ON_BOTH_SIDES), result)
             verify(matches, never()).save(any())
@@ -307,7 +318,7 @@ class MatchServiceTest : ServiceTest() {
         fun `should fail when match not found`() {
             whenever(matches.findById(1)).thenReturn(Optional.empty())
 
-            val result = service.startMatch(1)
+            val result = service.startMatch(adminUser, 1)
 
             assertEquals(failure(ApiError.MATCH_NOT_FOUND), result)
         }
@@ -318,7 +329,7 @@ class MatchServiceTest : ServiceTest() {
             whenever(matches.findById(1)).thenReturn(Optional.of(match))
             whenever(matchProgresses.findByMatchId(1)).thenReturn(null)
 
-            val result = service.startMatch(1)
+            val result = service.startMatch(adminUser, 1)
 
             assertEquals(failure(ApiError.PROGRESS_NOT_FOUND), result)
             verify(matches, never()).save(any())
@@ -331,7 +342,7 @@ class MatchServiceTest : ServiceTest() {
             match.athleteBlue = null
             whenever(matches.findById(1)).thenReturn(Optional.of(match))
 
-            val result = service.startMatch(1)
+            val result = service.startMatch(adminUser, 1)
 
             assertEquals(failure(ApiError.ATHLETES_NOT_ASSIGNED), result)
             verify(matches, never()).save(any())
@@ -342,7 +353,7 @@ class MatchServiceTest : ServiceTest() {
             val match = matchEntity(status = MatchStatus.RUNNING)
             whenever(matches.findById(1)).thenReturn(Optional.of(match))
 
-            val result = service.startMatch(1)
+            val result = service.startMatch(adminUser, 1)
 
             assertEquals(failure(ApiError.MATCH_ALREADY_STARTED), result)
         }
@@ -363,7 +374,7 @@ class MatchServiceTest : ServiceTest() {
             stubBracketExists()
             stubUpdateProgressReturnsArg()
 
-            val result = service.startMatch(1)
+            val result = service.startMatch(adminUser, 1)
 
             assertTrue(result is Either.Right)
             val started = (result as Either.Right).value
@@ -394,7 +405,7 @@ class MatchServiceTest : ServiceTest() {
             stubBracketExists()
             stubUpdateProgressReturnsArg()
 
-            val result = service.startMatch(1)
+            val result = service.startMatch(adminUser, 1)
 
             assertTrue(result is Either.Right)
             assertEquals(MatchStatus.RUNNING, (result as Either.Right).value.match.status)
@@ -409,7 +420,7 @@ class MatchServiceTest : ServiceTest() {
         fun `should fail when match not found`() {
             whenever(matches.findById(1)).thenReturn(Optional.empty())
 
-            val result = service.updateAthletesReps(1, 5, 3)
+            val result = service.updateAthletesReps(adminUser, 1, 5, 3)
 
             assertEquals(failure(ApiError.MATCH_NOT_FOUND), result)
         }
@@ -418,7 +429,7 @@ class MatchServiceTest : ServiceTest() {
         fun `should fail when match not running`() {
             whenever(matches.findById(1)).thenReturn(Optional.of(matchEntity(status = MatchStatus.PENDING)))
 
-            val result = service.updateAthletesReps(1, 5, 3)
+            val result = service.updateAthletesReps(adminUser, 1, 5, 3)
 
             assertEquals(failure(ApiError.MATCH_NOT_RUNNING), result)
             verify(matchProgresses, never()).findByMatchId(any())
@@ -429,7 +440,7 @@ class MatchServiceTest : ServiceTest() {
             whenever(matches.findById(1)).thenReturn(Optional.of(running))
             whenever(matchProgresses.findByMatchId(1)).thenReturn(null)
 
-            val result = service.updateAthletesReps(1, 5, 3)
+            val result = service.updateAthletesReps(adminUser, 1, 5, 3)
 
             assertEquals(failure(ApiError.PROGRESS_NOT_FOUND), result)
         }
@@ -441,7 +452,7 @@ class MatchServiceTest : ServiceTest() {
             whenever(matchProgresses.findByMatchId(1)).thenReturn(badProg)
             whenever(exercises.findExercisesByRoutineId(2)).thenReturn(exsEntities)
 
-            val result = service.updateAthletesReps(1, 5, 3)
+            val result = service.updateAthletesReps(adminUser, 1, 5, 3)
 
             assertEquals(failure(ApiError.EXERCISE_NOT_FOUND), result)
         }
@@ -455,7 +466,7 @@ class MatchServiceTest : ServiceTest() {
             whenever(exercises.findExercisesByRoutineId(2)).thenReturn(exsEntities)
             whenever(matchProgresses.save(any())).thenReturn(updated)
 
-            val result = service.updateAthletesReps(1, 5, 3)
+            val result = service.updateAthletesReps(adminUser, 1, 5, 3)
 
             assertEquals(success(updated.toDomain()), result)
             verify(matches, never()).save(any())
@@ -476,7 +487,7 @@ class MatchServiceTest : ServiceTest() {
             whenever(exercises.findExercisesByRoutineId(2)).thenReturn(exsEntities)
             whenever(matchProgresses.save(any())).thenReturn(updated)
 
-            val result = service.updateAthletesReps(1, 10, null)
+            val result = service.updateAthletesReps(adminUser, 1, 10, null)
 
             assertEquals(success(updated.toDomain()), result)
 
@@ -502,7 +513,7 @@ class MatchServiceTest : ServiceTest() {
             whenever(exercises.findExercisesByRoutineId(2)).thenReturn(exsEntities)
             whenever(matchProgresses.save(any())).thenReturn(updated)
 
-            val result = service.updateAthletesReps(1, 10, 10)
+            val result = service.updateAthletesReps(adminUser, 1, 10, 10)
 
             assertEquals(success(updated.toDomain()), result)
 
@@ -526,7 +537,7 @@ class MatchServiceTest : ServiceTest() {
             whenever(exercises.findExercisesByRoutineId(2)).thenReturn(exsEntities)
             stubUpdateProgressReturnsArg()
 
-            val result = service.updateAthletesReps(1, 10, 5)
+            val result = service.updateAthletesReps(adminUser, 1, 10, 5)
 
             assertEquals(success(updated.toDomain()), result)
             verify(matches, never()).save(any())
@@ -538,7 +549,7 @@ class MatchServiceTest : ServiceTest() {
             whenever(matches.findById(1)).thenReturn(Optional.of(single))
             whenever(matchProgresses.findByMatchId(1)).thenReturn(progOn(single, 1, 1))
 
-            val result = service.updateAthletesReps(1, 5, 3)
+            val result = service.updateAthletesReps(adminUser, 1, 5, 3)
 
             assertEquals(failure(ApiError.ATHLETE_NOT_IN_MATCH), result)
             verify(matchProgresses, never()).save(any())
@@ -560,7 +571,7 @@ class MatchServiceTest : ServiceTest() {
             whenever(exercises.findExercisesByRoutineId(2)).thenReturn(exsEntities)
             whenever(matchProgresses.save(any())).thenReturn(updated)
 
-            val result = service.updateAthletesReps(1, 10, null)
+            val result = service.updateAthletesReps(adminUser, 1, 10, null)
 
             assertEquals(success(updated.toDomain()), result)
 
@@ -580,7 +591,7 @@ class MatchServiceTest : ServiceTest() {
         fun `should fail when match not found`() {
             whenever(matches.findById(1)).thenReturn(Optional.empty())
 
-            val result = service.forceFinishSide(1, RepSide.RED)
+            val result = service.forceFinishSide(adminUser, 1, RepSide.RED)
 
             assertEquals(failure(ApiError.MATCH_NOT_FOUND), result)
         }
@@ -589,7 +600,7 @@ class MatchServiceTest : ServiceTest() {
         fun `should fail when match not running`() {
             whenever(matches.findById(1)).thenReturn(Optional.of(matchEntity(status = MatchStatus.PENDING)))
 
-            val result = service.forceFinishSide(1, RepSide.RED)
+            val result = service.forceFinishSide(adminUser, 1, RepSide.RED)
 
             assertEquals(failure(ApiError.MATCH_NOT_RUNNING), result)
             verify(matchProgresses, never()).findByMatchId(any())
@@ -601,7 +612,7 @@ class MatchServiceTest : ServiceTest() {
             whenever(matches.findById(1)).thenReturn(Optional.of(running))
             whenever(matchProgresses.findByMatchId(1)).thenReturn(progOn(running, 1, 1))
 
-            val result = service.forceFinishSide(1, RepSide.RED)
+            val result = service.forceFinishSide(adminUser, 1, RepSide.RED)
 
             assertEquals(failure(ApiError.OPPONENT_NOT_FINISHED), result)
             verify(matches, never()).save(any())
@@ -617,7 +628,7 @@ class MatchServiceTest : ServiceTest() {
             stubBracketExists()
             stubUpdateProgressReturnsArg()
 
-            val result = service.forceFinishSide(1, RepSide.RED)
+            val result = service.forceFinishSide(adminUser, 1, RepSide.RED)
 
             val captor = argumentCaptor<MatchEntity>()
             verify(matches, atLeastOnce()).save(captor.capture())
@@ -637,7 +648,7 @@ class MatchServiceTest : ServiceTest() {
             stubBracketExists()
             stubUpdateProgressReturnsArg()
 
-            val result = service.forceFinishSide(1, RepSide.BLUE)
+            val result = service.forceFinishSide(adminUser, 1, RepSide.BLUE)
 
             val captor = argumentCaptor<MatchEntity>()
             verify(matches, atLeastOnce()).save(captor.capture())
@@ -653,7 +664,7 @@ class MatchServiceTest : ServiceTest() {
             stubBracketExists()
             stubUpdateProgressReturnsArg()
 
-            val result = service.forceFinishSide(1, RepSide.RED)
+            val result = service.forceFinishSide(adminUser, 1, RepSide.RED)
 
             assertTrue(result is Either.Right)
 
@@ -693,7 +704,7 @@ class MatchServiceTest : ServiceTest() {
             whenever(matchProgresses.findByMatchId(1)).thenReturn(progressOn(4, 1))
             realAdvance()
 
-            val progress = expectSuccess(service.updateAthletesReps(1, 2, null))
+            val progress = expectSuccess(service.updateAthletesReps(adminUser, 1, 2, null))
 
             assertEquals(5, progress.redCurrentExerciseId)
             assertEquals(0, progress.redCurrentReps)
@@ -707,7 +718,7 @@ class MatchServiceTest : ServiceTest() {
             whenever(matchProgresses.findByMatchId(1)).thenReturn(progressOn(5, 9))
             realAdvance()
 
-            val progress = expectSuccess(service.updateAthletesReps(1, 10, null))
+            val progress = expectSuccess(service.updateAthletesReps(adminUser, 1, 10, null))
 
             assertEquals(6, progress.redCurrentExerciseId)
             assertEquals(0, progress.redCurrentReps)
@@ -720,7 +731,7 @@ class MatchServiceTest : ServiceTest() {
             whenever(matchProgresses.findByMatchId(1)).thenReturn(progressOn(6, 9))
             realAdvance()
 
-            val progress = expectSuccess(service.updateAthletesReps(1, 10, null))
+            val progress = expectSuccess(service.updateAthletesReps(adminUser, 1, 10, null))
 
             assertNull(progress.redCurrentExerciseId)
             assertEquals(10, progress.redCurrentReps)
@@ -829,9 +840,110 @@ class MatchServiceTest : ServiceTest() {
             val list = listOf(matchEntity(1), matchEntity(2))
             whenever(matches.findAll()).thenReturn(list)
 
-            val result = service.getAllMatches()
+            val result = service.getAllMatches(adminUser)
 
             assertEquals(success(list.map { it.toDomain() }), result)
+        }
+
+        @Test
+        fun `should only return matches of the tournaments the user judges`() {
+            val visible = matchEntity(1)
+            whenever(tournaments.findByHostId(judgeUser.id)).thenReturn(emptyList())
+            whenever(tournamentJudges.findByUserId(judgeUser.id))
+                .thenReturn(listOf(TournamentJudgeEntity(tournamentId = 1, userId = judgeUser.id)))
+            whenever(brackets.findByTournamentIdIn(listOf(1))).thenReturn(listOf(bracketEntity(1)))
+            whenever(matches.findByBracketIdIn(setOf(1))).thenReturn(listOf(visible))
+            stubTransactionRepositories()
+
+            val result = service.getAllMatches(judgeUser)
+
+            assertEquals(success(listOf(visible.toDomain())), result)
+        }
+
+        @Test
+        fun `should return no matches when the user is not assigned to any tournament`() {
+            whenever(tournaments.findByHostId(judgeUser.id)).thenReturn(emptyList())
+            whenever(tournamentJudges.findByUserId(judgeUser.id)).thenReturn(emptyList())
+            stubTransactionRepositories()
+
+            val result = service.getAllMatches(judgeUser)
+
+            assertEquals(success(emptyList<Match>()), result)
+        }
+    }
+
+    @Nested
+    inner class TournamentScopedAuthorization {
+        private fun runningMatch() = matchEntity(status = MatchStatus.RUNNING)
+
+        private fun stubRunningMatch() {
+            val match = runningMatch()
+            whenever(matches.findById(1)).thenReturn(Optional.of(match))
+        }
+
+        private fun stubControllableMatch() {
+            val match = runningMatch()
+            whenever(matches.findById(1)).thenReturn(Optional.of(match))
+            whenever(matchProgresses.findByMatchId(1)).thenReturn(progOn(match, 1, 1))
+            whenever(exercises.findExercisesByRoutineId(2)).thenReturn(exsEntities)
+            whenever(matchProgresses.save(any())).thenReturn(progOn(match, 1, 1, redReps = 3))
+        }
+
+        @Test
+        fun `should reject a judge that is not assigned to the tournament`() {
+            stubRunningMatch()
+            whenever(tournaments.findById(1)).thenReturn(Optional.of(tournamentEntity(hostId = 42)))
+            whenever(tournamentJudges.existsByTournamentIdAndUserId(1, judgeUser.id)).thenReturn(false)
+            stubTransactionRepositories()
+
+            val result = service.updateAthletesReps(judgeUser, 1, redReps = 3)
+
+            assertEquals(failure(ApiError.NOT_AUTHORIZED), result)
+        }
+
+        @Test
+        fun `should allow a judge assigned to the tournament`() {
+            stubControllableMatch()
+            whenever(tournaments.findById(1)).thenReturn(Optional.of(tournamentEntity(hostId = 42)))
+            whenever(tournamentJudges.existsByTournamentIdAndUserId(1, judgeUser.id)).thenReturn(true)
+            stubTransactionRepositories()
+
+            val result = service.updateAthletesReps(judgeUser, 1, redReps = 3)
+
+            assertTrue(result is Either.Right)
+        }
+
+        @Test
+        fun `should allow the tournament host to control a match`() {
+            stubControllableMatch()
+            whenever(tournaments.findById(1)).thenReturn(Optional.of(tournamentEntity(hostId = hostUser.id)))
+            stubTransactionRepositories()
+
+            val result = service.updateAthletesReps(hostUser, 1, redReps = 3)
+
+            assertTrue(result is Either.Right)
+        }
+
+        @Test
+        fun `should reject a host of another tournament`() {
+            stubRunningMatch()
+            whenever(tournaments.findById(1)).thenReturn(Optional.of(tournamentEntity(hostId = 42)))
+            stubTransactionRepositories()
+
+            val result = service.forceFinishSide(hostUser, 1, RepSide.RED)
+
+            assertEquals(failure(ApiError.NOT_AUTHORIZED), result)
+        }
+
+        @Test
+        fun `should reject starting a match of another tournament`() {
+            stubRunningMatch()
+            whenever(tournaments.findById(1)).thenReturn(Optional.of(tournamentEntity(hostId = 42)))
+            stubTransactionRepositories()
+
+            val result = service.startMatch(hostUser, 1)
+
+            assertEquals(failure(ApiError.NOT_AUTHORIZED), result)
         }
     }
 

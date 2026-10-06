@@ -47,6 +47,7 @@ class UserAuthService(
     fun createUser(
         username: String,
         password: String,
+        role: UserRole,
     ): Either<ApiError, User> {
         if (!PasswordValidationInfo.isSafePassword(password)) {
             return failure(ApiError.INSECURE_PASSWORD)
@@ -64,7 +65,7 @@ class UserAuthService(
                     UserEntity(
                         username = username,
                         password = passwordValidationInfo.validationInfo,
-                        role = UserRole.JUDGE,
+                        role = role,
                         createdAt = clock.instant().epochSecond,
                     ),
                 )
@@ -186,5 +187,10 @@ class UserAuthService(
     fun getUsers(): List<User> =
         trxManager.run {
             users.findAll().map { it.toDomain() }
+        }
+
+    fun getUsersByRole(role: UserRole): List<User> =
+        trxManager.run {
+            users.findAllByRole(role).map { it.toDomain() }
         }
 }

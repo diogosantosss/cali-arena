@@ -1,4 +1,6 @@
-export type UserRole = "JUDGE" | "ADMIN";
+import type { UserRole } from "@/data/auth";
+
+export type { UserRole } from "@/data/auth";
 
 export interface User {
   id: number;

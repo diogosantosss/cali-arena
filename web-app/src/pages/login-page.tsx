@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ApiError } from "@/api/client";
 import { authService } from "../services/auth.service";
+import { homeRouteFor } from "@/data/auth";
 import type { LoginInput } from "@/data/auth";
 import { useAuth } from "../hooks/use-auth";
 import { useTheme } from "@/hooks/use-theme";
@@ -51,8 +52,8 @@ export function LoginPage() {
 
   const from = typeof location.state?.from === "string" ? location.state.from : null;
   const judgeOrigin = from != null && from.startsWith("/judge");
-  const target =
-    from ?? (user?.role === "JUDGE" ? "/judge" : "/dashboard");
+  // Judges always land on the judge flow; admins and hosts on the dashboard.
+  const target = from ?? homeRouteFor(user?.role);
 
   if (isLoading) {
     return <div className="min-h-screen" style={{ background: "var(--background)" }} />;

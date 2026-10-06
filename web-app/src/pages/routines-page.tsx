@@ -11,6 +11,7 @@ import { SkeletonList } from "@/components/shared/management-list";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { usePermissions } from "@/hooks/use-permissions";
 import { routinesService } from "@/services/routines.service";
 import { EXERCISE_NAMES } from "@/data/routines";
 import type {
@@ -249,6 +250,7 @@ export function RoutinesPage() {
   } = useCollection(loadRoutines, "Failed to load routines");
 
   const [ui, dispatch] = useReducer(reducer, initialUiState);
+  const { canManageGlobalData, isAdmin } = usePermissions();
 
   const selectedRoutine = routines.find((r) => r.id === ui.selectedRoutineId);
 
@@ -422,13 +424,16 @@ export function RoutinesPage() {
     <div className="max-w-6xl mx-auto space-y-10">
       <PageHeader
         title="Routines"
+        eyebrow={isAdmin ? "Management" : "Library"}
         action={
-          <ToggleButton
-            open={ui.formOpen}
-            onClick={() => dispatch({ type: "toggleForm" })}
-            icon={Dumbbell}
-            label="New routine"
-          />
+          canManageGlobalData ? (
+            <ToggleButton
+              open={ui.formOpen}
+              onClick={() => dispatch({ type: "toggleForm" })}
+              icon={Dumbbell}
+              label="New routine"
+            />
+          ) : undefined
         }
       />
 
@@ -535,7 +540,9 @@ export function RoutinesPage() {
         <div className="col-span-2 space-y-4">
           {!selectedRoutine ? (
             <div className="flex items-center justify-center h-56 rounded-lg border border-dashed" style={{ borderColor: "var(--border)" }}>
-              <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>Select a routine to view and add exercises</p>
+              <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>
+              {canManageGlobalData ? "Select a routine to view and add exercises" : "Select a routine to view its exercises"}
+            </p>
             </div>
           ) : (
             <>
@@ -588,6 +595,7 @@ export function RoutinesPage() {
                                 key={ex.id}
                                 ex={ex}
                                 superset
+                                canManage={canManageGlobalData}
                                 editing={ui.editingExerciseId === ex.id}
                                 onEdit={() => dispatch({ type: "startEditExercise", exercise: ex })}
                                 onDelete={() => dispatch({ type: "openDeleteConfirm", exercise: ex })}
@@ -600,6 +608,7 @@ export function RoutinesPage() {
                           key={exercises[0].id}
                           ex={exercises[0]}
                           order={order}
+                          canManage={canManageGlobalData}
                           editing={ui.editingExerciseId === exercises[0].id}
                           onEdit={() => dispatch({ type: "startEditExercise", exercise: exercises[0] })}
                           onDelete={() => dispatch({ type: "openDeleteConfirm", exercise: exercises[0] })}
@@ -610,7 +619,7 @@ export function RoutinesPage() {
                 )}
               </div>
 
-              {ui.editingExerciseId == null && (
+              {canManageGlobalData && ui.editingExerciseId == null && (
                 <div className="rounded-lg overflow-hidden" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
                   <button
                     type="button"
@@ -735,6 +744,7 @@ function ExerciseRow({
   ex,
   order,
   superset,
+  canManage,
   editing,
   onEdit,
   onDelete,
@@ -743,6 +753,8 @@ function ExerciseRow({
   ex: Exercise;
   order?: string;
   superset?: boolean;
+  /** Hosts only browse routines: the edit/delete controls are admin-only. */
+  canManage: boolean;
   editing: boolean;
   onEdit: () => void;
   onDelete: () => void;
@@ -758,8 +770,8 @@ function ExerciseRow({
         borderColor: editing ? "var(--accent-45)" : superset ? "none" : "var(--border)",
       }}
     >
-      <div className="flex items-center gap-3 rounded-lg group">
-        <div className="flex items-center gap-3 flex-1 min-w-0 px-4 py-3">
+      <div className="flex items-center gap-3 rounded-lg group px-4 py-3">
+        <div className="flex items-center gap-3 flex-1 min-w-0">
           {order !== undefined && (
             <span
               className="w-5 h-5 rounded-md flex items-center justify-center text-xs font-bold shrink-0"
@@ -781,32 +793,34 @@ function ExerciseRow({
           </div>
         </div>
 
-        <span className={`text-xs px-2.5 py-1 rounded-full capitalize shrink-0 ${editing ? "opacity-40" : ""}`} style={{ background: t.bg, color: t.color }}>
+        <span className={`text-xs px-2.5 py-1 rounded-full capitalize shrink-0 flex-shrink-0 ${editing ? "opacity-40" : ""}`} style={{ background: t.bg, color: t.color }}>
           {ex.type.toLowerCase()}
         </span>
 
-        <div className="flex items-center gap-1 pr-2 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-          <button
-            onClick={onEdit}
-            title="Edit"
-            className="p-1.5 rounded transition-colors"
-            style={{ color: "var(--muted-foreground)" }}
-            onMouseEnter={(e) => (e.currentTarget.style.color = "var(--accent)")}
-            onMouseLeave={(e) => (e.currentTarget.style.color = "var(--muted-foreground)")}
-          >
-            <Pencil className="w-3.5 h-3.5" />
-          </button>
-          <button
-            onClick={onDelete}
-            title="Delete"
-            className="p-1.5 rounded transition-colors"
-            style={{ color: "var(--muted-foreground)" }}
-            onMouseEnter={(e) => (e.currentTarget.style.color = "var(--danger)")}
-            onMouseLeave={(e) => (e.currentTarget.style.color = "var(--muted-foreground)")}
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-          </button>
-        </div>
+        {canManage && (
+          <div className="flex items-center gap-1 pr-2 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+            <button
+              onClick={onEdit}
+              title="Edit"
+              className="p-1.5 rounded transition-colors"
+              style={{ color: "var(--muted-foreground)" }}
+              onMouseEnter={(e) => (e.currentTarget.style.color = "var(--accent)")}
+              onMouseLeave={(e) => (e.currentTarget.style.color = "var(--muted-foreground)")}
+            >
+              <Pencil className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={onDelete}
+              title="Delete"
+              className="p-1.5 rounded transition-colors"
+              style={{ color: "var(--muted-foreground)" }}
+              onMouseEnter={(e) => (e.currentTarget.style.color = "var(--danger)")}
+              onMouseLeave={(e) => (e.currentTarget.style.color = "var(--muted-foreground)")}
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
       </div>
 
       {expanded}

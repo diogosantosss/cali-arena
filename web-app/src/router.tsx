@@ -1,7 +1,9 @@
 import { createBrowserRouter } from "react-router-dom";
+import { ADMIN_ROLES, DASHBOARD_ROLES } from "@/data/auth";
 import { LoginPage } from "@/pages/login-page";
 import { DashboardLayout } from "./components/layout/DashboardLayout.tsx";
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import { RoleGate } from "./components/RoleGate";
 import { TournamentsPage } from "@/pages/tournaments-page";
 import { TournamentDetailPage } from "@/pages/tournament-detail";
 import { AthletesPage } from "@/pages/athletes-page";
@@ -15,23 +17,25 @@ import { ScreenPage } from "@/pages/live/screen-page";
 import { OverlayPage } from "@/pages/overlay/overlay-page.tsx";
 
 export const router = createBrowserRouter([
-  { 
-    path: "/", 
+  {
+    path: "/",
     element: <LoginPage />,
   },
   {
+    // Admins and hosts only: a judge that reaches /dashboard is sent to /judge.
     path: "/dashboard",
-    element: <ProtectedRoute />,
+    element: <ProtectedRoute roles={DASHBOARD_ROLES} />,
     children: [
       {
         element: <DashboardLayout />,
         children: [
           { index: true, element: <TournamentsPage /> },
           { path: "tournaments/:id", element: <TournamentDetailPage /> },
+          // Read-only for hosts: the backend only lets admins write this data.
           { path: "athletes", element: <AthletesPage /> },
           { path: "clubs", element: <ClubsPage /> },
-          { path: "users", element: <UsersPage /> },
           { path: "routines", element: <RoutinesPage /> },
+          { path: "users", element: <RoleGate roles={ADMIN_ROLES}><UsersPage /></RoleGate> },
         ],
       },
     ],

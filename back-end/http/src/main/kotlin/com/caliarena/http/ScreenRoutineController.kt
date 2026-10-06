@@ -2,6 +2,7 @@ package com.caliarena.http
 
 import com.caliarena.domain.RequiresRole
 import com.caliarena.domain.routine.ScreenRoutine
+import com.caliarena.domain.user.AuthenticatedUser
 import com.caliarena.domain.user.UserRole
 import com.caliarena.http.model.screen.CreateScreenRoutineInput
 import com.caliarena.http.model.screen.UpdateDisplayOrderInput
@@ -61,13 +62,14 @@ class ScreenRoutineController(
             )
 
     @PostMapping
-    @RequiresRole([UserRole.ADMIN])
+    @RequiresRole([UserRole.ADMIN, UserRole.HOST])
     fun create(
+        user: AuthenticatedUser,
         @PathVariable tournamentId: Int,
         @RequestBody input: CreateScreenRoutineInput,
     ): ResponseEntity<Any> =
         service
-            .create(tournamentId, input.routineId, input.displayOrder, input.label)
+            .create(user.user, tournamentId, input.routineId, input.displayOrder, input.label)
             .toResponse(
                 onSuccess = { screenRoutine: ScreenRoutine ->
                     ResponseEntity
@@ -78,41 +80,44 @@ class ScreenRoutineController(
             )
 
     @PatchMapping("/{id}/visibility")
-    @RequiresRole([UserRole.ADMIN])
+    @RequiresRole([UserRole.ADMIN, UserRole.HOST])
     fun updateVisibility(
+        user: AuthenticatedUser,
         @PathVariable tournamentId: Int,
         @PathVariable id: Int,
         @RequestBody input: UpdateVisibilityInput,
     ): ResponseEntity<Any> =
         service
-            .update(tournamentId, id, input.isVisible, null, null)
+            .update(user.user, tournamentId, id, input.isVisible, null, null)
             .toResponse(
                 onSuccess = { ResponseEntity.ok(it) },
                 onError = { it.toResponseEntity() },
             )
 
     @PatchMapping("/{id}/order")
-    @RequiresRole([UserRole.ADMIN])
+    @RequiresRole([UserRole.ADMIN, UserRole.HOST])
     fun updateDisplayOrder(
+        user: AuthenticatedUser,
         @PathVariable tournamentId: Int,
         @PathVariable id: Int,
         @RequestBody input: UpdateDisplayOrderInput,
     ): ResponseEntity<Any> =
         service
-            .update(tournamentId, id, null, input.displayOrder, null)
+            .update(user.user, tournamentId, id, null, input.displayOrder, null)
             .toResponse(
                 onSuccess = { ResponseEntity.ok(it) },
                 onError = { it.toResponseEntity() },
             )
 
     @DeleteMapping("/{id}")
-    @RequiresRole([UserRole.ADMIN])
+    @RequiresRole([UserRole.ADMIN, UserRole.HOST])
     fun delete(
+        user: AuthenticatedUser,
         @PathVariable tournamentId: Int,
         @PathVariable id: Int,
     ): ResponseEntity<Any> =
         service
-            .delete(tournamentId, id)
+            .delete(user.user, tournamentId, id)
             .toResponse(
                 onSuccess = { ResponseEntity.noContent().build() },
                 onError = { it.toResponseEntity() },

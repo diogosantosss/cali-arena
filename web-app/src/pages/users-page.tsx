@@ -17,6 +17,7 @@ import { UserPlus, CalendarDays } from "lucide-react";
 
 const roleStyles: Record<UserRole, { color: string; bg: string }> = {
   ADMIN: { color: "var(--accent)", bg: "var(--accent-12)" },
+  HOST: { color: "#9ad5a5", bg: "rgba(154,213,165,0.12)" },
   JUDGE: { color: "#7eb8f7", bg: "rgba(126,184,247,0.12)" },
 };
 
@@ -152,6 +153,7 @@ export function UsersPage() {
             onValueChange={(value) => dispatch({ type: "setFormField", field: "role", value: value as UserRole })}
             options={[
               { value: "JUDGE", label: "Judge" },
+              { value: "HOST", label: "Host" },
               { value: "ADMIN", label: "Admin" },
             ]}
           />
@@ -176,6 +178,7 @@ export function UsersPage() {
               options={[
                 { value: "ALL", label: "All roles" },
                 { value: "JUDGE", label: "Judge" },
+                { value: "HOST", label: "Host" },
                 { value: "ADMIN", label: "Admin" },
               ]}
             />

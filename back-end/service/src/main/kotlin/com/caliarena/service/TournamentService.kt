@@ -7,6 +7,7 @@ import com.caliarena.domain.tournament.ScreenState.WAITING
 import com.caliarena.domain.tournament.Tournament
 import com.caliarena.domain.tournament.TournamentState
 import com.caliarena.domain.tournament.TournamentStatus
+import com.caliarena.domain.user.User
 import com.caliarena.repo.entities.tournament.TournamentEntity
 import com.caliarena.repo.entities.tournament.TournamentStateEntity
 import com.caliarena.repo.trx.Transaction
@@ -70,9 +71,13 @@ class TournamentService(
             success(tournament)
         }
 
-    fun getAllTournaments(): List<Tournament> =
+    fun getAllTournaments(user: User): List<Tournament> =
         trx.run {
-            tournaments.findAll().map { it.toDomain() }
+            val visible =
+                visibleTournamentIds(user)
+                    ?: return@run tournaments.findAll().map { it.toDomain() }
+
+            tournaments.findAllById(visible).map { it.toDomain() }
         }
 
     fun getTournamentsByStatus(status: TournamentStatus): List<Tournament> =
@@ -81,6 +86,7 @@ class TournamentService(
         }
 
     fun updateTournamentStatus(
+        user: User,
         id: Int,
         newStatus: String,
     ): Either<ApiError, Tournament> =
@@ -89,6 +95,10 @@ class TournamentService(
                 tournaments.findByIdOrNull(id)
                     ?: return@run failure(ApiError.TOURNAMENT_NOT_FOUND)
 
+            if (!canManageTournament(user, id)) {
+                return@run failure(ApiError.NOT_AUTHORIZED)
+            }
+
             val status =
                 TournamentStatus.entries.find { it.name.equals(newStatus, true) }
                     ?: return@run failure(ApiError.INVALID_TOURNAMENT_STATUS)
@@ -96,6 +106,26 @@ class TournamentService(
             existing.status = status
 
             success(tournaments.save(existing).toDomain())
+        }
+
+    /**
+     * Removes a tournament.
+     *
+     * Everything hanging off it — `tournament_state`, `brackets`, `matches`,
+     * `match_progress`, `tournament_judges` and `screen_routines` — is declared
+     * `ON DELETE CASCADE`, so the database removes the whole tree with this single
+     * row. `endurance_routines`, `exercises`, `athletes` and `clubs` are global and
+     * stay untouched.
+     */
+    fun deleteTournament(id: Int): Either<ApiError, Unit> =
+        trx.run {
+            val tournament =
+                tournaments.findByIdOrNull(id)
+                    ?: return@run failure(ApiError.TOURNAMENT_NOT_FOUND)
+
+            tournaments.delete(tournament)
+
+            success(Unit)
         }
 
     fun getTournamentState(tournamentId: Int): Either<ApiError, TournamentState> =
@@ -111,6 +141,7 @@ class TournamentService(
         }
 
     fun updateScreen(
+        user: User,
         tournamentId: Int,
         screen: String,
         currentMatchId: Int?,
@@ -120,6 +151,10 @@ class TournamentService(
         trx.run {
             tournaments.findByIdOrNull(tournamentId)?.toDomain()
                 ?: return@run failure(ApiError.TOURNAMENT_NOT_FOUND)
+
+            if (!canManageTournament(user, tournamentId)) {
+                return@run failure(ApiError.NOT_AUTHORIZED)
+            }
 
             val screenState =
                 ScreenState.entries.find { it.name.equals(screen, true) }

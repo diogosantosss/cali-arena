@@ -5,6 +5,7 @@ import com.caliarena.domain.tournament.TournamentStatus
 import com.caliarena.repo.entities.match.MatchEntity
 import com.caliarena.repo.entities.tournament.BracketEntity
 import com.caliarena.repo.entities.tournament.TournamentEntity
+import com.caliarena.repo.entities.tournament.TournamentJudgeEntity
 import com.caliarena.repo.entities.tournament.TournamentStateEntity
 import com.caliarena.repo.trx.Transaction
 import com.caliarena.service.mapper.BracketLeaderboardMapper
@@ -22,6 +23,8 @@ import org.mockito.Mockito.lenient
 import org.mockito.Mockito.`when`
 import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
+import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import java.util.Optional
 
@@ -30,10 +33,7 @@ class TournamentServiceTest : ServiceTest() {
 
     @BeforeEach
     fun setup() {
-        lenient().whenever(transaction.tournaments).thenReturn(tournaments)
-        lenient().whenever(transaction.tournamentStates).thenReturn(tournamentStates)
-        lenient().whenever(transaction.matches).thenReturn(matches)
-        lenient().whenever(transaction.brackets).thenReturn(brackets)
+        stubTransactionRepositories()
 
         lenient()
             .doAnswer { invocation ->
@@ -57,16 +57,19 @@ class TournamentServiceTest : ServiceTest() {
 
     private val now = clock.instant()
 
-    private fun tournamentEntity(id: Int = 1) =
-        TournamentEntity(
-            id = id,
-            name = "Tournament $id",
-            location = "Location",
-            startDate = now.epochSecond,
-            endDate = null,
-            status = TournamentStatus.READY,
-            createdAt = now.epochSecond,
-        )
+    private fun tournamentEntity(
+        id: Int = 1,
+        hostId: Int? = null,
+    ) = TournamentEntity(
+        id = id,
+        name = "Tournament $id",
+        location = "Location",
+        startDate = now.epochSecond,
+        endDate = null,
+        status = TournamentStatus.READY,
+        createdAt = now.epochSecond,
+        hostId = hostId,
+    )
 
     private fun stateEntity(
         tournament: TournamentEntity = tournamentEntity(),
@@ -157,7 +160,7 @@ class TournamentServiceTest : ServiceTest() {
             lenient().whenever(tournaments.findById(1)).thenReturn(Optional.of(existing))
             lenient().whenever(tournaments.save(existing)).thenReturn(existing)
 
-            val result = service.updateTournamentStatus(1, "LIVE")
+            val result = service.updateTournamentStatus(adminUser, 1, "LIVE")
 
             assertEquals(success(existing.toDomain()), result)
             assertEquals(TournamentStatus.LIVE, existing.status)
@@ -167,7 +170,7 @@ class TournamentServiceTest : ServiceTest() {
         fun `should fail when not found`() {
             lenient().whenever(tournaments.findById(99)).thenReturn(Optional.empty())
 
-            val result = service.updateTournamentStatus(99, "LIVE")
+            val result = service.updateTournamentStatus(adminUser, 99, "LIVE")
 
             assertEquals(failure(ApiError.TOURNAMENT_NOT_FOUND), result)
         }
@@ -176,9 +179,75 @@ class TournamentServiceTest : ServiceTest() {
         fun `should fail on invalid status`() {
             lenient().whenever(tournaments.findById(1)).thenReturn(Optional.of(tournamentEntity()))
 
-            val result = service.updateTournamentStatus(1, "INVALID")
+            val result = service.updateTournamentStatus(adminUser, 1, "INVALID")
 
             assertEquals(failure(ApiError.INVALID_TOURNAMENT_STATUS), result)
+        }
+
+        @Test
+        fun `should allow the tournament host to update the status`() {
+            val existing = tournamentEntity(hostId = hostUser.id)
+            whenever(tournaments.findById(1)).thenReturn(Optional.of(existing))
+            whenever(tournaments.save(any())).thenReturn(existing)
+            stubTransactionRepositories()
+
+            val result = service.updateTournamentStatus(hostUser, 1, "LIVE")
+
+            assertEquals(success(existing.toDomain()), result)
+        }
+
+        @Test
+        fun `should reject a user that does not host the tournament`() {
+            val existing = tournamentEntity(hostId = 42)
+            whenever(tournaments.findById(1)).thenReturn(Optional.of(existing))
+            stubTransactionRepositories()
+
+            val result = service.updateTournamentStatus(judgeUser, 1, "LIVE")
+
+            assertEquals(failure(ApiError.NOT_AUTHORIZED), result)
+            verify(tournaments, never()).save(any())
+        }
+    }
+
+    @Nested
+    inner class GetAllTournaments {
+        @Test
+        fun `should return every tournament for an admin`() {
+            val list = listOf(tournamentEntity(1), tournamentEntity(2))
+            whenever(tournaments.findAll()).thenReturn(list)
+
+            val result = service.getAllTournaments(adminUser)
+
+            assertEquals(list.map { it.toDomain() }, result)
+        }
+
+        @Test
+        fun `should only return hosted and judged tournaments for a host`() {
+            val hosted = tournamentEntity(1, hostId = hostUser.id)
+            val judged = tournamentEntity(2)
+            whenever(tournaments.findByHostId(hostUser.id)).thenReturn(listOf(hosted))
+            whenever(tournamentJudges.findByUserId(hostUser.id))
+                .thenReturn(listOf(TournamentJudgeEntity(tournamentId = judged.id, userId = hostUser.id)))
+            whenever(tournaments.findAllById(listOf(1, 2))).thenReturn(listOf(hosted, judged))
+            stubTransactionRepositories()
+
+            val result = service.getAllTournaments(hostUser)
+
+            assertEquals(listOf(hosted.toDomain(), judged.toDomain()), result)
+        }
+
+        @Test
+        fun `should only return judged tournaments for a judge`() {
+            val judged = tournamentEntity(2)
+            whenever(tournaments.findByHostId(judgeUser.id)).thenReturn(emptyList())
+            whenever(tournamentJudges.findByUserId(judgeUser.id))
+                .thenReturn(listOf(TournamentJudgeEntity(tournamentId = judged.id, userId = judgeUser.id)))
+            whenever(tournaments.findAllById(listOf(2))).thenReturn(listOf(judged))
+            stubTransactionRepositories()
+
+            val result = service.getAllTournaments(judgeUser)
+
+            assertEquals(listOf(judged.toDomain()), result)
         }
     }
 
@@ -229,7 +298,7 @@ class TournamentServiceTest : ServiceTest() {
             whenever(brackets.findById(bracket.id)).thenReturn(Optional.of(bracket))
             whenever(tournamentStates.save(any())).thenReturn(state)
 
-            val result = service.updateScreen(1, "BATTLE", null, bracket.id, null)
+            val result = service.updateScreen(adminUser, 1, "BATTLE", null, bracket.id, null)
 
             assertTrue(result is Either.Right)
             assertEquals(ScreenState.BATTLE, (result as Either.Right).value.currentScreen)
@@ -252,7 +321,7 @@ class TournamentServiceTest : ServiceTest() {
             whenever(matches.findById(match.id)).thenReturn(Optional.of(match))
             whenever(tournamentStates.save(any())).thenReturn(state)
 
-            val result = service.updateScreen(1, "BATTLE", match.id, bracket.id, null)
+            val result = service.updateScreen(adminUser, 1, "BATTLE", match.id, bracket.id, null)
 
             assertTrue(result is Either.Right)
         }
@@ -272,7 +341,7 @@ class TournamentServiceTest : ServiceTest() {
             whenever(brackets.findById(bracket.id)).thenReturn(Optional.of(bracket))
             whenever(tournamentStates.save(any())).thenReturn(state)
 
-            val result = service.updateScreen(1, "LEADERBOARD", null, bracket.id, null)
+            val result = service.updateScreen(adminUser, 1, "LEADERBOARD", null, bracket.id, null)
 
             assertTrue(result is Either.Right)
             assertEquals(bracket.id, (result as Either.Right).value.currentBracketId)
@@ -294,7 +363,7 @@ class TournamentServiceTest : ServiceTest() {
             whenever(brackets.findByTournamentIdAndDivision(1, "FEMALE")).thenReturn(listOf(bracket))
             whenever(tournamentStates.save(any())).thenReturn(state)
 
-            val result = service.updateScreen(1, "BRACKETS", null, bracket.id, "FEMALE")
+            val result = service.updateScreen(adminUser, 1, "BRACKETS", null, bracket.id, "FEMALE")
 
             assertTrue(result is Either.Right)
             assertEquals("FEMALE", (result as Either.Right).value.currentDivision)
@@ -308,7 +377,7 @@ class TournamentServiceTest : ServiceTest() {
             whenever(brackets.findById(bracket.id)).thenReturn(Optional.of(bracket))
             whenever(brackets.findByTournamentIdAndDivision(1, "FEMALE")).thenReturn(emptyList())
 
-            val result = service.updateScreen(1, "BRACKETS", null, bracket.id, "FEMALE")
+            val result = service.updateScreen(adminUser, 1, "BRACKETS", null, bracket.id, "FEMALE")
 
             assertEquals(failure(ApiError.INVALID_BRACKET_DIVISION), result)
         }
@@ -320,7 +389,7 @@ class TournamentServiceTest : ServiceTest() {
             whenever(tournaments.findById(1)).thenReturn(Optional.of(tournament))
             whenever(brackets.findById(bracket.id)).thenReturn(Optional.of(bracket))
 
-            val result = service.updateScreen(1, "BRACKETS", null, bracket.id, "   ")
+            val result = service.updateScreen(adminUser, 1, "BRACKETS", null, bracket.id, "   ")
 
             assertEquals(failure(ApiError.INVALID_BRACKET_DIVISION), result)
         }
@@ -330,7 +399,7 @@ class TournamentServiceTest : ServiceTest() {
             whenever(tournaments.findById(1)).thenReturn(Optional.of(tournamentEntity()))
             whenever(brackets.findById(99)).thenReturn(Optional.empty())
 
-            val result = service.updateScreen(1, "LEADERBOARD", null, 99, null)
+            val result = service.updateScreen(adminUser, 1, "LEADERBOARD", null, 99, null)
 
             assertEquals(failure(ApiError.BRACKET_NOT_FOUND), result)
         }
@@ -342,7 +411,7 @@ class TournamentServiceTest : ServiceTest() {
             whenever(tournaments.findById(1)).thenReturn(Optional.of(tournament))
             whenever(brackets.findById(otherBracket.id)).thenReturn(Optional.of(otherBracket))
 
-            val result = service.updateScreen(1, "LEADERBOARD", null, otherBracket.id, null)
+            val result = service.updateScreen(adminUser, 1, "LEADERBOARD", null, otherBracket.id, null)
 
             assertEquals(failure(ApiError.BRACKET_NOT_FOUND), result)
         }
@@ -351,7 +420,7 @@ class TournamentServiceTest : ServiceTest() {
         fun `should fail when screen is invalid`() {
             whenever(tournaments.findById(1)).thenReturn(Optional.of(tournamentEntity()))
 
-            val result = service.updateScreen(1, "INVALID", null, null, null)
+            val result = service.updateScreen(adminUser, 1, "INVALID", null, null, null)
 
             assertEquals(failure(ApiError.INVALID_SCREEN_STATE), result)
         }
@@ -364,9 +433,33 @@ class TournamentServiceTest : ServiceTest() {
             whenever(brackets.findById(bracket.id)).thenReturn(Optional.of(bracket))
             whenever(tournamentStates.findByTournamentId(1)).thenReturn(null)
 
-            val result = service.updateScreen(1, "BATTLE", null, bracket.id, null)
+            val result = service.updateScreen(adminUser, 1, "BATTLE", null, bracket.id, null)
 
             assertEquals(failure(ApiError.TOURNAMENT_STATE_NOT_FOUND), result)
+        }
+    }
+
+    @Nested
+    inner class DeleteTournament {
+        @Test
+        fun `should delete the tournament and let the database cascade the rest`() {
+            val tournament = tournamentEntity()
+            whenever(tournaments.findById(1)).thenReturn(Optional.of(tournament))
+
+            val result = service.deleteTournament(1)
+
+            assertTrue(result is Either.Right)
+            verify(tournaments).delete(tournament)
+        }
+
+        @Test
+        fun `should fail when the tournament does not exist`() {
+            whenever(tournaments.findById(99)).thenReturn(Optional.empty())
+
+            val result = service.deleteTournament(99)
+
+            assertEquals(failure(ApiError.TOURNAMENT_NOT_FOUND), result)
+            verify(tournaments, never()).delete(any())
         }
     }
 }

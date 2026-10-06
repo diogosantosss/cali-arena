@@ -29,6 +29,7 @@ import org.mockito.kotlin.verifyNoInteractions
 import org.mockito.kotlin.whenever
 import org.springframework.messaging.simp.SimpMessagingTemplate
 import java.time.Instant
+import java.util.Optional
 
 @ExtendWith(MockitoExtension::class)
 class JudgeWsControllerTest {
@@ -39,6 +40,10 @@ class JudgeWsControllerTest {
     private lateinit var messaging: SimpMessagingTemplate
 
     private lateinit var controller: JudgeWsController
+
+    private val principal = wsPrincipal()
+
+    private val actingUser = principal.authenticatedUser.user
 
     private val now = Instant.parse("2025-01-01T00:00:00Z")
 
@@ -96,58 +101,77 @@ class JudgeWsControllerTest {
     }
 
     @Nested
+    inner class MissingPrincipal {
+        @Test
+        fun `should reject an action without an authenticated principal`() {
+            controller.onJudgeAction(1, action(JudgeActionType.START, RepSide.RED), Optional.empty())
+
+            assertError("/topic/matches/1", "not-authorized")
+            verifyNoInteractions(matchService)
+        }
+
+        @Test
+        fun `should reject an action when the principal is not a judge session`() {
+            controller.onJudgeAction(1, action(JudgeActionType.FINISH, RepSide.BLUE), Optional.of(java.security.Principal { "someone" }))
+
+            assertError("/topic/matches/1", "not-authorized")
+            verifyNoInteractions(matchService)
+        }
+    }
+
+    @Nested
     inner class Start {
         @Test
         fun `should broadcast started event on start action`() {
             val started = StartedMatch(match = match(), progress = progress())
-            whenever(matchService.startMatch(1)).thenReturn(success(started))
+            whenever(matchService.startMatch(actingUser, 1)).thenReturn(success(started))
 
-            controller.onJudgeAction(1, action(JudgeActionType.START, RepSide.RED))
+            controller.onJudgeAction(1, action(JudgeActionType.START, RepSide.RED), Optional.of(principal))
 
             verify(messaging).convertAndSend("/topic/matches/1", JudgeStartedEvent(match = match(), progress = progress()))
         }
 
         @Test
         fun `should broadcast error event when match does not exist`() {
-            whenever(matchService.startMatch(1)).thenReturn(failure(ApiError.MATCH_NOT_FOUND))
+            whenever(matchService.startMatch(actingUser, 1)).thenReturn(failure(ApiError.MATCH_NOT_FOUND))
 
-            controller.onJudgeAction(1, action(JudgeActionType.START, RepSide.RED))
+            controller.onJudgeAction(1, action(JudgeActionType.START, RepSide.RED), Optional.of(principal))
 
             assertError("/topic/matches/1", "match-not-found")
         }
 
         @Test
         fun `should broadcast error event when bracket does not exist`() {
-            whenever(matchService.startMatch(1)).thenReturn(failure(ApiError.BRACKET_NOT_FOUND))
+            whenever(matchService.startMatch(actingUser, 1)).thenReturn(failure(ApiError.BRACKET_NOT_FOUND))
 
-            controller.onJudgeAction(1, action(JudgeActionType.START, RepSide.RED))
+            controller.onJudgeAction(1, action(JudgeActionType.START, RepSide.RED), Optional.of(principal))
 
             assertError("/topic/matches/1", "bracket-not-found")
         }
 
         @Test
         fun `should broadcast error event when athletes are not assigned`() {
-            whenever(matchService.startMatch(1)).thenReturn(failure(ApiError.ATHLETES_NOT_ASSIGNED))
+            whenever(matchService.startMatch(actingUser, 1)).thenReturn(failure(ApiError.ATHLETES_NOT_ASSIGNED))
 
-            controller.onJudgeAction(1, action(JudgeActionType.START, RepSide.RED))
+            controller.onJudgeAction(1, action(JudgeActionType.START, RepSide.RED), Optional.of(principal))
 
             assertError("/topic/matches/1", "athletes-not-assigned")
         }
 
         @Test
         fun `should broadcast error event when match is already started`() {
-            whenever(matchService.startMatch(1)).thenReturn(failure(ApiError.MATCH_ALREADY_STARTED))
+            whenever(matchService.startMatch(actingUser, 1)).thenReturn(failure(ApiError.MATCH_ALREADY_STARTED))
 
-            controller.onJudgeAction(1, action(JudgeActionType.START, RepSide.RED))
+            controller.onJudgeAction(1, action(JudgeActionType.START, RepSide.RED), Optional.of(principal))
 
             assertError("/topic/matches/1", "match-already-started")
         }
 
         @Test
         fun `should broadcast error event when progress does not exist`() {
-            whenever(matchService.startMatch(1)).thenReturn(failure(ApiError.PROGRESS_NOT_FOUND))
+            whenever(matchService.startMatch(actingUser, 1)).thenReturn(failure(ApiError.PROGRESS_NOT_FOUND))
 
-            controller.onJudgeAction(1, action(JudgeActionType.START, RepSide.RED))
+            controller.onJudgeAction(1, action(JudgeActionType.START, RepSide.RED), Optional.of(principal))
 
             assertError("/topic/matches/1", "progress-not-found")
         }
@@ -158,9 +182,9 @@ class JudgeWsControllerTest {
         @Test
         fun `should broadcast reps event on adjust of red side`() {
             val updated = progress(redReps = 3, redExerciseId = 5)
-            whenever(matchService.updateAthletesReps(1, redReps = 3)).thenReturn(success(updated))
+            whenever(matchService.updateAthletesReps(actingUser, 1, redReps = 3)).thenReturn(success(updated))
 
-            controller.onJudgeAction(1, action(JudgeActionType.ADJUST, RepSide.RED, reps = 3))
+            controller.onJudgeAction(1, action(JudgeActionType.ADJUST, RepSide.RED, reps = 3), Optional.of(principal))
 
             verify(messaging).convertAndSend("/topic/matches/1", JudgeRepsEvent(side = RepSide.RED, reps = 3, exerciseId = 5))
         }
@@ -168,9 +192,9 @@ class JudgeWsControllerTest {
         @Test
         fun `should broadcast reps event on adjust of blue side`() {
             val updated = progress(blueReps = 4, blueExerciseId = 6)
-            whenever(matchService.updateAthletesReps(1, blueReps = 4)).thenReturn(success(updated))
+            whenever(matchService.updateAthletesReps(actingUser, 1, blueReps = 4)).thenReturn(success(updated))
 
-            controller.onJudgeAction(1, action(JudgeActionType.ADJUST, RepSide.BLUE, reps = 4))
+            controller.onJudgeAction(1, action(JudgeActionType.ADJUST, RepSide.BLUE, reps = 4), Optional.of(principal))
 
             verify(messaging).convertAndSend("/topic/matches/1", JudgeRepsEvent(side = RepSide.BLUE, reps = 4, exerciseId = 6))
         }
@@ -178,9 +202,9 @@ class JudgeWsControllerTest {
         @Test
         fun `should broadcast finished event when adjust completes the side`() {
             val updated = progress(redReps = 10, redFinishedAt = now, redExerciseId = 5)
-            whenever(matchService.updateAthletesReps(1, redReps = 10)).thenReturn(success(updated))
+            whenever(matchService.updateAthletesReps(actingUser, 1, redReps = 10)).thenReturn(success(updated))
 
-            controller.onJudgeAction(1, action(JudgeActionType.ADJUST, RepSide.RED, reps = 10))
+            controller.onJudgeAction(1, action(JudgeActionType.ADJUST, RepSide.RED, reps = 10), Optional.of(principal))
 
             verify(messaging).convertAndSend("/topic/matches/1", JudgeRepsEvent(side = RepSide.RED, reps = 10, exerciseId = 5))
             verify(messaging).convertAndSend("/topic/matches/1", JudgeFinishedEvent(side = RepSide.RED, finishedAt = now))
@@ -188,54 +212,54 @@ class JudgeWsControllerTest {
 
         @Test
         fun `should broadcast error event when match does not exist`() {
-            whenever(matchService.updateAthletesReps(1, redReps = 3)).thenReturn(failure(ApiError.MATCH_NOT_FOUND))
+            whenever(matchService.updateAthletesReps(actingUser, 1, redReps = 3)).thenReturn(failure(ApiError.MATCH_NOT_FOUND))
 
-            controller.onJudgeAction(1, action(JudgeActionType.ADJUST, RepSide.RED, reps = 3))
+            controller.onJudgeAction(1, action(JudgeActionType.ADJUST, RepSide.RED, reps = 3), Optional.of(principal))
 
             assertError("/topic/matches/1", "match-not-found")
         }
 
         @Test
         fun `should broadcast error event when match is not running`() {
-            whenever(matchService.updateAthletesReps(1, redReps = 3)).thenReturn(failure(ApiError.MATCH_NOT_RUNNING))
+            whenever(matchService.updateAthletesReps(actingUser, 1, redReps = 3)).thenReturn(failure(ApiError.MATCH_NOT_RUNNING))
 
-            controller.onJudgeAction(1, action(JudgeActionType.ADJUST, RepSide.RED, reps = 3))
+            controller.onJudgeAction(1, action(JudgeActionType.ADJUST, RepSide.RED, reps = 3), Optional.of(principal))
 
             assertError("/topic/matches/1", "match-not-running")
         }
 
         @Test
         fun `should broadcast error event when progress does not exist`() {
-            whenever(matchService.updateAthletesReps(1, redReps = 3)).thenReturn(failure(ApiError.PROGRESS_NOT_FOUND))
+            whenever(matchService.updateAthletesReps(actingUser, 1, redReps = 3)).thenReturn(failure(ApiError.PROGRESS_NOT_FOUND))
 
-            controller.onJudgeAction(1, action(JudgeActionType.ADJUST, RepSide.RED, reps = 3))
+            controller.onJudgeAction(1, action(JudgeActionType.ADJUST, RepSide.RED, reps = 3), Optional.of(principal))
 
             assertError("/topic/matches/1", "progress-not-found")
         }
 
         @Test
         fun `should broadcast error event when athlete is not in match`() {
-            whenever(matchService.updateAthletesReps(1, redReps = 3)).thenReturn(failure(ApiError.ATHLETE_NOT_IN_MATCH))
+            whenever(matchService.updateAthletesReps(actingUser, 1, redReps = 3)).thenReturn(failure(ApiError.ATHLETE_NOT_IN_MATCH))
 
-            controller.onJudgeAction(1, action(JudgeActionType.ADJUST, RepSide.RED, reps = 3))
+            controller.onJudgeAction(1, action(JudgeActionType.ADJUST, RepSide.RED, reps = 3), Optional.of(principal))
 
             assertError("/topic/matches/1", "athlete-not-in-match")
         }
 
         @Test
         fun `should broadcast error event when exercise does not exist`() {
-            whenever(matchService.updateAthletesReps(1, redReps = 3)).thenReturn(failure(ApiError.EXERCISE_NOT_FOUND))
+            whenever(matchService.updateAthletesReps(actingUser, 1, redReps = 3)).thenReturn(failure(ApiError.EXERCISE_NOT_FOUND))
 
-            controller.onJudgeAction(1, action(JudgeActionType.ADJUST, RepSide.RED, reps = 3))
+            controller.onJudgeAction(1, action(JudgeActionType.ADJUST, RepSide.RED, reps = 3), Optional.of(principal))
 
             assertError("/topic/matches/1", "exercise-not-found")
         }
 
         @Test
         fun `should broadcast error event when bracket does not exist`() {
-            whenever(matchService.updateAthletesReps(1, redReps = 3)).thenReturn(failure(ApiError.BRACKET_NOT_FOUND))
+            whenever(matchService.updateAthletesReps(actingUser, 1, redReps = 3)).thenReturn(failure(ApiError.BRACKET_NOT_FOUND))
 
-            controller.onJudgeAction(1, action(JudgeActionType.ADJUST, RepSide.RED, reps = 3))
+            controller.onJudgeAction(1, action(JudgeActionType.ADJUST, RepSide.RED, reps = 3), Optional.of(principal))
 
             assertError("/topic/matches/1", "bracket-not-found")
         }
@@ -246,9 +270,9 @@ class JudgeWsControllerTest {
         @Test
         fun `should broadcast finished event when side is finished`() {
             val finished = progress(redReps = 10, redFinishedAt = now)
-            whenever(matchService.forceFinishSide(1, RepSide.RED)).thenReturn(success(finished))
+            whenever(matchService.forceFinishSide(actingUser, 1, RepSide.RED)).thenReturn(success(finished))
 
-            controller.onJudgeAction(1, action(JudgeActionType.FINISH, RepSide.RED))
+            controller.onJudgeAction(1, action(JudgeActionType.FINISH, RepSide.RED), Optional.of(principal))
 
             verify(messaging).convertAndSend("/topic/matches/1", JudgeFinishedEvent(side = RepSide.RED, finishedAt = now))
         }
@@ -256,63 +280,63 @@ class JudgeWsControllerTest {
         @Test
         fun `should not broadcast when finish does not finish the side`() {
             val notFinished = progress(blueReps = 5, blueFinishedAt = null)
-            whenever(matchService.forceFinishSide(1, RepSide.BLUE)).thenReturn(success(notFinished))
+            whenever(matchService.forceFinishSide(actingUser, 1, RepSide.BLUE)).thenReturn(success(notFinished))
 
-            controller.onJudgeAction(1, action(JudgeActionType.FINISH, RepSide.BLUE))
+            controller.onJudgeAction(1, action(JudgeActionType.FINISH, RepSide.BLUE), Optional.of(principal))
 
             verifyNoInteractions(messaging)
         }
 
         @Test
         fun `should broadcast error event when match does not exist`() {
-            whenever(matchService.forceFinishSide(1, RepSide.RED)).thenReturn(failure(ApiError.MATCH_NOT_FOUND))
+            whenever(matchService.forceFinishSide(actingUser, 1, RepSide.RED)).thenReturn(failure(ApiError.MATCH_NOT_FOUND))
 
-            controller.onJudgeAction(1, action(JudgeActionType.FINISH, RepSide.RED))
+            controller.onJudgeAction(1, action(JudgeActionType.FINISH, RepSide.RED), Optional.of(principal))
 
             assertError("/topic/matches/1", "match-not-found")
         }
 
         @Test
         fun `should broadcast error event when match is not running`() {
-            whenever(matchService.forceFinishSide(1, RepSide.RED)).thenReturn(failure(ApiError.MATCH_NOT_RUNNING))
+            whenever(matchService.forceFinishSide(actingUser, 1, RepSide.RED)).thenReturn(failure(ApiError.MATCH_NOT_RUNNING))
 
-            controller.onJudgeAction(1, action(JudgeActionType.FINISH, RepSide.RED))
+            controller.onJudgeAction(1, action(JudgeActionType.FINISH, RepSide.RED), Optional.of(principal))
 
             assertError("/topic/matches/1", "match-not-running")
         }
 
         @Test
         fun `should broadcast error event when progress does not exist`() {
-            whenever(matchService.forceFinishSide(1, RepSide.RED)).thenReturn(failure(ApiError.PROGRESS_NOT_FOUND))
+            whenever(matchService.forceFinishSide(actingUser, 1, RepSide.RED)).thenReturn(failure(ApiError.PROGRESS_NOT_FOUND))
 
-            controller.onJudgeAction(1, action(JudgeActionType.FINISH, RepSide.RED))
+            controller.onJudgeAction(1, action(JudgeActionType.FINISH, RepSide.RED), Optional.of(principal))
 
             assertError("/topic/matches/1", "progress-not-found")
         }
 
         @Test
         fun `should broadcast error event when athlete is not in match`() {
-            whenever(matchService.forceFinishSide(1, RepSide.RED)).thenReturn(failure(ApiError.ATHLETE_NOT_IN_MATCH))
+            whenever(matchService.forceFinishSide(actingUser, 1, RepSide.RED)).thenReturn(failure(ApiError.ATHLETE_NOT_IN_MATCH))
 
-            controller.onJudgeAction(1, action(JudgeActionType.FINISH, RepSide.RED))
+            controller.onJudgeAction(1, action(JudgeActionType.FINISH, RepSide.RED), Optional.of(principal))
 
             assertError("/topic/matches/1", "athlete-not-in-match")
         }
 
         @Test
         fun `should broadcast error event when opponent is not finished`() {
-            whenever(matchService.forceFinishSide(1, RepSide.RED)).thenReturn(failure(ApiError.OPPONENT_NOT_FINISHED))
+            whenever(matchService.forceFinishSide(actingUser, 1, RepSide.RED)).thenReturn(failure(ApiError.OPPONENT_NOT_FINISHED))
 
-            controller.onJudgeAction(1, action(JudgeActionType.FINISH, RepSide.RED))
+            controller.onJudgeAction(1, action(JudgeActionType.FINISH, RepSide.RED), Optional.of(principal))
 
             assertError("/topic/matches/1", "opponent-not-finished")
         }
 
         @Test
         fun `should broadcast error event when bracket does not exist`() {
-            whenever(matchService.forceFinishSide(1, RepSide.RED)).thenReturn(failure(ApiError.BRACKET_NOT_FOUND))
+            whenever(matchService.forceFinishSide(actingUser, 1, RepSide.RED)).thenReturn(failure(ApiError.BRACKET_NOT_FOUND))
 
-            controller.onJudgeAction(1, action(JudgeActionType.FINISH, RepSide.RED))
+            controller.onJudgeAction(1, action(JudgeActionType.FINISH, RepSide.RED), Optional.of(principal))
 
             assertError("/topic/matches/1", "bracket-not-found")
         }

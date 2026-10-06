@@ -3,6 +3,7 @@ package com.caliarena.service
 import com.caliarena.domain.routine.Exercise
 import com.caliarena.domain.routine.RoutineOverview
 import com.caliarena.domain.routine.ScreenRoutine
+import com.caliarena.domain.user.User
 import com.caliarena.repo.entities.routine.ExerciseEntity
 import com.caliarena.repo.entities.routine.ScreenRoutineEntity
 import com.caliarena.repo.trx.TransactionManager
@@ -29,6 +30,7 @@ class ScreenRoutineService(
         }
 
     fun create(
+        user: User,
         tournamentId: Int,
         routineId: Int,
         displayOrder: Int,
@@ -37,6 +39,10 @@ class ScreenRoutineService(
         trx.run {
             tournaments.findByIdOrNull(tournamentId)
                 ?: return@run failure(ApiError.TOURNAMENT_NOT_FOUND)
+
+            if (!canManageTournament(user, tournamentId)) {
+                return@run failure(ApiError.NOT_AUTHORIZED)
+            }
 
             val routine =
                 routines.findByIdOrNull(routineId)?.toDomain()
@@ -78,6 +84,7 @@ class ScreenRoutineService(
         }
 
     fun update(
+        user: User,
         tournamentId: Int,
         id: Int,
         isVisible: Boolean?,
@@ -85,6 +92,10 @@ class ScreenRoutineService(
         label: String?,
     ): Either<ApiError, ScreenRoutine> =
         trx.run {
+            if (!canManageTournament(user, tournamentId)) {
+                return@run failure(ApiError.NOT_AUTHORIZED)
+            }
+
             val existing =
                 screenRoutines.findByIdOrNull(id)
                     ?: return@run failure(ApiError.SCREEN_ROUTINE_NOT_FOUND)
@@ -123,10 +134,15 @@ class ScreenRoutineService(
         }
 
     fun delete(
+        user: User,
         tournamentId: Int,
         id: Int,
     ): Either<ApiError, Unit> =
         trx.run {
+            if (!canManageTournament(user, tournamentId)) {
+                return@run failure(ApiError.NOT_AUTHORIZED)
+            }
+
             val existing =
                 screenRoutines.findByIdOrNull(id)
                     ?: return@run failure(ApiError.SCREEN_ROUTINE_NOT_FOUND)

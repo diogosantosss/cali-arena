@@ -6,6 +6,8 @@ import org.springframework.data.repository.CrudRepository
 interface BracketRepository : CrudRepository<BracketEntity, Int> {
     fun findByTournamentId(tournamentId: Int): List<BracketEntity>
 
+    fun findByTournamentIdIn(tournamentIds: Collection<Int>): List<BracketEntity>
+
     fun findByTournamentIdAndDivision(
         tournamentId: Int,
         division: String,

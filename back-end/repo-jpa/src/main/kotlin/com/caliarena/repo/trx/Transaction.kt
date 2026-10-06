@@ -9,6 +9,7 @@ import com.caliarena.repo.MatchProgressRepository
 import com.caliarena.repo.MatchRepository
 import com.caliarena.repo.ScreenRoutineRepository
 import com.caliarena.repo.TokenRepository
+import com.caliarena.repo.TournamentJudgeRepository
 import com.caliarena.repo.TournamentRepository
 import com.caliarena.repo.TournamentStateRepository
 import com.caliarena.repo.UserRepository
@@ -26,6 +27,7 @@ interface Transaction {
     val tournaments: TournamentRepository
     val brackets: BracketRepository
     val tournamentStates: TournamentStateRepository
+    val tournamentJudges: TournamentJudgeRepository
 
     fun rollback()
 }

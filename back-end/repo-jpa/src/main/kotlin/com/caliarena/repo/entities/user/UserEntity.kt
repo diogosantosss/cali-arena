@@ -1,5 +1,6 @@
 package com.caliarena.repo.entities.user
 
+import com.caliarena.domain.tournament.StaffMember
 import com.caliarena.domain.user.PasswordValidationInfo
 import com.caliarena.domain.user.User
 import com.caliarena.domain.user.UserRole
@@ -36,6 +37,17 @@ class UserEntity(
             password = PasswordValidationInfo(password),
             role = role,
             createdAt = Instant.ofEpochSecond(createdAt),
+        )
+
+    /**
+     * Password free projection, used when listing tournament staff so a host can
+     * pick users without exposing credentials.
+     */
+    fun toStaffMember() =
+        StaffMember(
+            id = id,
+            username = username,
+            role = role,
         )
 
     companion object {

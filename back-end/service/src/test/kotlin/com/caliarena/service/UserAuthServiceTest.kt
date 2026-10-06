@@ -126,6 +126,7 @@ class UserAuthServiceTest : ServiceTest() {
                 service.createUser(
                     "diogo",
                     "Password1",
+                    UserRole.JUDGE,
                 )
 
             assertEquals(success(savedEntity.toDomain()), result)
@@ -149,6 +150,7 @@ class UserAuthServiceTest : ServiceTest() {
                 service.createUser(
                     "diogo",
                     "Password1",
+                    UserRole.JUDGE,
                 )
 
             assertEquals(
@@ -165,6 +167,7 @@ class UserAuthServiceTest : ServiceTest() {
                 service.createUser(
                     "diogo",
                     "123",
+                    UserRole.JUDGE,
                 )
 
             assertEquals(
@@ -190,6 +193,7 @@ class UserAuthServiceTest : ServiceTest() {
             service.createUser(
                 "diogo",
                 "Password1",
+                UserRole.JUDGE,
             )
 
             verify(passwordEncoder).encode("Password1")

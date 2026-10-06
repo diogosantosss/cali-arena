@@ -1,5 +1,12 @@
 import { Navigate, Outlet } from "react-router-dom";
+import { homeRouteFor } from "@/data/auth";
+import type { UserRole } from "@/data/auth";
 import { useAuth } from "@/hooks/use-auth";
+
+interface ProtectedRouteProps {
+  /** When given, only these roles may enter; the others go to their own home. */
+  roles?: readonly UserRole[];
+}
 
 /**
  * Wraps authenticated routes. While the session check (getMe) is running it
@@ -8,8 +15,8 @@ import { useAuth } from "@/hooks/use-auth";
  * page. This guarantees a user is never left stuck on a dashboard page when
  * the backend goes down or the token becomes invalid.
  */
-export function ProtectedRoute() {
-  const { isAuthenticated, isLoading } = useAuth();
+export function ProtectedRoute({ roles }: ProtectedRouteProps) {
+  const { isAuthenticated, isLoading, user } = useAuth();
 
   if (isLoading) {
     return <div className="min-h-screen" style={{ background: "var(--background)" }} />;
@@ -17,6 +24,10 @@ export function ProtectedRoute() {
 
   if (!isAuthenticated) {
     return <Navigate to="/" replace />;
+  }
+
+  if (roles && user && !roles.includes(user.role)) {
+    return <Navigate to={homeRouteFor(user.role)} replace />;
   }
 
   return <Outlet />;

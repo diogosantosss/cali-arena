@@ -22,6 +22,8 @@ class TournamentEntity(
     var name: String = "",
     @Column(length = 100)
     var location: String? = null,
+    @Column(name = "host_id")
+    var hostId: Int? = null,
     @Column(name = "start_date")
     var startDate: Long? = null,
     @Column(name = "end_date")
@@ -41,6 +43,7 @@ class TournamentEntity(
             endDate = endDate?.let { Instant.ofEpochSecond(it) },
             status = status,
             createdAt = Instant.ofEpochSecond(createdAt),
+            hostId = hostId,
         )
 
     companion object {
@@ -49,6 +52,7 @@ class TournamentEntity(
                 id = this.id,
                 name = this.name,
                 location = this.location,
+                hostId = this.hostId,
                 startDate = this.startDate?.epochSecond,
                 endDate = this.endDate?.epochSecond,
                 status = this.status,

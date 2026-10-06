@@ -33,6 +33,8 @@ class BracketControllerTest {
 
     private lateinit var controller: BracketController
 
+    private val authUser = authenticatedUser()
+
     private val now = Instant.parse("2025-01-01T00:00:00Z")
 
     @BeforeEach
@@ -64,48 +66,58 @@ class BracketControllerTest {
         @Test
         fun `should create bracket successfully`() {
             val created = bracket()
-            whenever(bracketService.createBracket(10, "Open", "QUALIFIERS")).thenReturn(success(created))
+            whenever(bracketService.createBracket(authUser.user, 10, "Open", "QUALIFIERS")).thenReturn(success(created))
 
-            val response = controller.createBracket(input)
+            val response = controller.createBracket(authUser, input)
 
             assertEquals(HttpStatus.CREATED, response.statusCode)
             assertEquals("/api/brackets/1", response.headers.getFirst("Location"))
             assertEquals(created, response.body)
-            verify(bracketService).createBracket(10, "Open", "QUALIFIERS")
+            verify(bracketService).createBracket(authUser.user, 10, "Open", "QUALIFIERS")
         }
 
         @Test
         fun `should return not found when tournament does not exist`() {
-            whenever(bracketService.createBracket(99, "Open", "QUALIFIERS")).thenReturn(failure(ApiError.TOURNAMENT_NOT_FOUND))
+            whenever(
+                bracketService.createBracket(authUser.user, 99, "Open", "QUALIFIERS"),
+            ).thenReturn(failure(ApiError.TOURNAMENT_NOT_FOUND))
 
-            val response = controller.createBracket(CreateBracketInput(tournamentId = 99, division = "Open", stage = "QUALIFIERS"))
+            val response =
+                controller.createBracket(
+                    authUser,
+                    CreateBracketInput(tournamentId = 99, division = "Open", stage = "QUALIFIERS"),
+                )
 
             assertProblem(response, HttpStatus.NOT_FOUND, "tournament-not-found")
         }
 
         @Test
         fun `should return bad request when division is invalid`() {
-            whenever(bracketService.createBracket(10, "  ", "QUALIFIERS")).thenReturn(failure(ApiError.INVALID_BRACKET_DIVISION))
+            whenever(
+                bracketService.createBracket(authUser.user, 10, "  ", "QUALIFIERS"),
+            ).thenReturn(failure(ApiError.INVALID_BRACKET_DIVISION))
 
-            val response = controller.createBracket(CreateBracketInput(tournamentId = 10, division = "  ", stage = "QUALIFIERS"))
+            val response = controller.createBracket(authUser, CreateBracketInput(tournamentId = 10, division = "  ", stage = "QUALIFIERS"))
 
             assertProblem(response, HttpStatus.BAD_REQUEST, "invalid-bracket-division")
         }
 
         @Test
         fun `should return bad request when stage is invalid`() {
-            whenever(bracketService.createBracket(10, "Open", "INVALID")).thenReturn(failure(ApiError.INVALID_BRACKET_STAGE))
+            whenever(bracketService.createBracket(authUser.user, 10, "Open", "INVALID")).thenReturn(failure(ApiError.INVALID_BRACKET_STAGE))
 
-            val response = controller.createBracket(CreateBracketInput(tournamentId = 10, division = "Open", stage = "INVALID"))
+            val response = controller.createBracket(authUser, CreateBracketInput(tournamentId = 10, division = "Open", stage = "INVALID"))
 
             assertProblem(response, HttpStatus.BAD_REQUEST, "invalid-bracket-stage")
         }
 
         @Test
         fun `should return conflict when bracket already exists`() {
-            whenever(bracketService.createBracket(10, "Open", "QUALIFIERS")).thenReturn(failure(ApiError.BRACKET_ALREADY_EXISTS))
+            whenever(
+                bracketService.createBracket(authUser.user, 10, "Open", "QUALIFIERS"),
+            ).thenReturn(failure(ApiError.BRACKET_ALREADY_EXISTS))
 
-            val response = controller.createBracket(input)
+            val response = controller.createBracket(authUser, input)
 
             assertProblem(response, HttpStatus.CONFLICT, "bracket-already-exists")
         }

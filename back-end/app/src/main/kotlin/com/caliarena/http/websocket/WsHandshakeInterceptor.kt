@@ -2,6 +2,7 @@ package com.caliarena.http.websocket
 
 import com.caliarena.domain.user.UserRole
 import com.caliarena.http.RequestTokenProcessor
+import com.caliarena.http.WsAuthenticatedPrincipal
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.http.server.ServerHttpRequest
@@ -35,9 +36,20 @@ class WsHandshakeInterceptor(
             "user {}",
             user.user,
         )
-        if (user.user.role != UserRole.JUDGE && user.user.role != UserRole.ADMIN) {
+
+        // coarse gate only: tournament scoped permissions are checked per message
+        if (user.user.role !in ALLOWED_ROLES) {
             response.setStatusCode(HttpStatus.FORBIDDEN)
             return false
+        }
+
+        val principal = WsAuthenticatedPrincipal(user)
+
+        @Suppress("UNCHECKED_CAST")
+        (attributes as? MutableMap<String, Any>)?.let {
+            it[USER_ATTRIBUTE] = principal
+            // Spring also looks for a "principal" entry when resolving the session user
+            it[PRINCIPAL_ATTRIBUTE] = principal
         }
 
         return true
@@ -57,6 +69,14 @@ class WsHandshakeInterceptor(
     }
 
     companion object {
+        /** Session attribute holding the [WsAuthenticatedPrincipal] of the connection. */
+        const val USER_ATTRIBUTE = "caliarena.authenticatedUser"
+
+        /** Key Spring's handshake handler reads to expose the session principal. */
+        const val PRINCIPAL_ATTRIBUTE = "principal"
+
+        private val ALLOWED_ROLES = setOf(UserRole.ADMIN, UserRole.HOST, UserRole.JUDGE)
+
         private val logger = LoggerFactory.getLogger(WsHandshakeInterceptor::class.java)
     }
 }

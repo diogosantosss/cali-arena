@@ -31,7 +31,7 @@ abstract class AbstractRepositoryTest {
         jdbc.execute(
             """
             TRUNCATE TABLE 
-            match_progress, matches, screen_routines, tournament_state, brackets, tournaments, exercises, endurance_routines, tokens, users, athletes, clubs 
+            match_progress, matches, screen_routines, tournament_state, brackets, tournament_judges, tournaments, exercises, endurance_routines, tokens, users, athletes, clubs 
             CASCADE
             """.trimIndent(),
         )

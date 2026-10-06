@@ -11,6 +11,7 @@ import type {
   TournamentBracketsSummary,
   TournamentState,
   UpdateScreenInput,
+  UpdateTournamentStatusInput,
 } from "@/data/tournaments";
 
 export const tournamentsService = {
@@ -88,5 +89,13 @@ export const tournamentsService = {
 
   deleteScreenRoutine(tournamentId: number, id: number): Promise<void> {
     return apiClient.delete(`/tournaments/${tournamentId}/screen-routines/${id}`);
+  },
+
+  updateTournamentStatus(tournamentId: number, status: Tournament["status"]): Promise<Tournament> {
+    return apiClient.put(`/tournaments/${tournamentId}/status`, { status } as UpdateTournamentStatusInput);
+  },
+
+  deleteTournament(id: number): Promise<void> {
+    return apiClient.delete(`/tournaments/${id}`);
   },
 };

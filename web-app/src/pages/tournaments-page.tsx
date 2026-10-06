@@ -12,6 +12,7 @@ import { ManagementList } from "@/components/shared/management-list";
 import { ListRow } from "@/components/shared/list-row";
 import { Badge } from "@/components/shared/badge";
 import { formatDate } from "@/utils/format";
+import { usePermissions } from "@/hooks/use-permissions";
 import { tournamentsService } from "@/services/tournaments.service";
 import type { CreateTournamentInput, TournamentStatus } from "@/data/tournaments";
 import { MapPin, CalendarDays, ArrowRight, Plus } from "lucide-react";
@@ -81,6 +82,7 @@ function reducer(state: TournamentsUiState, action: Action): TournamentsUiState 
 export function TournamentsPage() {
   const loadTournaments = useCallback(() => tournamentsService.getTournaments(), []);
   const { items, loading, error, reload } = useCollection(loadTournaments, "Failed to load");
+  const { canCreateTournament, isAdmin } = usePermissions();
 
   const navigate = useNavigate();
   const [ui, dispatch] = useReducer(reducer, initialUiState);
@@ -108,13 +110,16 @@ export function TournamentsPage() {
     <div className="max-w-5xl mx-auto space-y-10 animate-fade-up" style={{ opacity: 0 }}>
       <PageHeader
         title="Tournaments"
+        eyebrow={isAdmin ? "Management" : "Your tournaments"}
         action={
-          <ToggleButton
-            open={ui.formOpen}
-            onClick={() => dispatch({ type: "toggleForm" })}
-            icon={Plus}
-            label="New tournament"
-          />
+          canCreateTournament ? (
+            <ToggleButton
+              open={ui.formOpen}
+              onClick={() => dispatch({ type: "toggleForm" })}
+              icon={Plus}
+              label="New tournament"
+            />
+          ) : undefined
         }
       />
 

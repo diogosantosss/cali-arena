@@ -38,6 +38,8 @@ class ScreenRoutineControllerTest {
 
     private lateinit var controller: ScreenRoutineController
 
+    private val authUser = authenticatedUser()
+
     @BeforeEach
     fun setUp() {
         controller = ScreenRoutineController(service, publisher)
@@ -106,29 +108,29 @@ class ScreenRoutineControllerTest {
         @Test
         fun `should create screen routine successfully`() {
             val created = screenRoutine()
-            whenever(service.create(7, 5, 1, null)).thenReturn(success(created))
+            whenever(service.create(authUser.user, 7, 5, 1, null)).thenReturn(success(created))
 
-            val response = controller.create(7, input)
+            val response = controller.create(authUser, 7, input)
 
             assertEquals(HttpStatus.CREATED, response.statusCode)
             assertEquals(created, response.body)
-            verify(service).create(7, 5, 1, null)
+            verify(service).create(authUser.user, 7, 5, 1, null)
         }
 
         @Test
         fun `should return not found when tournament does not exist`() {
-            whenever(service.create(99, 5, 1, null)).thenReturn(failure(ApiError.TOURNAMENT_NOT_FOUND))
+            whenever(service.create(authUser.user, 99, 5, 1, null)).thenReturn(failure(ApiError.TOURNAMENT_NOT_FOUND))
 
-            val response = controller.create(99, input)
+            val response = controller.create(authUser, 99, input)
 
             assertProblem(response, HttpStatus.NOT_FOUND, "tournament-not-found")
         }
 
         @Test
         fun `should return not found when routine does not exist`() {
-            whenever(service.create(7, 99, 1, null)).thenReturn(failure(ApiError.ROUTINE_NOT_FOUND))
+            whenever(service.create(authUser.user, 7, 99, 1, null)).thenReturn(failure(ApiError.ROUTINE_NOT_FOUND))
 
-            val response = controller.create(7, input.copy(routineId = 99))
+            val response = controller.create(authUser, 7, input.copy(routineId = 99))
 
             assertProblem(response, HttpStatus.NOT_FOUND, "routine-not-found")
         }
@@ -139,38 +141,38 @@ class ScreenRoutineControllerTest {
         @Test
         fun `should update visibility successfully`() {
             val updated = screenRoutine().copy(isVisible = false)
-            whenever(service.update(7, 1, false, null, null)).thenReturn(success(updated))
+            whenever(service.update(authUser.user, 7, 1, false, null, null)).thenReturn(success(updated))
 
-            val response = controller.updateVisibility(7, 1, UpdateVisibilityInput(isVisible = false))
+            val response = controller.updateVisibility(authUser, 7, 1, UpdateVisibilityInput(isVisible = false))
 
             assertEquals(HttpStatus.OK, response.statusCode)
             assertEquals(updated, response.body)
-            verify(service).update(7, 1, false, null, null)
+            verify(service).update(authUser.user, 7, 1, false, null, null)
         }
 
         @Test
         fun `should return not found when screen routine does not exist`() {
-            whenever(service.update(7, 99, true, null, null)).thenReturn(failure(ApiError.SCREEN_ROUTINE_NOT_FOUND))
+            whenever(service.update(authUser.user, 7, 99, true, null, null)).thenReturn(failure(ApiError.SCREEN_ROUTINE_NOT_FOUND))
 
-            val response = controller.updateVisibility(7, 99, UpdateVisibilityInput(isVisible = true))
+            val response = controller.updateVisibility(authUser, 7, 99, UpdateVisibilityInput(isVisible = true))
 
             assertProblem(response, HttpStatus.NOT_FOUND, "screen-routine-not-found")
         }
 
         @Test
         fun `should return conflict on tournament mismatch`() {
-            whenever(service.update(7, 1, true, null, null)).thenReturn(failure(ApiError.TOURNAMENT_MISMATCH))
+            whenever(service.update(authUser.user, 7, 1, true, null, null)).thenReturn(failure(ApiError.TOURNAMENT_MISMATCH))
 
-            val response = controller.updateVisibility(7, 1, UpdateVisibilityInput(isVisible = true))
+            val response = controller.updateVisibility(authUser, 7, 1, UpdateVisibilityInput(isVisible = true))
 
             assertProblem(response, HttpStatus.CONFLICT, "tournament-mismatch")
         }
 
         @Test
         fun `should return not found when routine does not exist`() {
-            whenever(service.update(7, 1, true, null, null)).thenReturn(failure(ApiError.ROUTINE_NOT_FOUND))
+            whenever(service.update(authUser.user, 7, 1, true, null, null)).thenReturn(failure(ApiError.ROUTINE_NOT_FOUND))
 
-            val response = controller.updateVisibility(7, 1, UpdateVisibilityInput(isVisible = true))
+            val response = controller.updateVisibility(authUser, 7, 1, UpdateVisibilityInput(isVisible = true))
 
             assertProblem(response, HttpStatus.NOT_FOUND, "routine-not-found")
         }
@@ -180,37 +182,37 @@ class ScreenRoutineControllerTest {
     inner class UpdateDisplayOrder {
         @Test
         fun `should update display order successfully`() {
-            whenever(service.update(7, 1, null, 3, null)).thenReturn(success(screenRoutine()))
+            whenever(service.update(authUser.user, 7, 1, null, 3, null)).thenReturn(success(screenRoutine()))
 
-            val response = controller.updateDisplayOrder(7, 1, UpdateDisplayOrderInput(displayOrder = 3))
+            val response = controller.updateDisplayOrder(authUser, 7, 1, UpdateDisplayOrderInput(displayOrder = 3))
 
             assertEquals(HttpStatus.OK, response.statusCode)
-            verify(service).update(7, 1, null, 3, null)
+            verify(service).update(authUser.user, 7, 1, null, 3, null)
         }
 
         @Test
         fun `should return not found when screen routine does not exist`() {
-            whenever(service.update(7, 99, null, 3, null)).thenReturn(failure(ApiError.SCREEN_ROUTINE_NOT_FOUND))
+            whenever(service.update(authUser.user, 7, 99, null, 3, null)).thenReturn(failure(ApiError.SCREEN_ROUTINE_NOT_FOUND))
 
-            val response = controller.updateDisplayOrder(7, 99, UpdateDisplayOrderInput(displayOrder = 3))
+            val response = controller.updateDisplayOrder(authUser, 7, 99, UpdateDisplayOrderInput(displayOrder = 3))
 
             assertProblem(response, HttpStatus.NOT_FOUND, "screen-routine-not-found")
         }
 
         @Test
         fun `should return conflict on tournament mismatch`() {
-            whenever(service.update(7, 1, null, 3, null)).thenReturn(failure(ApiError.TOURNAMENT_MISMATCH))
+            whenever(service.update(authUser.user, 7, 1, null, 3, null)).thenReturn(failure(ApiError.TOURNAMENT_MISMATCH))
 
-            val response = controller.updateDisplayOrder(7, 1, UpdateDisplayOrderInput(displayOrder = 3))
+            val response = controller.updateDisplayOrder(authUser, 7, 1, UpdateDisplayOrderInput(displayOrder = 3))
 
             assertProblem(response, HttpStatus.CONFLICT, "tournament-mismatch")
         }
 
         @Test
         fun `should return not found when routine does not exist`() {
-            whenever(service.update(7, 1, null, 3, null)).thenReturn(failure(ApiError.ROUTINE_NOT_FOUND))
+            whenever(service.update(authUser.user, 7, 1, null, 3, null)).thenReturn(failure(ApiError.ROUTINE_NOT_FOUND))
 
-            val response = controller.updateDisplayOrder(7, 1, UpdateDisplayOrderInput(displayOrder = 3))
+            val response = controller.updateDisplayOrder(authUser, 7, 1, UpdateDisplayOrderInput(displayOrder = 3))
 
             assertProblem(response, HttpStatus.NOT_FOUND, "routine-not-found")
         }
@@ -220,29 +222,29 @@ class ScreenRoutineControllerTest {
     inner class Delete {
         @Test
         fun `should delete screen routine successfully`() {
-            whenever(service.delete(7, 1)).thenReturn(success(Unit))
+            whenever(service.delete(authUser.user, 7, 1)).thenReturn(success(Unit))
 
-            val response = controller.delete(7, 1)
+            val response = controller.delete(authUser, 7, 1)
 
             assertEquals(HttpStatus.NO_CONTENT, response.statusCode)
             assertNull(response.body)
-            verify(service).delete(7, 1)
+            verify(service).delete(authUser.user, 7, 1)
         }
 
         @Test
         fun `should return not found when screen routine does not exist`() {
-            whenever(service.delete(7, 99)).thenReturn(failure(ApiError.SCREEN_ROUTINE_NOT_FOUND))
+            whenever(service.delete(authUser.user, 7, 99)).thenReturn(failure(ApiError.SCREEN_ROUTINE_NOT_FOUND))
 
-            val response = controller.delete(7, 99)
+            val response = controller.delete(authUser, 7, 99)
 
             assertProblem(response, HttpStatus.NOT_FOUND, "screen-routine-not-found")
         }
 
         @Test
         fun `should return conflict on tournament mismatch`() {
-            whenever(service.delete(7, 1)).thenReturn(failure(ApiError.TOURNAMENT_MISMATCH))
+            whenever(service.delete(authUser.user, 7, 1)).thenReturn(failure(ApiError.TOURNAMENT_MISMATCH))
 
-            val response = controller.delete(7, 1)
+            val response = controller.delete(authUser, 7, 1)
 
             assertProblem(response, HttpStatus.CONFLICT, "tournament-mismatch")
         }

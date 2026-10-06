@@ -15,6 +15,7 @@ import com.caliarena.repo.entities.routine.ExerciseEntity
 import com.caliarena.repo.entities.routine.ScreenRoutineEntity
 import com.caliarena.repo.entities.tournament.BracketEntity
 import com.caliarena.repo.entities.tournament.TournamentEntity
+import com.caliarena.repo.entities.tournament.TournamentJudgeEntity
 import com.caliarena.repo.entities.user.TokenEntity
 import com.caliarena.repo.entities.user.UserEntity
 import com.caliarena.repo.trx.Transaction
@@ -77,11 +78,27 @@ internal fun Transaction.newAthlete(
     )
 }
 
-internal fun Transaction.newTournament(status: TournamentStatus = TournamentStatus.DRAFT): TournamentEntity =
+internal fun Transaction.newTournament(
+    status: TournamentStatus = TournamentStatus.DRAFT,
+    host: UserEntity? = null,
+): TournamentEntity =
     tournaments.save(
         TournamentEntity(
             name = "t-${System.nanoTime()}",
+            hostId = host?.id,
             status = status,
+            createdAt = now().epochSecond,
+        ),
+    )
+
+internal fun Transaction.assignJudge(
+    tournament: TournamentEntity,
+    judge: UserEntity,
+): TournamentJudgeEntity =
+    tournamentJudges.save(
+        TournamentJudgeEntity(
+            tournamentId = tournament.id,
+            userId = judge.id,
             createdAt = now().epochSecond,
         ),
     )

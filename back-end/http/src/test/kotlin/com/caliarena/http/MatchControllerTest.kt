@@ -38,6 +38,8 @@ class MatchControllerTest {
 
     private lateinit var controller: MatchController
 
+    private val authUser = authenticatedUser()
+
     private val now = Instant.parse("2025-01-01T00:00:00Z")
 
     @BeforeEach
@@ -89,57 +91,57 @@ class MatchControllerTest {
         @Test
         fun `should create match successfully`() {
             val created = match(id = 1)
-            whenever(matchService.createMatch(10, 5, 1, 2)).thenReturn(success(created))
+            whenever(matchService.createMatch(authUser.user, 10, 5, 1, 2)).thenReturn(success(created))
 
-            val response = controller.createMatch(input)
+            val response = controller.createMatch(authUser, input)
 
             assertEquals(HttpStatus.CREATED, response.statusCode)
             assertEquals("/api/matches/1", response.headers.getFirst("Location"))
             assertEquals(created, response.body)
-            verify(matchService).createMatch(10, 5, 1, 2)
+            verify(matchService).createMatch(authUser.user, 10, 5, 1, 2)
         }
 
         @Test
         fun `should return not found when bracket does not exist`() {
-            whenever(matchService.createMatch(99, 5, 1, 2)).thenReturn(failure(ApiError.BRACKET_NOT_FOUND))
+            whenever(matchService.createMatch(authUser.user, 99, 5, 1, 2)).thenReturn(failure(ApiError.BRACKET_NOT_FOUND))
 
-            val response = controller.createMatch(input.copy(bracketId = 99))
+            val response = controller.createMatch(authUser, input.copy(bracketId = 99))
 
             assertProblem(response, HttpStatus.NOT_FOUND, "bracket-not-found")
         }
 
         @Test
         fun `should return not found when routine does not exist`() {
-            whenever(matchService.createMatch(10, 99, 1, 2)).thenReturn(failure(ApiError.ROUTINE_NOT_FOUND))
+            whenever(matchService.createMatch(authUser.user, 10, 99, 1, 2)).thenReturn(failure(ApiError.ROUTINE_NOT_FOUND))
 
-            val response = controller.createMatch(input.copy(routineId = 99))
+            val response = controller.createMatch(authUser, input.copy(routineId = 99))
 
             assertProblem(response, HttpStatus.NOT_FOUND, "routine-not-found")
         }
 
         @Test
         fun `should return bad request when athletes are not assigned`() {
-            whenever(matchService.createMatch(10, 5, null, null)).thenReturn(failure(ApiError.ATHLETES_NOT_ASSIGNED))
+            whenever(matchService.createMatch(authUser.user, 10, 5, null, null)).thenReturn(failure(ApiError.ATHLETES_NOT_ASSIGNED))
 
-            val response = controller.createMatch(input.copy(athleteRedId = null, athleteBlueId = null))
+            val response = controller.createMatch(authUser, input.copy(athleteRedId = null, athleteBlueId = null))
 
             assertProblem(response, HttpStatus.BAD_REQUEST, "athletes-not-assigned")
         }
 
         @Test
         fun `should return not found when an athlete does not exist`() {
-            whenever(matchService.createMatch(10, 5, 99, 2)).thenReturn(failure(ApiError.ATHLETE_NOT_FOUND))
+            whenever(matchService.createMatch(authUser.user, 10, 5, 99, 2)).thenReturn(failure(ApiError.ATHLETE_NOT_FOUND))
 
-            val response = controller.createMatch(input.copy(athleteRedId = 99))
+            val response = controller.createMatch(authUser, input.copy(athleteRedId = 99))
 
             assertProblem(response, HttpStatus.NOT_FOUND, "athlete-not-found")
         }
 
         @Test
         fun `should return bad request when the same athlete is on both sides`() {
-            whenever(matchService.createMatch(10, 5, 1, 1)).thenReturn(failure(ApiError.SAME_ATHLETE_ON_BOTH_SIDES))
+            whenever(matchService.createMatch(authUser.user, 10, 5, 1, 1)).thenReturn(failure(ApiError.SAME_ATHLETE_ON_BOTH_SIDES))
 
-            val response = controller.createMatch(input.copy(athleteBlueId = 1))
+            val response = controller.createMatch(authUser, input.copy(athleteBlueId = 1))
 
             assertProblem(response, HttpStatus.BAD_REQUEST, "same-athlete-on-both-sides")
         }
@@ -150,9 +152,9 @@ class MatchControllerTest {
         @Test
         fun `should start match and broadcast started event`() {
             val startedMatch = StartedMatch(match = match(), progress = progress())
-            whenever(matchService.startMatch(1)).thenReturn(success(startedMatch))
+            whenever(matchService.startMatch(authUser.user, 1)).thenReturn(success(startedMatch))
 
-            val response = controller.startMatch(1)
+            val response = controller.startMatch(authUser, 1)
 
             assertEquals(HttpStatus.OK, response.statusCode)
             assertEquals("/api/matches/1", response.headers.getFirst("Location"))
@@ -162,45 +164,45 @@ class MatchControllerTest {
 
         @Test
         fun `should return not found when match does not exist`() {
-            whenever(matchService.startMatch(99)).thenReturn(failure(ApiError.MATCH_NOT_FOUND))
+            whenever(matchService.startMatch(authUser.user, 99)).thenReturn(failure(ApiError.MATCH_NOT_FOUND))
 
-            val response = controller.startMatch(99)
+            val response = controller.startMatch(authUser, 99)
 
             assertProblem(response, HttpStatus.NOT_FOUND, "match-not-found")
         }
 
         @Test
         fun `should return not found when bracket does not exist`() {
-            whenever(matchService.startMatch(1)).thenReturn(failure(ApiError.BRACKET_NOT_FOUND))
+            whenever(matchService.startMatch(authUser.user, 1)).thenReturn(failure(ApiError.BRACKET_NOT_FOUND))
 
-            val response = controller.startMatch(1)
+            val response = controller.startMatch(authUser, 1)
 
             assertProblem(response, HttpStatus.NOT_FOUND, "bracket-not-found")
         }
 
         @Test
         fun `should return bad request when athletes are not assigned`() {
-            whenever(matchService.startMatch(1)).thenReturn(failure(ApiError.ATHLETES_NOT_ASSIGNED))
+            whenever(matchService.startMatch(authUser.user, 1)).thenReturn(failure(ApiError.ATHLETES_NOT_ASSIGNED))
 
-            val response = controller.startMatch(1)
+            val response = controller.startMatch(authUser, 1)
 
             assertProblem(response, HttpStatus.BAD_REQUEST, "athletes-not-assigned")
         }
 
         @Test
         fun `should return conflict when match is already started`() {
-            whenever(matchService.startMatch(1)).thenReturn(failure(ApiError.MATCH_ALREADY_STARTED))
+            whenever(matchService.startMatch(authUser.user, 1)).thenReturn(failure(ApiError.MATCH_ALREADY_STARTED))
 
-            val response = controller.startMatch(1)
+            val response = controller.startMatch(authUser, 1)
 
             assertProblem(response, HttpStatus.CONFLICT, "match-already-started")
         }
 
         @Test
         fun `should return not found when progress does not exist`() {
-            whenever(matchService.startMatch(1)).thenReturn(failure(ApiError.PROGRESS_NOT_FOUND))
+            whenever(matchService.startMatch(authUser.user, 1)).thenReturn(failure(ApiError.PROGRESS_NOT_FOUND))
 
-            val response = controller.startMatch(1)
+            val response = controller.startMatch(authUser, 1)
 
             assertProblem(response, HttpStatus.NOT_FOUND, "progress-not-found")
         }
@@ -211,66 +213,66 @@ class MatchControllerTest {
         @Test
         fun `should update match reps successfully`() {
             val updated = progress(redReps = 5, blueReps = 4)
-            whenever(matchService.updateAthletesReps(1, 5, 4)).thenReturn(success(updated))
+            whenever(matchService.updateAthletesReps(authUser.user, 1, 5, 4)).thenReturn(success(updated))
 
-            val response = controller.updateMatchReps(1, UpdateRepsInput(redReps = 5, blueReps = 4))
+            val response = controller.updateMatchReps(authUser, 1, UpdateRepsInput(redReps = 5, blueReps = 4))
 
             assertEquals(HttpStatus.ACCEPTED, response.statusCode)
             assertEquals("/api/matches/1", response.headers.getFirst("Location"))
             assertEquals(updated, response.body)
-            verify(matchService).updateAthletesReps(1, 5, 4)
+            verify(matchService).updateAthletesReps(authUser.user, 1, 5, 4)
         }
 
         @Test
         fun `should return not found when match does not exist`() {
-            whenever(matchService.updateAthletesReps(1, null, null)).thenReturn(failure(ApiError.MATCH_NOT_FOUND))
+            whenever(matchService.updateAthletesReps(authUser.user, 1, null, null)).thenReturn(failure(ApiError.MATCH_NOT_FOUND))
 
-            val response = controller.updateMatchReps(1, UpdateRepsInput())
+            val response = controller.updateMatchReps(authUser, 1, UpdateRepsInput())
 
             assertProblem(response, HttpStatus.NOT_FOUND, "match-not-found")
         }
 
         @Test
         fun `should return conflict when match is not running`() {
-            whenever(matchService.updateAthletesReps(1, null, null)).thenReturn(failure(ApiError.MATCH_NOT_RUNNING))
+            whenever(matchService.updateAthletesReps(authUser.user, 1, null, null)).thenReturn(failure(ApiError.MATCH_NOT_RUNNING))
 
-            val response = controller.updateMatchReps(1, UpdateRepsInput())
+            val response = controller.updateMatchReps(authUser, 1, UpdateRepsInput())
 
             assertProblem(response, HttpStatus.CONFLICT, "match-not-running")
         }
 
         @Test
         fun `should return not found when progress does not exist`() {
-            whenever(matchService.updateAthletesReps(1, null, null)).thenReturn(failure(ApiError.PROGRESS_NOT_FOUND))
+            whenever(matchService.updateAthletesReps(authUser.user, 1, null, null)).thenReturn(failure(ApiError.PROGRESS_NOT_FOUND))
 
-            val response = controller.updateMatchReps(1, UpdateRepsInput())
+            val response = controller.updateMatchReps(authUser, 1, UpdateRepsInput())
 
             assertProblem(response, HttpStatus.NOT_FOUND, "progress-not-found")
         }
 
         @Test
         fun `should return bad request when athlete is not in match`() {
-            whenever(matchService.updateAthletesReps(1, 5, null)).thenReturn(failure(ApiError.ATHLETE_NOT_IN_MATCH))
+            whenever(matchService.updateAthletesReps(authUser.user, 1, 5, null)).thenReturn(failure(ApiError.ATHLETE_NOT_IN_MATCH))
 
-            val response = controller.updateMatchReps(1, UpdateRepsInput(redReps = 5))
+            val response = controller.updateMatchReps(authUser, 1, UpdateRepsInput(redReps = 5))
 
             assertProblem(response, HttpStatus.BAD_REQUEST, "athlete-not-in-match")
         }
 
         @Test
         fun `should return not found when exercise does not exist`() {
-            whenever(matchService.updateAthletesReps(1, 5, null)).thenReturn(failure(ApiError.EXERCISE_NOT_FOUND))
+            whenever(matchService.updateAthletesReps(authUser.user, 1, 5, null)).thenReturn(failure(ApiError.EXERCISE_NOT_FOUND))
 
-            val response = controller.updateMatchReps(1, UpdateRepsInput(redReps = 5))
+            val response = controller.updateMatchReps(authUser, 1, UpdateRepsInput(redReps = 5))
 
             assertProblem(response, HttpStatus.NOT_FOUND, "exercise-not-found")
         }
 
         @Test
         fun `should return not found when bracket does not exist`() {
-            whenever(matchService.updateAthletesReps(1, 5, null)).thenReturn(failure(ApiError.BRACKET_NOT_FOUND))
+            whenever(matchService.updateAthletesReps(authUser.user, 1, 5, null)).thenReturn(failure(ApiError.BRACKET_NOT_FOUND))
 
-            val response = controller.updateMatchReps(1, UpdateRepsInput(redReps = 5))
+            val response = controller.updateMatchReps(authUser, 1, UpdateRepsInput(redReps = 5))
 
             assertProblem(response, HttpStatus.NOT_FOUND, "bracket-not-found")
         }
@@ -303,9 +305,9 @@ class MatchControllerTest {
     inner class GetAllMatches {
         @Test
         fun `should get all matches`() {
-            whenever(matchService.getAllMatches()).thenReturn(success(listOf(match())))
+            whenever(matchService.getAllMatches(authUser.user)).thenReturn(success(listOf(match())))
 
-            val response = controller.getAllMatches()
+            val response = controller.getAllMatches(authUser)
 
             assertEquals(HttpStatus.OK, response.statusCode)
             assertEquals(listOf(match()), response.body)

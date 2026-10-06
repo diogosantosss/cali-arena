@@ -1,7 +1,9 @@
 package com.caliarena.repo
 
+import com.caliarena.domain.match.MatchStatus
 import com.caliarena.domain.tournament.ScreenState
 import com.caliarena.domain.tournament.TournamentStatus
+import com.caliarena.repo.entities.match.MatchEntity
 import com.caliarena.repo.entities.tournament.TournamentEntity
 import com.caliarena.repo.entities.tournament.TournamentStateEntity
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -13,6 +15,15 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.springframework.data.repository.findByIdOrNull
+
+private data class TournamentSubtree(
+    val tournamentId: Int,
+    val bracketId: Int,
+    val matchId: Int,
+    val routineId: Int,
+    val redId: Int,
+    val blueId: Int,
+)
 
 class TournamentRepositoryTest : AbstractRepositoryTest() {
     @Nested
@@ -194,5 +205,64 @@ class TournamentRepositoryTest : AbstractRepositoryTest() {
                 assertEquals(ScreenState.ROUTINES, tournamentStates.findByTournamentId(tournament.id)?.currentScreen)
                 assertFalse(tournamentStates.findAll().count { it.tournament.id == tournament.id } > 1)
             }
+    }
+
+    @Nested
+    inner class DeleteTournament {
+        @Test
+        fun `deleting a tournament removes its whole subtree but nothing global`() {
+            val subtree =
+                trx.run {
+                    val tournament = newTournament()
+                    val bracket = newBracket(tournament)
+                    val red = newAthlete("red-${System.nanoTime()}")
+                    val blue = newAthlete("blue-${System.nanoTime()}")
+                    val routine = newRoutine("global-${System.nanoTime()}")
+                    val match =
+                        matches.save(
+                            MatchEntity(
+                                bracket = bracket,
+                                routineId = routine.id,
+                                athleteRed = red,
+                                athleteBlue = blue,
+                                status = MatchStatus.RUNNING,
+                                createdAt = now().epochSecond,
+                            ),
+                        )
+                    newProgress(match)
+                    val judge = newUser("judge-${System.nanoTime()}")
+                    assignJudge(tournament, judge)
+                    newScreenRoutine(tournament)
+                    tournamentStates.save(
+                        TournamentStateEntity(
+                            tournament = tournament,
+                            currentScreen = ScreenState.BATTLE,
+                            currentMatch = match,
+                            currentBracket = bracket,
+                            updatedAt = now().epochSecond,
+                        ),
+                    )
+
+                    TournamentSubtree(tournament.id, bracket.id, match.id, routine.id, red.id, blue.id)
+                }
+
+            trx.run {
+                val tournament = tournaments.findByIdOrNull(subtree.tournamentId) ?: error("tournament missing")
+                tournaments.delete(tournament)
+            }
+
+            trx.run {
+                assertNull(tournaments.findByIdOrNull(subtree.tournamentId))
+                assertNull(tournamentStates.findByTournamentId(subtree.tournamentId))
+                assertTrue(brackets.findByTournamentId(subtree.tournamentId).isEmpty())
+                assertTrue(matches.findByBracketIdIn(listOf(subtree.bracketId)).isEmpty())
+                assertNull(matchProgresses.findByMatchId(subtree.matchId))
+                assertTrue(screenRoutines.findByTournamentIdOrderByDisplayOrder(subtree.tournamentId).isEmpty())
+                assertTrue(tournamentJudges.findByTournamentId(subtree.tournamentId).isEmpty())
+                assertTrue(routines.existsById(subtree.routineId))
+                assertTrue(athletes.existsById(subtree.redId))
+                assertTrue(athletes.existsById(subtree.blueId))
+            }
+        }
     }
 }
