@@ -43,6 +43,19 @@
   --gold: #f5c453;
   --gold-10: rgba(245, 196, 83, 0.1);
   --gold-25: rgba(245, 196, 83, 0.25);
+
+  /* danger */
+  --danger-foreground: #0f0f11;
+
+  /* danger alpha surfaces (variants of the danger color) */
+  --danger-04: rgba(241, 106, 106, 0.04);
+  --danger-06: rgba(241, 106, 106, 0.06);
+  --danger-08: rgba(241, 106, 106, 0.08);
+  --danger-10: rgba(241, 106, 106, 0.1);
+  --danger-12: rgba(241, 106, 106, 0.12);
+  --danger-15: rgba(241, 106, 106, 0.15);
+  --danger-25: rgba(241, 106, 106, 0.25);
+  --danger-30: rgba(241, 106, 106, 0.3);
 }
 
 :root[data-theme="light"] {
@@ -67,5 +80,15 @@
   --ring: #e8a020;
   --faint: #a39d92;
   --danger: #d9534f;
+  --danger-foreground: #ffffff;
   --radius: 0.375rem;
+
+  --danger-04: rgba(217, 83, 79, 0.04);
+  --danger-06: rgba(217, 83, 79, 0.06);
+  --danger-08: rgba(217, 83, 79, 0.08);
+  --danger-10: rgba(217, 83, 79, 0.1);
+  --danger-12: rgba(217, 83, 79, 0.12);
+  --danger-15: rgba(217, 83, 79, 0.15);
+  --danger-25: rgba(217, 83, 79, 0.25);
+  --danger-30: rgba(217, 83, 79, 0.3);
 }

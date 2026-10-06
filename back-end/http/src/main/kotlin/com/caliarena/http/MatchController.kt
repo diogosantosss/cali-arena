@@ -5,6 +5,7 @@ import com.caliarena.domain.match.JudgeStartedEvent
 import com.caliarena.domain.match.Match
 import com.caliarena.domain.match.MatchProgress
 import com.caliarena.domain.match.StartedMatch
+import com.caliarena.domain.user.AuthenticatedUser
 import com.caliarena.domain.user.UserRole
 import com.caliarena.http.model.match.CreateMatchInput
 import com.caliarena.http.model.match.UpdateRepsInput
@@ -31,12 +32,13 @@ class MatchController(
     private val messaging: SimpMessagingTemplate,
 ) {
     @PostMapping
-    @RequiresRole([UserRole.ADMIN, UserRole.JUDGE])
+    @RequiresRole([UserRole.ADMIN, UserRole.HOST])
     fun createMatch(
+        user: AuthenticatedUser,
         @RequestBody input: CreateMatchInput,
     ): ResponseEntity<Any> =
         matchService
-            .createMatch(input.bracketId, input.routineId, input.athleteRedId, input.athleteBlueId)
+            .createMatch(user.user, input.bracketId, input.routineId, input.athleteRedId, input.athleteBlueId)
             .toResponse(
                 onSuccess = { match: Match ->
                     ResponseEntity
@@ -48,12 +50,13 @@ class MatchController(
             )
 
     @PutMapping("/{id}/start")
-    @RequiresRole([UserRole.ADMIN, UserRole.JUDGE])
+    @RequiresRole([UserRole.ADMIN, UserRole.HOST, UserRole.JUDGE])
     fun startMatch(
+        user: AuthenticatedUser,
         @PathVariable id: Int,
     ): ResponseEntity<Any> =
         matchService
-            .startMatch(id)
+            .startMatch(user.user, id)
             .toResponse(
                 onSuccess = { started: StartedMatch ->
                     messaging.convertAndSend(
@@ -69,13 +72,14 @@ class MatchController(
             )
 
     @PutMapping("/{matchId}/reps")
-    @RequiresRole([UserRole.ADMIN, UserRole.JUDGE])
+    @RequiresRole([UserRole.ADMIN, UserRole.HOST, UserRole.JUDGE])
     fun updateMatchReps(
+        user: AuthenticatedUser,
         @PathVariable matchId: Int,
         @RequestBody input: UpdateRepsInput,
     ): ResponseEntity<Any> =
         matchService
-            .updateAthletesReps(matchId, input.redReps, input.blueReps)
+            .updateAthletesReps(user.user, matchId, input.redReps, input.blueReps)
             .toResponse(
                 onSuccess = { prog: MatchProgress ->
                     ResponseEntity
@@ -101,10 +105,10 @@ class MatchController(
             )
 
     @GetMapping
-    @RequiresRole([UserRole.ADMIN, UserRole.JUDGE])
-    fun getAllMatches(): ResponseEntity<Any> =
+    @RequiresRole([UserRole.ADMIN, UserRole.HOST, UserRole.JUDGE])
+    fun getAllMatches(user: AuthenticatedUser): ResponseEntity<Any> =
         matchService
-            .getAllMatches()
+            .getAllMatches(user.user)
             .toResponse(
                 onSuccess = { matches: List<Match> ->
                     ResponseEntity

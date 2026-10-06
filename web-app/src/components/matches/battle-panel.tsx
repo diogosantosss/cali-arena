@@ -130,15 +130,13 @@ export function BattlePanel({ matchId, athletes, routines, overviews, onError }:
 
   const matchStatus = currentMatch ? matchStatusStyles[currentMatch.status] : null;
 
-  const repButton =
-    "px-3 py-1.5 rounded text-sm font-semibold transition-colors disabled:opacity-30 disabled:cursor-not-allowed";
-  const repIncrementStyle = { background: "var(--accent-12)", color: "var(--accent)", border: "1px solid var(--accent-25)" };
-  const repDecrementStyle = { background: "var(--secondary)", color: "var(--secondary-foreground)", border: "1px solid var(--border)" };
-
   return (
-    <div className="rounded-lg" style={{ background: "var(--background)", border: "1px solid var(--border)" }}>
-      <div className="flex items-center justify-between gap-4 px-5 py-4">
-        <div className="flex items-center gap-3 min-w-0">
+    <div className="w-full">
+      <header
+        className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 py-4"
+        style={{ borderBottom: "1px solid var(--border)" }}
+      >
+        <div className="flex items-center gap-3 min-w-0 flex-wrap">
           {matchStatus && (
             <span className="text-[11px] px-2 py-0.5 rounded-full shrink-0" style={{ background: matchStatus.bg, color: matchStatus.color }}>
               {matchStatus.label}
@@ -162,13 +160,13 @@ export function BattlePanel({ matchId, athletes, routines, overviews, onError }:
           )}
         </div>
 
-        <div className="flex items-center gap-4 shrink-0">
+        <div className="flex items-center gap-5 shrink-0">
           <div className="text-right hidden sm:block">
             <p className="text-[10px] uppercase tracking-widest" style={{ color: "var(--faint)" }}>
               {matchFinished ? "Final time" : isRunning ? "Elapsed" : "Clock"}
             </p>
             <p
-              className="text-lg font-bold tabular-nums leading-tight"
+              className="text-2xl md:text-3xl font-bold tabular-nums leading-tight"
               style={{
                 color: redFinished || blueFinished ? "#4ade80" : "var(--foreground)",
                 fontFamily: "Geist Variable, monospace",
@@ -180,23 +178,20 @@ export function BattlePanel({ matchId, athletes, routines, overviews, onError }:
           {!isRunning && currentMatch?.status !== "FINISHED" && (
             <button
               onClick={() => void run(startMatch)}
-              className="px-4 py-1.5 rounded text-sm font-medium"
+              className="h-9 px-4 rounded-md text-sm font-medium transition-colors"
               style={{ background: "var(--accent)", color: "var(--accent-foreground)" }}
             >
               Start match
             </button>
           )}
         </div>
-      </div>
+      </header>
 
       {isRunning && (
         <div>
           <div
-            className="flex flex-wrap items-center gap-x-3 gap-y-2 px-5 py-3"
-            style={{
-              background: controlActive ? "rgba(74,222,128,0.08)" : "var(--card)",
-              borderTop: "1px solid var(--border)",
-            }}
+            className="flex flex-wrap items-center gap-x-3 gap-y-2 py-3"
+            style={{ borderBottom: "1px solid var(--border)" }}
           >
             {controlActive ? (
               <ShieldCheck className="w-4 h-4 shrink-0" style={{ color: "#4ade80" }} />
@@ -213,7 +208,7 @@ export function BattlePanel({ matchId, athletes, routines, overviews, onError }:
               {controlActive ? (
                 <button
                   onClick={releaseControl}
-                  className="px-3 py-1 rounded text-xs font-medium transition-colors"
+                  className="h-7 px-3 rounded-md text-xs font-medium transition-colors"
                   style={{ background: "var(--secondary)", color: "var(--secondary-foreground)", border: "1px solid var(--border)" }}
                 >
                   Release
@@ -221,7 +216,7 @@ export function BattlePanel({ matchId, athletes, routines, overviews, onError }:
               ) : (
                 <button
                   onClick={() => setConfirmTakeover(true)}
-                  className="px-3 py-1 rounded text-xs font-semibold transition-colors"
+                  className="h-7 px-3 rounded-md text-xs font-semibold transition-colors"
                   style={{ background: "var(--accent)", color: "var(--accent-foreground)" }}
                 >
                   Assume control
@@ -230,8 +225,8 @@ export function BattlePanel({ matchId, athletes, routines, overviews, onError }:
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 px-5 pt-4 pb-5">
-            <RepControl
+          <div className="grid grid-cols-1 md:grid-cols-2">
+            <RepColumn
               label={redAthlete?.name ?? "Red"}
               dot="#e05555"
               finished={redFinished}
@@ -241,31 +236,27 @@ export function BattlePanel({ matchId, athletes, routines, overviews, onError }:
               disabled={!controlActive}
               onAdjust={(delta) => void run(() => adjustReps("red", delta))}
               onFinish={() => setFinishTarget("red")}
-              repButton={repButton}
-              repIncrementStyle={repIncrementStyle}
-              repDecrementStyle={repDecrementStyle}
             />
-            <RepControl
-              label={blueAthlete?.name ?? "Blue"}
-              dot="#5588e0"
-              finished={blueFinished}
-              finishTime={blueFinished && progress?.blueFinishedAt ? finishTime(progress.blueFinishedAt) : null}
-              exercise={blueExercise}
-              reps={blueReps}
-              disabled={!controlActive}
-              onAdjust={(delta) => void run(() => adjustReps("blue", delta))}
-              onFinish={() => setFinishTarget("blue")}
-              repButton={repButton}
-              repIncrementStyle={repIncrementStyle}
-              repDecrementStyle={repDecrementStyle}
-            />
+            <div className="border-t md:border-t-0 md:border-l" style={{ borderColor: "var(--border)" }}>
+              <RepColumn
+                label={blueAthlete?.name ?? "Blue"}
+                dot="#5588e0"
+                finished={blueFinished}
+                finishTime={blueFinished && progress?.blueFinishedAt ? finishTime(progress.blueFinishedAt) : null}
+                exercise={blueExercise}
+                reps={blueReps}
+                disabled={!controlActive}
+                onAdjust={(delta) => void run(() => adjustReps("blue", delta))}
+                onFinish={() => setFinishTarget("blue")}
+              />
+            </div>
           </div>
         </div>
       )}
 
       {exercises.length > 0 && (
-        <div style={{ borderTop: "1px solid var(--border)" }} className="px-5 py-4">
-          <div className="flex items-center gap-2 mb-3">
+        <div style={{ borderTop: "1px solid var(--border)" }} className="py-5">
+          <div className="flex items-center gap-2 mb-1">
             <p className="text-[10px] uppercase tracking-widest" style={{ color: "var(--faint)" }}>
               Routine
             </p>
@@ -282,19 +273,23 @@ export function BattlePanel({ matchId, athletes, routines, overviews, onError }:
               </span>
             )}
           </div>
-          <div className="space-y-2">
+          <div>
             {groups.map((group, i) => {
               const hasRed = group.items.some((e) => e.id === redExercise?.id);
               const hasBlue = group.items.some((e) => e.id === blueExercise?.id);
               const isGoal = i === groups.length - 1;
               const type = group.items[0]?.type;
               return (
-                <div key={group.order} className="flex items-center gap-3 min-w-0">
+                <div
+                  key={group.order}
+                  className="flex items-center gap-3 min-w-0 py-2.5"
+                  style={i > 0 ? { borderTop: "1px solid var(--border)" } : undefined}
+                >
                   <span
-                    className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0"
-                    style={{ background: "var(--secondary)", color: "var(--muted-foreground)", border: "1px solid var(--border)" }}
+                    className="w-6 shrink-0 text-right text-[11px] font-medium tabular-nums"
+                    style={{ color: "var(--faint)" }}
                   >
-                    {i + 1}
+                    {String(i + 1).padStart(2, "0")}
                   </span>
                   <span
                     className="text-sm truncate"
@@ -404,7 +399,7 @@ export function BattlePanel({ matchId, athletes, routines, overviews, onError }:
   );
 }
 
-function RepControl({
+function RepColumn({
   label,
   dot,
   finished,
@@ -414,9 +409,6 @@ function RepControl({
   disabled,
   onAdjust,
   onFinish,
-  repButton,
-  repIncrementStyle,
-  repDecrementStyle,
 }: {
   label: string;
   dot: string;
@@ -427,32 +419,43 @@ function RepControl({
   disabled: boolean;
   onAdjust: (delta: number) => void;
   onFinish: () => void;
-  repButton: string;
-  repIncrementStyle: React.CSSProperties;
-  repDecrementStyle: React.CSSProperties;
 }) {
   const target = exercise?.targetReps ?? 0;
   const pct = finished ? 100 : target > 0 ? Math.min(100, Math.round((reps / target) * 100)) : 0;
 
+  const incrementStyle = { background: "var(--accent-12)", color: "var(--accent)", border: "1px solid var(--accent-25)" };
+  const decrementStyle = { background: "transparent", color: "var(--secondary-foreground)", border: "1px solid var(--border)" };
+  const repButton =
+    "h-8 px-3 rounded-md text-sm font-semibold transition-colors disabled:opacity-30 disabled:cursor-not-allowed";
+
   return (
-    <div
-      className="rounded-xl px-4 py-4"
-      style={{ background: "var(--card)", border: "1px solid var(--border)", borderTop: `2px solid ${dot}` }}
-    >
+    <div className="min-w-0 px-2 sm:px-4 md:px-8 py-6 md:py-8">
       <div className="flex items-center gap-2 min-w-0">
-        <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: dot, boxShadow: `0 0 8px ${dot}` }} />
-        <p className="text-sm font-semibold truncate" style={{ color: "var(--foreground)" }}>{label}</p>
+        <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: dot, boxShadow: `0 0 10px ${dot}` }} />
+        <span className="text-sm font-semibold truncate" style={{ color: "var(--foreground)" }}>{label}</span>
+      </div>
+
+      <div className="flex items-baseline gap-2 mt-3">
+        <span
+          className="text-5xl md:text-6xl font-bold tabular-nums leading-none"
+          style={{ color: finished ? "#4ade80" : "var(--foreground)", fontFamily: "Geist Variable, monospace" }}
+        >
+          {reps}
+        </span>
+        {!finished && target > 0 && (
+          <span className="text-lg font-medium" style={{ color: "var(--faint)" }}>/ {target}</span>
+        )}
       </div>
 
       {finished ? (
-        <p className="text-sm font-semibold mt-2" style={{ color: "#4ade80" }}>
+        <p className="mt-3 text-sm font-semibold" style={{ color: "#4ade80" }}>
           {finishTime ? `Finished — ${finishTime}` : "Finished"}
         </p>
       ) : (
-        <div className="flex items-center gap-2 mt-2 min-w-0">
-          <p className="text-lg font-semibold truncate" style={{ color: "var(--secondary-foreground)" }}>
+        <p className="mt-3 flex items-center gap-2 min-w-0">
+          <span className="text-sm font-medium truncate" style={{ color: "var(--secondary-foreground)" }}>
             {exercise?.name ?? "—"}
-          </p>
+          </span>
           {exercise && exercise.type !== "NORMAL" && (
             <span
               className="shrink-0 text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded"
@@ -465,44 +468,37 @@ function RepControl({
               {exercise.type}
             </span>
           )}
-        </div>
+          {!finished && exercise?.addedWeight ? (
+            <span className="shrink-0 text-[10px] uppercase tracking-widest" style={{ color: "var(--accent)" }}>
+              +{exercise.addedWeight} kg
+            </span>
+          ) : null}
+        </p>
       )}
 
-      {!finished && exercise?.addedWeight ? (
-        <p className="text-[10px] uppercase tracking-widest mt-1.5" style={{ color: "var(--accent)" }}>
-          +{exercise.addedWeight} kg
-        </p>
-      ) : null}
-
-      <div className="flex items-baseline gap-1.5 mt-2.5">
-        <p
-          className="text-3xl font-bold tabular-nums leading-none"
-          style={{ color: finished ? "#4ade80" : "var(--foreground)", fontFamily: "Geist Variable, monospace" }}
-        >
-          {reps}
-        </p>
-        {target > 0 && (
-          <p className="text-sm font-medium" style={{ color: "var(--faint)" }}>/ {target}</p>
-        )}
+      <div className="h-1.5 mt-4 w-full overflow-hidden" style={{ background: "var(--secondary)" }}>
+        <div className="h-full transition-all duration-300" style={{ width: `${pct}%`, background: dot, boxShadow: `0 0 12px ${dot}` }} />
       </div>
 
-      <div className="h-1.5 rounded-full mt-2.5 overflow-hidden" style={{ background: "var(--secondary)" }}>
-        <div
-          className="h-full rounded-full transition-all duration-300"
-          style={{ width: `${pct}%`, background: dot, boxShadow: `0 0 10px ${dot}` }}
-        />
-      </div>
-
-      <div className="flex items-center gap-1.5 mt-4">
-        <button className={`${repButton} px-2.5`} disabled={disabled || finished} style={repDecrementStyle} onClick={() => onAdjust(-1)}>−1</button>
-        <button className={repButton} disabled={disabled || finished} style={repIncrementStyle} onClick={() => onAdjust(1)}>+1</button>
-        <button className={repButton} disabled={disabled || finished} style={repIncrementStyle} onClick={() => onAdjust(2)}>+2</button>
-        <button className={repButton} disabled={disabled || finished} style={repIncrementStyle} onClick={() => onAdjust(5)}>+5</button>
+      <div className="flex flex-wrap items-center gap-2 mt-5">
+        <button className={repButton} disabled={disabled || finished} style={decrementStyle} onClick={() => onAdjust(-1)}>
+          −1
+        </button>
+        <button className={repButton} disabled={disabled || finished} style={incrementStyle} onClick={() => onAdjust(1)}>
+          +1
+        </button>
+        <button className={repButton} disabled={disabled || finished} style={incrementStyle} onClick={() => onAdjust(2)}>
+          +2
+        </button>
+        <button className={repButton} disabled={disabled || finished} style={incrementStyle} onClick={() => onAdjust(5)}>
+          +5
+        </button>
+        <span className="flex-1" />
         <button
           onClick={onFinish}
           disabled={disabled || finished}
-          className="ml-auto px-3 py-1.5 rounded text-sm font-medium transition-colors disabled:opacity-30"
-          style={{ background: "rgba(74,222,128,0.12)", color: "#4ade80", border: "1px solid rgba(74,222,128,0.25)" }}
+          className="h-8 px-3 rounded-md text-sm font-medium transition-colors disabled:opacity-30"
+          style={{ color: "#4ade80", border: "1px solid rgba(74,222,128,0.3)" }}
         >
           Finish
         </button>

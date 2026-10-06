@@ -5,6 +5,7 @@ import com.caliarena.domain.match.MatchProgress
 import com.caliarena.domain.match.MatchStatus
 import com.caliarena.domain.match.RepSide
 import com.caliarena.domain.match.StartedMatch
+import com.caliarena.domain.user.User
 import com.caliarena.repo.entities.match.MatchEntity
 import com.caliarena.repo.entities.match.MatchProgressEntity
 import com.caliarena.repo.entities.match.MatchProgressEntity.Companion.fromDomain
@@ -24,6 +25,7 @@ class MatchService(
     private val publisher: SpectatorPublisher,
 ) {
     fun createMatch(
+        user: User,
         bracketId: Int,
         routineId: Int,
         athleteRedId: Int?,
@@ -33,6 +35,10 @@ class MatchService(
             val bracket =
                 brackets.findByIdOrNull(bracketId)
                     ?: return@run failure(ApiError.BRACKET_NOT_FOUND)
+
+            if (!canManageTournament(user, bracket.tournament.id)) {
+                return@run failure(ApiError.NOT_AUTHORIZED)
+            }
 
             routines.findByIdOrNull(routineId)
                 ?: return@run failure(ApiError.ROUTINE_NOT_FOUND)
@@ -89,8 +95,15 @@ class MatchService(
             success(match.toDomain())
         }
 
-    fun startMatch(matchId: Int): Either<ApiError, StartedMatch> =
+    fun startMatch(
+        user: User,
+        matchId: Int,
+    ): Either<ApiError, StartedMatch> =
         trxManager.run {
+            if (!canControlMatch(user, matchId)) {
+                return@run failure(ApiError.NOT_AUTHORIZED)
+            }
+
             val match =
                 matches.findByIdOrNull(matchId)
                     ?: return@run failure(ApiError.MATCH_NOT_FOUND)
@@ -130,11 +143,16 @@ class MatchService(
         }
 
     fun updateAthletesReps(
+        user: User,
         matchId: Int,
         redReps: Int? = null,
         blueReps: Int? = null,
     ): Either<ApiError, MatchProgress> =
         trxManager.run {
+            if (!canControlMatch(user, matchId)) {
+                return@run failure(ApiError.NOT_AUTHORIZED)
+            }
+
             val match =
                 matches.findByIdOrNull(matchId)
                     ?: return@run failure(ApiError.MATCH_NOT_FOUND)
@@ -228,10 +246,15 @@ class MatchService(
     }
 
     fun forceFinishSide(
+        user: User,
         matchId: Int,
         side: RepSide,
     ): Either<ApiError, MatchProgress> =
         trxManager.run {
+            if (!canControlMatch(user, matchId)) {
+                return@run failure(ApiError.NOT_AUTHORIZED)
+            }
+
             val match =
                 matches.findByIdOrNull(matchId)
                     ?: return@run failure(ApiError.MATCH_NOT_FOUND)
@@ -297,9 +320,19 @@ class MatchService(
             success(updated)
         }
 
-    fun getAllMatches(): Either<ApiError, List<Match>> =
+    fun getAllMatches(user: User): Either<ApiError, List<Match>> =
         trxManager.run {
-            success(matches.findAll().map(MatchEntity::toDomain))
+            val visible =
+                visibleTournamentIds(user)
+                    ?: return@run success(matches.findAll().map(MatchEntity::toDomain))
+
+            val visibleBrackets = brackets.findByTournamentIdIn(visible).map { it.id }.toSet()
+
+            if (visibleBrackets.isEmpty()) {
+                return@run success(emptyList())
+            }
+
+            success(matches.findByBracketIdIn(visibleBrackets).map(MatchEntity::toDomain))
         }
 
     fun deleteMatch(matchId: Int): Either<ApiError, Unit> =

@@ -69,11 +69,15 @@ const initialState: State = {
 
 function reducer(state: State, action: Action): State {
   switch (action.type) {
-    case "setTournament": return { ...state, tournament: action.tournament };
-    case "setTournamentState": return { ...state, tournamentState: action.state };
-    case "setScreenRoutines": return { ...state, screenRoutines: action.screenRoutines };
+    case "setTournament":
+      return { ...state, tournament: action.tournament };
+    case "setTournamentState":
+      return { ...state, tournamentState: action.state };
+    case "setScreenRoutines":
+      return { ...state, screenRoutines: action.screenRoutines };
     case "upsertScreenRoutine": {
       const exists = state.screenRoutines.some((r) => r.id === action.screenRoutine.id);
+
       return {
         ...state,
         screenRoutines: exists
@@ -83,17 +87,28 @@ function reducer(state: State, action: Action): State {
     }
     case "removeScreenRoutine":
       return { ...state, screenRoutines: state.screenRoutines.filter((r) => r.id !== action.id) };
-    case "setRoutines": return { ...state, routines: action.routines };
-    case "setOverview": return { ...state, overviews: { ...state.overviews, [action.routineName]: action.overview } };
-    case "setCurrentMatch": return { ...state, currentMatch: action.match };
-    case "setMatchProgress": return { ...state, matchProgress: action.progress };
-    case "setCurrentStage": return { ...state, currentStage: action.stage };
-    case "setLeaderboard": return { ...state, leaderboard: action.leaderboard };
-    case "setBracketSummary": return { ...state, bracketSummary: action.summary };
-    case "resetMatchData": return { ...state, currentMatch: null, matchProgress: null };
-    case "setAthletes": return { ...state, athletes: action.athletes };
-    case "setError": return { ...state, error: action.message };
-    default: throw new Error("Unknown action");
+    case "setRoutines":
+      return { ...state, routines: action.routines };
+    case "setOverview":
+      return { ...state, overviews: { ...state.overviews, [action.routineName]: action.overview } };
+    case "setCurrentMatch":
+      return { ...state, currentMatch: action.match };
+    case "setMatchProgress":
+      return { ...state, matchProgress: action.progress };
+    case "setCurrentStage":
+      return { ...state, currentStage: action.stage };
+    case "setLeaderboard":
+      return { ...state, leaderboard: action.leaderboard };
+    case "setBracketSummary":
+      return { ...state, bracketSummary: action.summary };
+    case "resetMatchData":
+      return { ...state, currentMatch: null, matchProgress: null };
+    case "setAthletes":
+      return { ...state, athletes: action.athletes };
+    case "setError":
+      return { ...state, error: action.message };
+    default:
+      throw new Error("Unknown action");
   }
 }
 
@@ -254,7 +269,7 @@ export function ScreenPage() {
       .then((bracket) => {
         if (!cancelled) dispatch({ type: "setCurrentStage", stage: bracket.stage });
       })
-      .catch(() => {});
+      .catch(() => { });
     return () => {
       cancelled = true;
     };
@@ -264,6 +279,8 @@ export function ScreenPage() {
     switch (event.action) {
       case "TOURNAMENT_STATE_UPDATED": {
         dispatch({ type: "setTournamentState", state: event.state });
+        if (event.leaderboard) dispatch({ type: "setLeaderboard", leaderboard: event.leaderboard });
+        if (event.bracketSummary) dispatch({ type: "setBracketSummary", summary: event.bracketSummary });
         break;
       }
       case "SCREEN_ROUTINES_CREATED":

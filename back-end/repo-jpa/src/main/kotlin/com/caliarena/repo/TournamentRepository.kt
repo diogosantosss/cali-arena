@@ -8,4 +8,6 @@ interface TournamentRepository : CrudRepository<TournamentEntity, Int> {
     fun findByStatus(status: TournamentStatus): List<TournamentEntity>
 
     fun findByName(tournamentName: String): TournamentEntity?
+
+    fun findByHostId(hostId: Int): List<TournamentEntity>
 }

@@ -11,6 +11,7 @@ import type { BracketStage } from "@/data/tournaments";
 import { screenBackground } from "@/utils/screen-background";
 import { formatTime } from "@/utils/format-time";
 import { useElapsedMs } from "@/hooks/use-elapsed-ms";
+import { useCountUp } from "@/hooks/use-count-up";
 import { ScreenHeader } from "./screen-header";
 
 const bracketStageLabel: Record<BracketStage, string> = {
@@ -226,6 +227,7 @@ function AthletePanel({
   const finishColor = finishState.won ? "var(--spec-green)" : finishState.lost ? "var(--spec-red)" : "var(--spec-text-white)";
   const isFinished = finishState.finished && finishState.str !== null;
   const pct = isFinished ? 100 : progress.pct;
+  const animatedPct = useCountUp(pct);
 
   return (
     <div className="mt-25 flex flex-col items-center pt-16">
@@ -293,16 +295,9 @@ function AthletePanel({
             style={{ width: `${pct}%`, background: color, boxShadow: `0 0 14px ${color}` }}
           />
         </div>
-        <div className="flex flex-col items-end leading-none">
-          <span className="font-cairo text-[1.5rem] font-bold tabular-nums text-white">
-            {pct}%
-          </span>
-          {!isFinished && (
-            <span className="mt-1 font-cairo text-sm tabular-nums text-[var(--spec-text-grey)]">
-              {progress.fraction}
-            </span>
-          )}
-        </div>
+        <span className="inline-block font-cairo text-[1.5rem] font-bold tabular-nums leading-none text-white">
+          {animatedPct}%
+        </span>
       </div>
 
       {nextExercise && !isFinished && (

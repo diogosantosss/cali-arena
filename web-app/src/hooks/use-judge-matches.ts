@@ -9,6 +9,7 @@ import type { Match } from "@/data/matches";
 
 export interface JudgeMatchItem {
   match: Match;
+  tournamentId?: number;
   division?: string;
   athleteRed?: Athlete;
   athleteBlue?: Athlete;
@@ -41,8 +42,12 @@ async function loadJudgeMatches(): Promise<JudgeMatchItem[]> {
     bracketIds.map((id) => tournamentsService.getBracketById(id).catch(() => null)),
   );
   const divisionByBracket = new Map<number, string>();
+  const tournamentByBracket = new Map<number, number>();
   for (const bracket of brackets) {
-    if (bracket) divisionByBracket.set(bracket.id, bracket.division);
+    if (bracket) {
+      divisionByBracket.set(bracket.id, bracket.division);
+      tournamentByBracket.set(bracket.id, bracket.tournamentId);
+    }
   }
 
   return matches.map((match) => {
@@ -50,6 +55,7 @@ async function loadJudgeMatches(): Promise<JudgeMatchItem[]> {
     const athleteBlue = athletes.find((a) => a.id === match.athleteBlueId);
     return {
       match,
+      tournamentId: tournamentByBracket.get(match.bracketId),
       division: divisionByBracket.get(match.bracketId),
       athleteRed,
       athleteBlue,

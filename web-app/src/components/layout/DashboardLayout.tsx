@@ -14,13 +14,16 @@ import {
 import { useAuth } from "@/hooks/use-auth";
 import { useTheme } from "@/hooks/use-theme";
 import { useState } from "react";
+import type { UserRole } from "@/data/auth";
+import { ADMIN_ROLES, DASHBOARD_ROLES } from "@/data/auth";
 
-const navItems = [
-  { to: "/dashboard", label: "Tournaments", icon: Trophy, end: true },
-  { to: "/dashboard/athletes", label: "Athletes", icon: PersonStanding },
-  { to: "/dashboard/clubs", label: "Clubs", icon: Building2 },
-  { to: "/dashboard/users", label: "Users", icon: Users },
-  { to: "/dashboard/routines", label: "Routines", icon: Dumbbell },
+const navItems: { to: string; label: string; icon: typeof Trophy; end?: boolean; roles: readonly UserRole[] }[] = [
+  { to: "/dashboard", label: "Tournaments", icon: Trophy, end: true, roles: DASHBOARD_ROLES },
+  { to: "/dashboard/athletes", label: "Athletes", icon: PersonStanding, roles: DASHBOARD_ROLES },
+  { to: "/dashboard/clubs", label: "Clubs", icon: Building2, roles: DASHBOARD_ROLES },
+  { to: "/dashboard/routines", label: "Routines", icon: Dumbbell, roles: DASHBOARD_ROLES },
+  // Managing accounts stays with admins.
+  { to: "/dashboard/users", label: "Users", icon: Users, roles: ADMIN_ROLES },
 ];
 
 const pageTitles: Record<string, string> = {
@@ -31,6 +34,12 @@ const pageTitles: Record<string, string> = {
   "/dashboard/routines": "Routines",
 };
 
+const panelLabels: Record<UserRole, string> = {
+  ADMIN: "Admin Panel",
+  HOST: "Host Panel",
+  JUDGE: "Judge",
+};
+
 export function DashboardLayout() {
   const { logout, user } = useAuth();
   const { theme, toggleTheme } = useTheme();
@@ -39,6 +48,7 @@ export function DashboardLayout() {
   const [collapsed, setCollapsed] = useState(false);
 
   const title = pageTitles[location.pathname] ?? "Dashboard";
+  const visibleNavItems = user ? navItems.filter((item) => item.roles.includes(user.role)) : navItems;
 
   function handleLogout() {
     logout();
@@ -65,7 +75,7 @@ export function DashboardLayout() {
                   className="hidden lg:inline text-[10px] uppercase tracking-[0.3em] leading-none"
                   style={{ color: "var(--accent)" }}
                 >
-                  Admin Panel
+                  {user ? panelLabels[user.role] : "Panel"}
                 </span>
               </>
             )}
@@ -85,7 +95,7 @@ export function DashboardLayout() {
           </div>
 
           <div className={`flex-1 flex flex-col gap-0.5 w-full ${collapsed ? "items-center" : "items-center lg:items-stretch lg:px-10"}`}>
-            {navItems.map((item) => (
+            {visibleNavItems.map((item) => (
               <Tooltip key={item.to}>
                 <TooltipTrigger asChild>
                   <NavLink

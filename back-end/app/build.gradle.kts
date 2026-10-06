@@ -107,7 +107,7 @@ tasks.register<Exec>("buildImagePostgres") {
         dockerImagePostgres, // Name:tag of the image to be built (e.g., "my-postgres:test")
         "-f", // Flag to specify a custom Dockerfile
         "docker/Dockerfile-postgres", // Path to the Dockerfile used to build the image
-        "../repo-jpa", // Build context directory containing files referenced by the Dockerfile
+        "..", // Build context directory (back-end root) containing files referenced by the Dockerfile
     )
 }
 

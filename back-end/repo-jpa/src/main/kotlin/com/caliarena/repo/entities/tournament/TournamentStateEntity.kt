@@ -14,6 +14,8 @@ import jakarta.persistence.Id
 import jakarta.persistence.JoinColumn
 import jakarta.persistence.ManyToOne
 import jakarta.persistence.Table
+import org.hibernate.annotations.OnDelete
+import org.hibernate.annotations.OnDeleteAction
 import java.time.Instant
 
 @Entity
@@ -24,15 +26,18 @@ class TournamentStateEntity(
     var id: Int = 0,
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "tournament_id", nullable = false)
+    @OnDelete(action = OnDeleteAction.CASCADE)
     var tournament: TournamentEntity = TournamentEntity(),
     @Enumerated(EnumType.STRING)
     @Column(name = "current_screen", nullable = false, length = 20)
     var currentScreen: ScreenState = ScreenState.WAITING,
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "current_match_id")
+    @OnDelete(action = OnDeleteAction.SET_NULL)
     var currentMatch: MatchEntity? = null,
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "current_bracket_id")
+    @OnDelete(action = OnDeleteAction.SET_NULL)
     var currentBracket: BracketEntity? = null,
     @Column(name = "current_division", length = 40)
     var currentDivision: String? = null,

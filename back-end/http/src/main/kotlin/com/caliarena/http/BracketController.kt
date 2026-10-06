@@ -1,6 +1,7 @@
 package com.caliarena.http
 
 import com.caliarena.domain.RequiresRole
+import com.caliarena.domain.user.AuthenticatedUser
 import com.caliarena.domain.user.UserRole
 import com.caliarena.http.model.toResponseEntity
 import com.caliarena.http.model.tournament.CreateBracketInput
@@ -23,12 +24,14 @@ class BracketController(
     private val bracketService: BracketService,
 ) {
     @PostMapping
-    @RequiresRole([UserRole.ADMIN])
+    @RequiresRole([UserRole.ADMIN, UserRole.HOST])
     fun createBracket(
+        user: AuthenticatedUser,
         @RequestBody input: CreateBracketInput,
     ): ResponseEntity<Any> =
         bracketService
             .createBracket(
+                user = user.user,
                 tournamentId = input.tournamentId,
                 division = input.division,
                 stage = input.stage,

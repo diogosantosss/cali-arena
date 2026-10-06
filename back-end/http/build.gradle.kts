@@ -29,9 +29,14 @@ dependencies {
     api("org.springframework.security:spring-security-core:7.0.5")
 
     testImplementation(platform("org.junit:junit-bom:5.12.0"))
+    testImplementation("org.junit.jupiter:junit-jupiter")
+    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
     testImplementation("org.springframework:spring-test:6.2.11")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+
+    testImplementation("org.mockito.kotlin:mockito-kotlin:5.4.0")
+    testImplementation("org.mockito:mockito-junit-jupiter:5.18.0")
 }
 
 kotlin {

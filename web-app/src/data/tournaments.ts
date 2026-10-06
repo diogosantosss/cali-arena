@@ -109,3 +109,7 @@ export interface CreateScreenRoutineInput {
   displayOrder: number;
   label?: string;
 }
+
+export interface UpdateTournamentStatusInput {
+  status: TournamentStatus;
+}

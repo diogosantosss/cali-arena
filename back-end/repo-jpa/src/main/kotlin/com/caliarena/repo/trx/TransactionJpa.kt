@@ -9,6 +9,7 @@ import com.caliarena.repo.MatchProgressRepository
 import com.caliarena.repo.MatchRepository
 import com.caliarena.repo.ScreenRoutineRepository
 import com.caliarena.repo.TokenRepository
+import com.caliarena.repo.TournamentJudgeRepository
 import com.caliarena.repo.TournamentRepository
 import com.caliarena.repo.TournamentStateRepository
 import com.caliarena.repo.UserRepository
@@ -29,6 +30,7 @@ class TransactionJpa(
     override val tournaments: TournamentRepository,
     override val brackets: BracketRepository,
     override val tournamentStates: TournamentStateRepository,
+    override val tournamentJudges: TournamentJudgeRepository,
 ) : Transaction {
     override fun rollback() {
         TransactionAspectSupport

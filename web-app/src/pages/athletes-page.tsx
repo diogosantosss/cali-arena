@@ -11,6 +11,7 @@ import { ManagementList } from "@/components/shared/management-list";
 import { ListRow } from "@/components/shared/list-row";
 import { Badge } from "@/components/shared/badge";
 import { formatDate } from "@/utils/format";
+import { usePermissions } from "@/hooks/use-permissions";
 import { athletesService } from "@/services/athletes.service";
 import type { Athlete, CreateAthleteInput } from "@/data/athletes";
 import type { Gender } from "@/data/gender";
@@ -141,6 +142,7 @@ function athletesReducer(state: AthletesState, action: AthletesAction): Athletes
 
 export function AthletesPage() {
   const [state, dispatch] = useReducer(athletesReducer, initialAthletesState);
+  const { canManageGlobalData, isAdmin } = usePermissions();
 
   const loadAthletes = useCallback(async () => {
     dispatch({ type: "load-start" });
@@ -219,13 +221,16 @@ export function AthletesPage() {
     <div className="max-w-5xl mx-auto space-y-10">
       <PageHeader
         title="Athletes"
+        eyebrow={isAdmin ? "Management" : "Directory"}
         action={
-          <ToggleButton
-            open={state.formOpen && state.editingId == null}
-            onClick={() => dispatch({ type: state.formOpen ? "close-form" : "open-create" })}
-            icon={UserPlus}
-            label="New athlete"
-          />
+          canManageGlobalData ? (
+            <ToggleButton
+              open={state.formOpen && state.editingId == null}
+              onClick={() => dispatch({ type: state.formOpen ? "close-form" : "open-create" })}
+              icon={UserPlus}
+              label="New athlete"
+            />
+          ) : undefined
         }
       />
 
@@ -356,19 +361,21 @@ export function AthletesPage() {
                 }
                 badge={<Badge label={g.label} color={g.color} bg={g.bg} />}
                 trailing={
-                  <button
-                    onClick={() => dispatch({ type: "open-edit", athlete })}
-                    title={state.editingId === athlete.id ? "Close edit" : "Edit athlete"}
-                    className="p-1.5 rounded transition-colors"
-                    style={{
-                      color:
-                        state.editingId === athlete.id ? "var(--accent)" : "var(--muted-foreground)",
-                      background:
-                        state.editingId === athlete.id ? "var(--accent-10)" : "transparent",
-                    }}
-                  >
-                    <Pencil className="w-3.5 h-3.5" />
-                  </button>
+                  canManageGlobalData ? (
+                    <button
+                      onClick={() => dispatch({ type: "open-edit", athlete })}
+                      title={state.editingId === athlete.id ? "Close edit" : "Edit athlete"}
+                      className="p-1.5 rounded transition-colors"
+                      style={{
+                        color:
+                          state.editingId === athlete.id ? "var(--accent)" : "var(--muted-foreground)",
+                        background:
+                          state.editingId === athlete.id ? "var(--accent-10)" : "transparent",
+                      }}
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
+                  ) : undefined
                 }
                 expanded={
                   state.editingId === athlete.id ? (

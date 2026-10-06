@@ -35,6 +35,20 @@ dependencies {
     runtimeOnly("org.postgresql:postgresql:42.7.2")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
+    testImplementation("org.springframework.boot:spring-boot-testcontainers")
+    testImplementation("org.testcontainers:testcontainers:2.0.5")
+    testImplementation("org.testcontainers:testcontainers-junit-jupiter:2.0.5")
+    testImplementation("org.testcontainers:testcontainers-postgresql:2.0.5")
+}
+
+/**
+ * Exposes src/sql to the test classpath so Testcontainers can load the same
+ * schema and seed scripts the docker-compose database uses.
+ */
+sourceSets {
+    test {
+        resources.srcDir("src/sql")
+    }
 }
 
 kotlin {
@@ -43,36 +57,4 @@ kotlin {
 
 tasks.test {
     useJUnitPlatform()
-    environment("DB_URL", "jdbc:postgresql://localhost:5433/postgres?user=postgres&password=postgres")
-    dependsOn(":repo-jpa:dbTestsWait")
-    finalizedBy(":repo-jpa:dbTestsDown")
-}
-
-/**
- * Docker related tasks
- */
-
-val composeFileDir: Directory = rootProject.layout.projectDirectory
-val dockerComposePath = composeFileDir.file("repo-jpa/docker-compose.yml").toString()
-val dockerExe =
-    when (
-        org.gradle.internal.os.OperatingSystem
-            .current()
-    ) {
-        org.gradle.internal.os.OperatingSystem.MAC_OS -> "/usr/local/bin/docker"
-        org.gradle.internal.os.OperatingSystem.WINDOWS -> "docker"
-        else -> "docker" // Linux and others
-    }
-
-tasks.register<Exec>("dbTestsUp") {
-    commandLine(dockerExe, "compose", "-f", dockerComposePath, "up", "-d", "--build", "--force-recreate", "db-tests")
-}
-
-tasks.register<Exec>("dbTestsWait") {
-    commandLine(dockerExe, "exec", "db-tests", "/app/bin/wait-for-postgres.sh", "localhost")
-    dependsOn("dbTestsUp")
-}
-
-tasks.register<Exec>("dbTestsDown") {
-    commandLine(dockerExe, "compose", "-f", dockerComposePath, "down", "db-tests")
 }

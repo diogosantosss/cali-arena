@@ -5,6 +5,7 @@ DROP TABLE IF EXISTS matches;
 DROP TABLE IF EXISTS brackets;
 DROP TABLE IF EXISTS exercises;
 DROP TABLE IF EXISTS endurance_routines;
+DROP TABLE IF EXISTS tournament_judges;
 DROP TABLE IF EXISTS tournaments;
 DROP TABLE IF EXISTS athletes;
 DROP TABLE IF EXISTS clubs;
@@ -54,6 +55,7 @@ CREATE TABLE tournaments
     id         SERIAL PRIMARY KEY,
     name       VARCHAR(100)      NOT NULL,
     location   VARCHAR(100),
+    host_id    INT REFERENCES users (id),
 
     start_date BIGINT,
     end_date   BIGINT,
@@ -62,10 +64,21 @@ CREATE TABLE tournaments
     created_at BIGINT            NOT NULL
 );
 
+-- judges assigned to a tournament: only they (plus the host and admins) can drive its matches
+CREATE TABLE tournament_judges
+(
+    tournament_id INT NOT NULL REFERENCES tournaments (id) ON DELETE CASCADE,
+    user_id       INT NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+
+    created_at BIGINT NOT NULL,
+
+    PRIMARY KEY (tournament_id, user_id)
+);
+
 CREATE TABLE brackets
 (
     id            SERIAL PRIMARY KEY,
-    tournament_id INT REFERENCES tournaments (id),
+    tournament_id INT REFERENCES tournaments (id) ON DELETE CASCADE,
     division      VARCHAR(40) NOT NULL,
     stage         VARCHAR(20) NOT NULL,
     created_at    BIGINT        NOT NULL
@@ -97,7 +110,7 @@ CREATE TABLE exercises
 CREATE TABLE matches
 (
     id                  SERIAL PRIMARY KEY,
-    bracket_id          INT REFERENCES brackets (id),
+    bracket_id          INT REFERENCES brackets (id) ON DELETE CASCADE,
     routine_id          INT REFERENCES endurance_routines (id),
 
     athlete_red_id      INT REFERENCES athletes (id),
@@ -117,10 +130,10 @@ CREATE TABLE matches
 CREATE TABLE tournament_state
 (
     id                 SERIAL PRIMARY KEY,
-    tournament_id      INT REFERENCES tournaments (id),
+    tournament_id      INT REFERENCES tournaments (id) ON DELETE CASCADE,
     current_screen     VARCHAR(20) NOT NULL,
-    current_match_id   INT REFERENCES matches (id),
-    current_bracket_id INT REFERENCES brackets (id),
+    current_match_id   INT REFERENCES matches (id) ON DELETE SET NULL,
+    current_bracket_id INT REFERENCES brackets (id) ON DELETE SET NULL,
     current_division  VARCHAR(40),
     updated_at         BIGINT       NOT NULL
 );
@@ -129,7 +142,7 @@ CREATE TABLE tournament_state
 CREATE TABLE match_progress
 (
     id                       SERIAL PRIMARY KEY,
-    match_id                 INT UNIQUE REFERENCES matches (id),
+    match_id                 INT UNIQUE REFERENCES matches (id) ON DELETE CASCADE,
 
     red_current_exercise_id  INT REFERENCES exercises (id),
     blue_current_exercise_id INT REFERENCES exercises (id),

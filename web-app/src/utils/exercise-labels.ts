@@ -62,6 +62,28 @@ export function nextLabel(
   return groups.find((g) => g.order > current.order)?.label ?? null;
 }
 
+export interface OverlayExerciseItem {
+  label: string;
+  active: boolean;
+}
+
+export function overlayExerciseItems(
+  exercises: Exercise[],
+  currentExerciseId: number | null | undefined
+): OverlayExerciseItem[] {
+  const groups = routineGroups(exercises);
+  const current = groups.find((g) => g.items.some((e) => e.id === currentExerciseId)) ?? groups[0];
+  if (!current) return [];
+
+  const superset = current.items.length > 1;
+  return current.items.map((e) => ({
+    label: superset
+      ? formatSupersetItem(e.targetReps, e.name, e.addedWeight)
+      : formatFullItem(e.targetReps, e.name, e.addedWeight),
+    active: e.id === currentExerciseId,
+  }));
+}
+
 export interface ExerciseProgress {
   pct: number;
   fraction: string;

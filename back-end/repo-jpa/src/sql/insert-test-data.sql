@@ -1,13 +1,15 @@
 TRUNCATE TABLE
     match_progress, screen_routines, tournament_state, matches,
-    brackets, exercises, endurance_routines, tournaments,
+    brackets, exercises, endurance_routines, tournament_judges, tournaments,
     athletes, clubs, tokens, users
     RESTART IDENTITY CASCADE;
 
--- users / tokens password Admin123! Santos123!
+-- users / tokens password Admin123! Santos123! (the 'Host' user shares Santos' password)
+-- 'Host' hosts tournament 1 (see tournaments.host_id)
 INSERT INTO users (username, password, role, created_at)
 VALUES ('admin', '$2a$10$2kAtmal2xxnA/OS5WJ7ugOfjEO24o4KQiU3GPpMLWz4YL1CaywGzm', 'ADMIN', 1787328276),
-       ('Santos', '$2a$10$nkPckXGoB84z0DtdU.J6Qu7tOReSiPNfE7CaWcho/zEI28suW.2ue', 'JUDGE', 1787328276);
+       ('Santos', '$2a$10$nkPckXGoB84z0DtdU.J6Qu7tOReSiPNfE7CaWcho/zEI28suW.2ue', 'JUDGE', 1787328276),
+       ('Host', '$2a$10$nkPckXGoB84z0DtdU.J6Qu7tOReSiPNfE7CaWcho/zEI28suW.2ue', 'HOST', 1787328276);
 
 -- clubs
 INSERT INTO clubs (name, short_name, created_at)
@@ -41,14 +43,19 @@ VALUES ('Athlete 1', 'MALE', 1, 1787328276),
        ('Athlete 23', 'MALE', 2, 1787328276),
        ('Athlete 24', 'MALE', 2, 1787328276);
 
--- tournament + screen state
-INSERT INTO tournaments (name, location, start_date, end_date, status, created_at)
+-- tournament + screen state (host_id 3 = 'Host')
+INSERT INTO tournaments (name, location, host_id, start_date, end_date, status, created_at)
 VALUES ('BAR-WINGS ENDURANCE CHAMPIONSHIP 2026',
         'Caldas da Rainha, Portugal',
+        3,
         1787328276,
         null,
         'READY',
         1787328276);
+
+-- judges of tournament 1 (id 2 = 'Santos')
+INSERT INTO tournament_judges (tournament_id, user_id, created_at)
+VALUES (1, 2, 1787328276);
 
 INSERT INTO tournament_state (tournament_id, current_screen, current_match_id, current_bracket_id, updated_at)
 VALUES (1, 'WAITING', NULL, NULL, 1787328276);

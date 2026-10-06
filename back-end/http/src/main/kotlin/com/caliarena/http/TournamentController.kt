@@ -1,15 +1,18 @@
 package com.caliarena.http
 
 import com.caliarena.domain.RequiresRole
+import com.caliarena.domain.user.AuthenticatedUser
 import com.caliarena.domain.user.UserRole
 import com.caliarena.http.model.toResponseEntity
 import com.caliarena.http.model.tournament.CreateTournamentInput
 import com.caliarena.http.model.tournament.UpdateScreenInput
+import com.caliarena.http.model.tournament.UpdateTournamentStatusInput
 import com.caliarena.http.utils.toResponse
 import com.caliarena.service.TournamentService
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
+import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
@@ -48,7 +51,7 @@ class TournamentController(
             )
 
     @GetMapping
-    fun getTournaments(): ResponseEntity<Any> = ResponseEntity.ok(tournamentService.getAllTournaments())
+    fun getTournaments(user: AuthenticatedUser): ResponseEntity<Any> = ResponseEntity.ok(tournamentService.getAllTournaments(user.user))
 
     @GetMapping("/{id}")
     fun getTournamentById(
@@ -63,6 +66,35 @@ class TournamentController(
                         .header(HttpHeaders.LOCATION, "/api/tournaments/${tournament.id}")
                         .body(tournament)
                 },
+                onError = { it.toResponseEntity() },
+            )
+
+    @PutMapping("/{id}/status")
+    @RequiresRole([UserRole.ADMIN, UserRole.HOST])
+    fun updateTournamentStatus(
+        user: AuthenticatedUser,
+        @PathVariable id: Int,
+        @RequestBody input: UpdateTournamentStatusInput,
+    ): ResponseEntity<Any> =
+        tournamentService
+            .updateTournamentStatus(
+                user = user.user,
+                id = id,
+                newStatus = input.status,
+            ).toResponse(
+                onSuccess = { ResponseEntity.status(HttpStatus.OK).body(it) },
+                onError = { it.toResponseEntity() },
+            )
+
+    @DeleteMapping("/{id}")
+    @RequiresRole([UserRole.ADMIN])
+    fun deleteTournament(
+        @PathVariable id: Int,
+    ): ResponseEntity<Any> =
+        tournamentService
+            .deleteTournament(id)
+            .toResponse(
+                onSuccess = { ResponseEntity.status(HttpStatus.NO_CONTENT).build() },
                 onError = { it.toResponseEntity() },
             )
 
@@ -82,13 +114,15 @@ class TournamentController(
             )
 
     @PutMapping("/{tournamentId}/state/screen")
-    @RequiresRole([UserRole.ADMIN])
+    @RequiresRole([UserRole.ADMIN, UserRole.HOST])
     fun updateScreen(
+        user: AuthenticatedUser,
         @PathVariable tournamentId: Int,
         @RequestBody input: UpdateScreenInput,
     ): ResponseEntity<Any> =
         tournamentService
             .updateScreen(
+                user = user.user,
                 tournamentId = tournamentId,
                 screen = input.screen,
                 currentMatchId = input.currentMatchId,

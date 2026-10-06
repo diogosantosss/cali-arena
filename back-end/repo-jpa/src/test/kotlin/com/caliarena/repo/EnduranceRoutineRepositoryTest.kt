@@ -1,60 +1,16 @@
 package com.caliarena.repo
 
-import com.caliarena.domain.routine.ExerciseType
-import com.caliarena.repo.entities.routine.EnduranceRoutineEntity
-import com.caliarena.repo.entities.routine.ExerciseEntity
-import com.caliarena.repo.trx.Transaction
-import com.caliarena.repo.trx.TransactionManagerJpa
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
-import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
-import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.data.repository.findByIdOrNull
-import java.time.Instant
-import java.time.temporal.ChronoUnit
 
-@SpringBootTest(classes = [TestConfig::class])
-class EnduranceRoutineRepositoryTest {
-    @Autowired
-    lateinit var trx: TransactionManagerJpa
-
-    @BeforeEach
-    fun cleanup() {
-        trx.run {
-            matchProgresses.deleteAll()
-            matches.deleteAll()
-            screenRoutines.deleteAll()
-            exercises.deleteAll()
-            routines.deleteAll()
-        }
-    }
-
-    private fun now() = Instant.now().truncatedTo(ChronoUnit.SECONDS)
-
-    private fun Transaction.newRoutine(name: String = "routine-${System.nanoTime()}"): EnduranceRoutineEntity =
-        routines.save(EnduranceRoutineEntity(name = name, timeCapSeconds = 600, createdAt = now().epochSecond))
-
-    private fun Transaction.newExercise(
-        routine: EnduranceRoutineEntity,
-        order: Int = 1,
-    ): ExerciseEntity =
-        exercises.save(
-            ExerciseEntity(
-                routine = routine,
-                name = "ex-$order",
-                targetReps = 10,
-                exerciseOrder = order,
-                type = ExerciseType.NORMAL,
-            ),
-        )
-
+class EnduranceRoutineRepositoryTest : AbstractRepositoryTest() {
     @Nested
     inner class CreateRoutine {
         @Test
@@ -62,7 +18,7 @@ class EnduranceRoutineRepositoryTest {
             trx.run {
                 val created = newRoutine(name = "push-day")
 
-                assertNotEqualsZero(created.id)
+                assertNotEquals(0, created.id)
                 assertEquals("push-day", created.name)
                 assertEquals(600, created.timeCapSeconds)
             }
@@ -111,7 +67,7 @@ class EnduranceRoutineRepositoryTest {
 
                 val exercise = newExercise(routine, order = 2)
 
-                assertNotEqualsZero(exercise.id)
+                assertNotEquals(0, exercise.id)
                 assertEquals(routine.id, exercise.routine.id)
                 assertEquals(2, exercise.exerciseOrder)
             }
@@ -184,9 +140,5 @@ class EnduranceRoutineRepositoryTest {
                 assertNull(routines.findByIdOrNull(routine.id))
                 assertTrue(exercises.findExercisesByRoutineId(routine.id).isEmpty())
             }
-    }
-
-    private fun assertNotEqualsZero(id: Int) {
-        assertNotEquals(0, id)
     }
 }

@@ -14,6 +14,8 @@ import com.caliarena.repo.entities.match.MatchProgressEntity
 import com.caliarena.repo.entities.tournament.BracketEntity
 import com.caliarena.repo.entities.tournament.TournamentEntity
 import com.caliarena.repo.trx.Transaction
+import com.caliarena.service.mapper.BracketLeaderboardMapper
+import com.caliarena.service.mapper.BracketSummaryMapper
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
@@ -44,21 +46,30 @@ class BracketServiceTest : ServiceTest() {
             }.whenever(trxManager)
             .run<Any>(any())
 
-        service = BracketService(trxManager, clock)
+        service =
+            BracketService(
+                trxManager,
+                clock,
+                BracketLeaderboardMapper(),
+                BracketSummaryMapper(),
+            )
     }
 
     private val now = clock.instant()
 
-    private fun tournamentEntity(id: Int = 1) =
-        TournamentEntity(
-            id = id,
-            name = "Tournament $id",
-            location = "Location",
-            startDate = now.epochSecond,
-            endDate = null,
-            status = TournamentStatus.READY,
-            createdAt = now.epochSecond,
-        )
+    private fun tournamentEntity(
+        id: Int = 1,
+        hostId: Int? = null,
+    ) = TournamentEntity(
+        id = id,
+        name = "Tournament $id",
+        location = "Location",
+        startDate = now.epochSecond,
+        endDate = null,
+        status = TournamentStatus.READY,
+        createdAt = now.epochSecond,
+        hostId = hostId,
+    )
 
     private fun bracketEntity(
         id: Int = 1,
@@ -109,7 +120,7 @@ class BracketServiceTest : ServiceTest() {
             whenever(brackets.findByTournamentIdAndDivision(1, "ELITE MALE")).thenReturn(emptyList())
             whenever(brackets.save(any())).thenReturn(bracketEntity())
 
-            val result = service.createBracket(1, "ELITE MALE", "QUALIFIERS")
+            val result = service.createBracket(adminUser, 1, "ELITE MALE", "QUALIFIERS")
 
             assertEquals(success(bracketEntity().toDomain()), result)
         }
@@ -118,7 +129,7 @@ class BracketServiceTest : ServiceTest() {
         fun `should fail when tournament does not exist`() {
             whenever(tournaments.findById(1)).thenReturn(Optional.empty())
 
-            val result = service.createBracket(1, "ELITE MALE", "QUALIFIERS")
+            val result = service.createBracket(adminUser, 1, "ELITE MALE", "QUALIFIERS")
 
             assertEquals(failure(ApiError.TOURNAMENT_NOT_FOUND), result)
         }
@@ -127,7 +138,7 @@ class BracketServiceTest : ServiceTest() {
         fun `should fail when division is blank`() {
             whenever(tournaments.findById(1)).thenReturn(Optional.of(tournamentEntity()))
 
-            val result = service.createBracket(1, "   ", "QUALIFIERS")
+            val result = service.createBracket(adminUser, 1, "   ", "QUALIFIERS")
 
             assertEquals(failure(ApiError.INVALID_BRACKET_DIVISION), result)
         }
@@ -136,7 +147,7 @@ class BracketServiceTest : ServiceTest() {
         fun `should fail when stage is invalid`() {
             whenever(tournaments.findById(1)).thenReturn(Optional.of(tournamentEntity()))
 
-            val result = service.createBracket(1, "ELITE MALE", "INVALID")
+            val result = service.createBracket(adminUser, 1, "ELITE MALE", "INVALID")
 
             assertEquals(failure(ApiError.INVALID_BRACKET_STAGE), result)
         }
@@ -148,11 +159,35 @@ class BracketServiceTest : ServiceTest() {
             whenever(tournaments.findById(1)).thenReturn(Optional.of(tournamentEntity()))
             whenever(brackets.findByTournamentIdAndDivision(1, "ELITE MALE")).thenReturn(listOf(existing))
 
-            val result = service.createBracket(1, "ELITE MALE", "QUALIFIERS")
+            val result = service.createBracket(adminUser, 1, "ELITE MALE", "QUALIFIERS")
 
             assertEquals(failure(ApiError.BRACKET_ALREADY_EXISTS), result)
 
             verify(brackets, never()).save(any())
+        }
+
+        @Test
+        fun `should fail when user is not admin nor tournament host`() {
+            whenever(tournaments.findById(1)).thenReturn(Optional.of(tournamentEntity(hostId = 99)))
+            stubTransactionRepositories()
+
+            val result = service.createBracket(judgeUser, 1, "ELITE MALE", "QUALIFIERS")
+
+            assertEquals(failure(ApiError.NOT_AUTHORIZED), result)
+            verify(brackets, never()).save(any())
+        }
+
+        @Test
+        fun `should allow the tournament host`() {
+            val tournament = tournamentEntity(hostId = hostUser.id)
+            whenever(tournaments.findById(1)).thenReturn(Optional.of(tournament))
+            whenever(brackets.findByTournamentIdAndDivision(1, "ELITE MALE")).thenReturn(emptyList())
+            whenever(brackets.save(any())).thenReturn(bracketEntity())
+            stubTransactionRepositories()
+
+            val result = service.createBracket(hostUser, 1, "ELITE MALE", "QUALIFIERS")
+
+            assertEquals(success(bracketEntity().toDomain()), result)
         }
     }
 

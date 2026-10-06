@@ -55,6 +55,10 @@ enum class ApiError(
 
     TOURNAMENT_ALREADY_EXISTS("tournament-already-exists", HttpStatus.CONFLICT),
 
+    JUDGE_ALREADY_ASSIGNED("judge-already-assigned", HttpStatus.CONFLICT),
+
+    JUDGE_NOT_ASSIGNED("judge-not-assigned", HttpStatus.NOT_FOUND),
+
     INVALID_TOURNAMENT_STATUS("invalid-tournament-status", HttpStatus.BAD_REQUEST),
 
     TOURNAMENT_STATE_NOT_FOUND("tournament-state-not-found", HttpStatus.NOT_FOUND),

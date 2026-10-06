@@ -11,6 +11,7 @@ import com.caliarena.domain.match.MatchProgress
 import com.caliarena.domain.match.RepSide
 import com.caliarena.domain.match.RepSide.BLUE
 import com.caliarena.domain.match.RepSide.RED
+import com.caliarena.domain.user.User
 import com.caliarena.service.ApiError
 import com.caliarena.service.Either
 import com.caliarena.service.Failure
@@ -20,7 +21,9 @@ import org.springframework.messaging.handler.annotation.DestinationVariable
 import org.springframework.messaging.handler.annotation.MessageMapping
 import org.springframework.messaging.simp.SimpMessagingTemplate
 import org.springframework.stereotype.Controller
+import java.security.Principal
 import java.time.Instant
+import java.util.Optional
 
 @Controller
 class JudgeWsController(
@@ -29,11 +32,16 @@ class JudgeWsController(
 ) {
     companion object {
         const val BROADCAST_TOPIC_PREFIX = "/topic/matches/"
+
+        const val NOT_AUTHORIZED_MESSAGE = "not-authorized"
     }
 
     /**
      * Handles a judge action, dispatching to a per-action handler that broadcasts
      * the resulting event to `/topic/matches/{matchId}`.
+     *
+     * The acting user comes from the handshake principal; the match service then
+     * verifies the user is an admin, the tournament host or one of its judges.
      *
      * Input: `{"action":"START","side":"RED"}` or `{"action":"ADJUST","side":"RED","reps":4}`
      * sent to `/app/matches/{matchId}/actions`
@@ -45,28 +53,37 @@ class JudgeWsController(
     fun onJudgeAction(
         @DestinationVariable matchId: Int,
         input: JudgeActionInput,
+        principal: Optional<Principal>,
     ) {
+        val user =
+            (principal.orElse(null) as? WsAuthenticatedPrincipal)?.authenticatedUser?.user
+                ?: return send(matchId, JudgeErrorEvent(message = NOT_AUTHORIZED_MESSAGE))
+
         when (input.action) {
-            JudgeActionType.START -> start(matchId)
-            JudgeActionType.ADJUST -> adjustReps(matchId, input)
-            JudgeActionType.FINISH -> forceFinish(matchId, input)
+            JudgeActionType.START -> start(user, matchId)
+            JudgeActionType.ADJUST -> adjustReps(user, matchId, input)
+            JudgeActionType.FINISH -> forceFinish(user, matchId, input)
         }
     }
 
-    private fun start(matchId: Int) {
-        matchService.startMatch(matchId).broadcast(matchId) { started ->
+    private fun start(
+        user: User,
+        matchId: Int,
+    ) {
+        matchService.startMatch(user, matchId).broadcast(matchId) { started ->
             send(matchId, JudgeStartedEvent(match = started.match, progress = started.progress))
         }
     }
 
     private fun adjustReps(
+        user: User,
         matchId: Int,
         input: JudgeActionInput,
     ) {
         val result =
             when (input.side) {
-                RED -> matchService.updateAthletesReps(matchId, redReps = input.reps)
-                BLUE -> matchService.updateAthletesReps(matchId, blueReps = input.reps)
+                RED -> matchService.updateAthletesReps(user, matchId, redReps = input.reps)
+                BLUE -> matchService.updateAthletesReps(user, matchId, blueReps = input.reps)
             }
 
         result.broadcast(matchId) { progress ->
@@ -83,10 +100,11 @@ class JudgeWsController(
     }
 
     private fun forceFinish(
+        user: User,
         matchId: Int,
         input: JudgeActionInput,
     ) {
-        matchService.forceFinishSide(matchId, input.side).broadcast(matchId) { progress ->
+        matchService.forceFinishSide(user, matchId, input.side).broadcast(matchId) { progress ->
             broadcastFinishIfDone(matchId, input.side, progress)
         }
     }

@@ -7,6 +7,9 @@ import type { Bracket, BracketStage, ScreenState, TournamentState } from "@/data
 import { BattlePanel } from "@/components/matches/battle-panel";
 import type { Match } from "@/data/matches";
 import { ScreenRoutinesPanel } from "./screen-routines-panel";
+import { ScreenBracketsPreview, ScreenLeaderboardPreview } from "./screen-previews";
+import { AnimatedPanel } from "@/components/shared/animated-panel";
+import { usePanelHost } from "@/hooks/use-panel-host";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Check,
@@ -15,18 +18,18 @@ import {
   Network,
   Swords,
   Trophy,
+  Monitor,
+  Activity,
+  List,
 } from "lucide-react";
 
-const screenOptions: { value: ScreenState; label: string }[] = [
-  { value: "WAITING", label: "Waiting" },
-  { value: "ROUTINES", label: "Routines" },
-  { value: "BATTLE", label: "Battle" },
-  { value: "LEADERBOARD", label: "Leaderboard" },
-  { value: "BRACKETS", label: "Brackets" },
+const screenOptions: { value: ScreenState; label: string; icon: React.ReactNode }[] = [
+  { value: "WAITING", label: "Waiting", icon: <Monitor className="w-4 h-4" /> },
+  { value: "ROUTINES", label: "Routines", icon: <Activity className="w-4 h-4" /> },
+  { value: "BATTLE", label: "Battle", icon: <Swords className="w-4 h-4" /> },
+  { value: "LEADERBOARD", label: "Leaderboard", icon: <Trophy className="w-4 h-4" /> },
+  { value: "BRACKETS", label: "Brackets", icon: <List className="w-4 h-4" /> },
 ];
-
-const screenLabel = (screen: ScreenState) =>
-  screenOptions.find((option) => option.value === screen)?.label ?? screen;
 
 const stageLabel: Record<BracketStage, string> = {
   QUALIFIERS: "Qualifiers",
@@ -79,12 +82,11 @@ function createInitialState(state: TournamentState | null): ScreenControlState {
 function reducer(state: ScreenControlState, action: Action): ScreenControlState {
   switch (action.type) {
     case "setScreen":
+      // Selections are intentionally kept so each screen's panel stays mounted
+      // and can animate in/out instead of being torn down on every switch.
       return {
         ...state,
         screen: action.screen,
-        matchId: action.screen === "BATTLE" ? state.matchId : null,
-        bracketId: action.screen === "LEADERBOARD" ? state.bracketId : null,
-        division: action.screen === "BRACKETS" ? state.division : null,
         error: null,
       };
     case "setMatchId":
@@ -117,6 +119,7 @@ export function ScreenControl({
   const [ui, dispatch] = useReducer(reducer, tournamentState, createInitialState);
   const [justApplied, setJustApplied] = useState(false);
   const appliedTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const { hostRef: panelHostRef, hostStyle: panelHostStyle } = usePanelHost(ui.screen);
 
   useEffect(() => {
     return () => window.clearTimeout(appliedTimer.current);
@@ -179,216 +182,217 @@ export function ScreenControl({
     (ui.screen === "BRACKETS" && !ui.division);
 
   return (
-    <div className="rounded-lg overflow-hidden" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
-      <div className="flex items-center justify-between gap-3 px-5 py-4">
-        <div className="min-w-0">
-          <p className="text-xs tracking-widest uppercase" style={{ color: "var(--muted-foreground)" }}>
-            Screen control
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <p className="text-xs uppercase tracking-widest" style={{ color: "var(--muted-foreground)" }}>
+            Spectator Screen
           </p>
-          <h3
-            className="text-xl leading-tight mt-1 flex items-center gap-2.5"
-            style={{ fontFamily: "DM Serif Display, Georgia, serif", color: "var(--foreground)" }}
-          >
-            Spectator screen
-            <span className="flex items-center gap-1.5 mt-0.5 select-none">
-              <span
-                className="w-1.5 h-1.5 rounded-full"
-                style={{ background: isDirty ? "var(--muted-foreground)" : "var(--accent)" }}
-              />
-              <span
-                className="text-[10px] uppercase tracking-widest font-sans"
-                style={{ color: isDirty ? "var(--muted-foreground)" : "var(--accent)" }}
-              >
-                {isDirty ? "Pending" : "Live"}
-              </span>
+          <div className="flex items-center gap-2 mt-1">
+            <span className="text-lg font-medium" style={{ color: "var(--foreground)" }}>Screen Control</span>
+            <span
+              className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] uppercase tracking-widest font-medium ${
+                isDirty ? "bg-muted text-muted-foreground" : "bg-accent/10 text-accent"
+              }`}
+            >
+              <span className={`w-1.5 h-1.5 rounded-full ${isDirty ? "" : "animate-pulse"}`} />
+              {isDirty ? "Pending" : "Live"}
             </span>
-          </h3>
+          </div>
         </div>
         <a
           href={`/screen/${tournamentId}`}
           target="_blank"
           rel="noreferrer"
-          className="flex items-center gap-1.5 text-[11px] font-medium shrink-0 transition-colors"
+          className="flex items-center gap-1.5 text-sm font-medium transition-colors"
           style={{ color: "var(--muted-foreground)" }}
           onMouseEnter={(e) => (e.currentTarget.style.color = "var(--accent)")}
           onMouseLeave={(e) => (e.currentTarget.style.color = "var(--muted-foreground)")}
         >
-          <ExternalLink className="w-3 h-3" />
-          Open screen
+          <ExternalLink className="w-3.5 h-3.5" />
+          Open Screen
         </a>
       </div>
 
-      <div style={{ borderTop: "1px solid var(--border)" }} className="px-5 py-5 space-y-5">
-        <div>
-          <p className="text-[10px] uppercase tracking-widest mb-2" style={{ color: "var(--muted-foreground)" }}>
-            Screen
-          </p>
-          <div className="flex flex-wrap items-center gap-1 p-1 rounded-lg" style={{ background: "var(--secondary)", border: "1px solid var(--border)" }}>
-            {screenOptions.map(({ value, label }) => {
-              const active = ui.screen === value;
-              return (
-                <button
-                  key={value}
-                  onClick={() => dispatch({ type: "setScreen", screen: value })}
-                  className="px-3 py-1.5 rounded-md text-xs font-medium transition-colors"
-                  style={{
-                    background: active ? "var(--accent)" : "transparent",
-                    color: active ? "var(--accent-foreground)" : "var(--secondary-foreground)",
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!active) {
-                      e.currentTarget.style.color = "var(--foreground)";
-                      e.currentTarget.style.background = "var(--border)";
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!active) {
-                      e.currentTarget.style.color = "var(--secondary-foreground)";
-                      e.currentTarget.style.background = "transparent";
-                    }
-                  }}
-                >
-                  {label}
-                </button>
-              );
-            })}
-          </div>
+      {/* Screen Selection */}
+      <div className="space-y-3">
+        <div className="flex flex-wrap gap-2">
+          {screenOptions.map(({ value, label, icon }) => {
+            const active = ui.screen === value;
+            return (
+              <button
+                key={value}
+                onClick={() => dispatch({ type: "setScreen", screen: value })}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all border ${
+                  active
+                    ? "border-accent bg-accent/5 text-accent"
+                    : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted"
+                }`}
+              >
+                <span className={active ? "text-accent" : "text-muted-foreground"}>{icon}</span>
+                <span>{label}</span>
+              </button>
+            );
+          })}
         </div>
+      </div>
 
-        <div className="flex flex-wrap items-end gap-3">
-          {ui.screen === "BATTLE" && (
-            <div className="space-y-1.5">
-              <p className="text-[10px] uppercase tracking-widest" style={{ color: "var(--muted-foreground)" }}>Match</p>
-              <Select
-                value={ui.matchId ? String(ui.matchId) : ""}
-                onValueChange={(value) => dispatch({ type: "setMatchId", id: Number(value) })}
-              >
-                <SelectTrigger className="h-8 text-xs w-72 border-border focus:ring-accent/40" style={{ background: "var(--background)", color: "var(--secondary-foreground)" }}>
-                  <Swords className="w-3.5 h-3.5 shrink-0" style={{ color: "var(--muted-foreground)" }} />
-                  <SelectValue placeholder="Select match" />
-                </SelectTrigger>
-                <SelectContent position="popper" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
-                  {readyMatches.map((m) => {
-                    const red = athletes.find((a) => a.id === m.athleteRedId);
-                    const blue = athletes.find((a) => a.id === m.athleteBlueId);
-                    const bracket = brackets.find((b) => b.id === m.bracketId);
-                    const label = `${red?.name ?? "Not assigned"} vs ${blue?.name ?? "Not assigned"}`;
-                    return (
-                      <SelectItem key={m.id} value={String(m.id)} className="text-xs" style={{ color: "var(--secondary-foreground)" }}>
-                        {bracket ? `${stageLabel[bracket.stage]} — ${label}` : label}
-                      </SelectItem>
-                    );
-                  })}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-
-          {ui.screen === "LEADERBOARD" && (
-            <div className="space-y-1.5">
-              <p className="text-[10px] uppercase tracking-widest" style={{ color: "var(--muted-foreground)" }}>Bracket</p>
-              <Select
-                value={ui.bracketId ? String(ui.bracketId) : ""}
-                onValueChange={(value) => dispatch({ type: "setBracketId", id: Number(value) })}
-              >
-                <SelectTrigger className="h-8 text-xs w-72 border-border focus:ring-accent/40" style={{ background: "var(--background)", color: "var(--secondary-foreground)" }}>
-                  <Trophy className="w-3.5 h-3.5 shrink-0" style={{ color: "var(--muted-foreground)" }} />
-                  <SelectValue placeholder="Select bracket" />
-                </SelectTrigger>
-                <SelectContent position="popper" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
-                  {brackets.map((b) => (
-                    <SelectItem key={b.id} value={String(b.id)} className="text-xs" style={{ color: "var(--secondary-foreground)" }}>
-                      {b.stage} · {b.division}
+      {/* Context Selectors */}
+      <div className="flex flex-wrap items-end gap-4" style={{ opacity: isDirty ? 1 : 0.5 }}>
+        {ui.screen === "BATTLE" && (
+          <div className="space-y-1.5 flex-1 min-w-[280px]">
+            <label className="text-[10px] uppercase tracking-widest" style={{ color: "var(--muted-foreground)" }}>
+              Match
+            </label>
+            <Select
+              value={ui.matchId ? String(ui.matchId) : ""}
+              onValueChange={(value) => dispatch({ type: "setMatchId", id: Number(value) })}
+            >
+              <SelectTrigger className="h-9 text-sm w-full border-border focus:ring-accent/40" style={{ background: "var(--background)", color: "var(--foreground)" }}>
+                <Swords className="w-4 h-4 shrink-0" style={{ color: "var(--muted-foreground)" }} />
+                <SelectValue placeholder="Select a match" />
+              </SelectTrigger>
+              <SelectContent position="popper" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+                {readyMatches.map((m) => {
+                  const red = athletes.find((a) => a.id === m.athleteRedId);
+                  const blue = athletes.find((a) => a.id === m.athleteBlueId);
+                  const bracket = brackets.find((b) => b.id === m.bracketId);
+                  const label = `${red?.name ?? "Not assigned"} vs ${blue?.name ?? "Not assigned"}`;
+                  return (
+                    <SelectItem key={m.id} value={String(m.id)} className="text-sm" style={{ color: "var(--foreground)" }}>
+                      {bracket ? `${stageLabel[bracket.stage]} — ${label}` : label}
                     </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
+                  );
+                })}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
 
-          {ui.screen === "BRACKETS" && (
-            <div className="space-y-1.5">
-              <p className="text-[10px] uppercase tracking-widest" style={{ color: "var(--muted-foreground)" }}>Division</p>
-              <Select
-                value={ui.division ?? ""}
-                onValueChange={(value) => dispatch({ type: "setDivision", division: value })}
-              >
-                <SelectTrigger className="h-8 text-xs w-56 border-border focus:ring-accent/40" style={{ background: "var(--background)", color: "var(--secondary-foreground)" }}>
-                  <Network className="w-3.5 h-3.5 shrink-0" style={{ color: "var(--muted-foreground)" }} />
-                  <SelectValue placeholder="Select division" />
-                </SelectTrigger>
-                <SelectContent position="popper" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
-                  {divisions.map((d) => (
-                    <SelectItem key={d} value={d} className="text-xs" style={{ color: "var(--secondary-foreground)" }}>{d}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
+        {ui.screen === "LEADERBOARD" && (
+          <div className="space-y-1.5 flex-1 min-w-[280px]">
+            <label className="text-[10px] uppercase tracking-widest" style={{ color: "var(--muted-foreground)" }}>
+              Bracket
+            </label>
+            <Select
+              value={ui.bracketId ? String(ui.bracketId) : ""}
+              onValueChange={(value) => dispatch({ type: "setBracketId", id: Number(value) })}
+            >
+              <SelectTrigger className="h-9 text-sm w-full border-border focus:ring-accent/40" style={{ background: "var(--background)", color: "var(--foreground)" }}>
+                <Trophy className="w-4 h-4 shrink-0" style={{ color: "var(--muted-foreground)" }} />
+                <SelectValue placeholder="Select a bracket" />
+              </SelectTrigger>
+              <SelectContent position="popper" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+                {brackets.map((b) => (
+                  <SelectItem key={b.id} value={String(b.id)} className="text-sm" style={{ color: "var(--foreground)" }}>
+                    {b.stage} · {b.division}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
 
-          <button
-            onClick={() => void handleUpdateScreen()}
-            disabled={updateDisabled}
-            className="flex items-center gap-1.5 px-4 h-8 rounded text-xs font-medium transition-opacity disabled:opacity-50 ml-auto"
-            style={{ background: "var(--accent)", color: "var(--accent-foreground)" }}
-          >
-            {ui.loading ? (
-              <>
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                Applying…
-              </>
-            ) : justApplied ? (
-              <>
-                <Check className="w-3.5 h-3.5" />
-                Applied
-              </>
-            ) : (
-              "Update screen"
-            )}
-          </button>
-        </div>
+        {ui.screen === "BRACKETS" && (
+          <div className="space-y-1.5 flex-1 min-w-[280px]">
+            <label className="text-[10px] uppercase tracking-widest" style={{ color: "var(--muted-foreground)" }}>
+              Division
+            </label>
+            <Select
+              value={ui.division ?? ""}
+              onValueChange={(value) => dispatch({ type: "setDivision", division: value })}
+            >
+              <SelectTrigger className="h-9 text-sm w-full border-border focus:ring-accent/40" style={{ background: "var(--background)", color: "var(--foreground)" }}>
+                <Network className="w-4 h-4 shrink-0" style={{ color: "var(--muted-foreground)" }} />
+                <SelectValue placeholder="Select division" />
+              </SelectTrigger>
+              <SelectContent position="popper" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+                {divisions.map((d) => (
+                  <SelectItem key={d} value={d} className="text-sm" style={{ color: "var(--foreground)" }}>{d}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+      </div>
 
-        <div
-          className="flex items-center gap-2 text-[11px] px-3 py-2 rounded-lg truncate"
-          style={{ background: "var(--background)", border: "1px solid var(--border)", color: "var(--muted-foreground)" }}
-        >
+      {/* Action Bar */}
+      <div className="flex items-center justify-between gap-4 pt-2 border-t" style={{ borderColor: "var(--border)" }}>
+        <div className="flex items-center gap-2 text-sm" style={{ color: "var(--muted-foreground)" }}>
           {isDirty ? (
             <>
-              <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: "var(--muted-foreground)" }} />
-              <span>
-                Will show <span className="font-medium" style={{ color: "var(--foreground)" }}>{screenLabel(ui.screen)}{pendingDetail && <> · {pendingDetail}</>}</span> — press update to go live
-              </span>
+              <span className="w-2 h-2 rounded-full" style={{ background: "var(--muted-foreground)" }} />
+              <span>Will show <strong style={{ color: "var(--foreground)" }}>{screenOptions.find((o) => o.value === ui.screen)?.label ?? ui.screen}</strong>{pendingDetail && <><span className="mx-2">·</span> {pendingDetail}</>} — press update to go live</span>
             </>
           ) : (
             <>
-              <span className="w-1.5 h-1.5 rounded-full shrink-0 animate-pulse" style={{ background: "var(--accent)" }} />
-              <span>
-                Live now — <span className="font-medium" style={{ color: "var(--foreground)" }}>{screenLabel(ui.screen)}{pendingDetail && <> · {pendingDetail}</>}</span>
-              </span>
+              <span className="w-2 h-2 rounded-full animate-pulse" style={{ background: "var(--accent)" }} />
+              <span>Live now — <strong style={{ color: "var(--foreground)" }}>{screenOptions.find((o) => o.value === ui.screen)?.label ?? ui.screen}</strong>{pendingDetail && <><span className="mx-2">·</span> {pendingDetail}</>}</span>
             </>
           )}
         </div>
 
-        {ui.error && (
-          <p className="text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded px-3 py-2">
-            {ui.error}
-          </p>
-        )}
+        <button
+          onClick={() => void handleUpdateScreen()}
+          disabled={updateDisabled || !isDirty}
+          className="flex items-center gap-2 px-5 h-9 rounded-lg text-sm font-medium transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+          style={{
+            background: isDirty ? "var(--accent)" : "var(--muted)",
+            color: isDirty ? "var(--accent-foreground)" : "var(--muted-foreground)",
+          }}
+        >
+          {ui.loading ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Applying…
+            </>
+          ) : justApplied ? (
+            <>
+              <Check className="w-4 h-4" />
+              Applied
+            </>
+          ) : isDirty ? (
+            "Update Screen"
+          ) : (
+            "No Changes"
+          )}
+        </button>
+      </div>
 
-        {ui.screen === "BATTLE" && ui.matchId && (
-          <BattlePanel
-            key={ui.matchId}
-            matchId={ui.matchId}
-            athletes={athletes}
-            routines={routines}
-            overviews={overviews}
-            onError={(message) => dispatch({ type: "battleError", message })}
-          />
-        )}
+      {ui.error && (
+        <div className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm" style={{ background: "var(--danger-10)", color: "var(--danger)", border: "1px solid var(--danger)" }}>
+          <Loader2 className="w-4 h-4" style={{ color: "var(--danger)" }} />
+          {ui.error}
+        </div>
+      )}
 
-        {ui.screen === "ROUTINES" && (
+      {/* Screen-specific Panels */}
+      <div ref={panelHostRef} className="relative" style={panelHostStyle}>
+        <AnimatedPanel name="BATTLE" activeTab={ui.screen}>
+          {ui.matchId && (
+            <BattlePanel
+              key={ui.matchId}
+              matchId={ui.matchId}
+              athletes={athletes}
+              routines={routines}
+              overviews={overviews}
+              onError={(message) => dispatch({ type: "battleError", message })}
+            />
+          )}
+        </AnimatedPanel>
+
+        <AnimatedPanel name="ROUTINES" activeTab={ui.screen}>
           <ScreenRoutinesPanel tournamentId={tournamentId} routines={routines} />
-        )}
+        </AnimatedPanel>
+
+        <AnimatedPanel name="LEADERBOARD" activeTab={ui.screen}>
+          <ScreenLeaderboardPreview bracketId={ui.bracketId} />
+        </AnimatedPanel>
+
+        <AnimatedPanel name="BRACKETS" activeTab={ui.screen}>
+          <ScreenBracketsPreview tournamentId={tournamentId} division={ui.division} />
+        </AnimatedPanel>
       </div>
     </div>
   );

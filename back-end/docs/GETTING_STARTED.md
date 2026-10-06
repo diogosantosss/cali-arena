@@ -16,6 +16,9 @@ DB_URL=jdbc:postgresql://caliarena-postgres:5432/db?user=dbuser&password=changei
 POSTGRES_DB=db
 POSTGRES_USER=dbuser
 POSTGRES_PASSWORD=changeit
+
+REDIS_HOST=caliarena-redis
+REDIS_PORT=6379
 ```
 
 > **Important:** this file contains credentials and must never be committed. It is gitignored.
@@ -25,7 +28,7 @@ POSTGRES_PASSWORD=changeit
 From `back-end/`:
 
 ```bash
-./gradlew allUp      # builds everything (JVM + Postgres + nginx) and starts the stack
+./gradlew allUp      # builds everything (JVM + Postgres + nginx + Redis) and starts the stack
 ./gradlew allDown    # stops the stack
 ```
 
@@ -45,7 +48,7 @@ The JVM container starts with the **`prod`** Spring profile
 ```
 
 > Requires PostgreSQL running on `localhost:5432` and the local profile (`dev`) set in
-> `app/src/main/resources/application.properties`. This file is dev-only and not committed.
+> `app/src/main/resources/application.properties`. This file is dev-only.
 
 ---
 

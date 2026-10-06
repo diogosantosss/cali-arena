@@ -12,6 +12,8 @@ import jakarta.persistence.JoinColumn
 import jakarta.persistence.ManyToOne
 import jakarta.persistence.OneToOne
 import jakarta.persistence.Table
+import org.hibernate.annotations.OnDelete
+import org.hibernate.annotations.OnDeleteAction
 import java.time.Instant
 
 @Entity
@@ -22,6 +24,7 @@ class MatchProgressEntity(
     var id: Int = 0,
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "match_id", unique = true, nullable = false)
+    @OnDelete(action = OnDeleteAction.CASCADE)
     var match: MatchEntity = MatchEntity(),
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "red_current_exercise_id")

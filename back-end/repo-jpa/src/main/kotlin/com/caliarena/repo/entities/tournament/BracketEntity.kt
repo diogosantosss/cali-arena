@@ -13,6 +13,8 @@ import jakarta.persistence.Id
 import jakarta.persistence.JoinColumn
 import jakarta.persistence.ManyToOne
 import jakarta.persistence.Table
+import org.hibernate.annotations.OnDelete
+import org.hibernate.annotations.OnDeleteAction
 import java.time.Instant
 
 @Entity
@@ -23,6 +25,7 @@ class BracketEntity(
     var id: Int = 0,
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "tournament_id", nullable = false)
+    @OnDelete(action = OnDeleteAction.CASCADE)
     var tournament: TournamentEntity = TournamentEntity(),
     @Column(nullable = false, length = 40)
     var division: String = "MALE",

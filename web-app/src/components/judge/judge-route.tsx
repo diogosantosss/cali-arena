@@ -1,9 +1,11 @@
 import { Navigate, Outlet, useLocation } from "react-router-dom";
+import { JUDGE_ROLES, homeRouteFor } from "@/data/auth";
 import { useAuth } from "@/hooks/use-auth";
 
 /**
- * Guards the judge flow. Only authenticated JUDGE/ADMIN users pass; the
- * judge pages are standalone (no dashboard sidebar), like /screen.
+ * Guards the judge flow. Admins, hosts and judges pass; the judge pages are
+ * standalone (no dashboard sidebar), like /screen. Anybody else is sent to the
+ * page that belongs to their role.
  */
 export function JudgeRoute() {
   const { isAuthenticated, isLoading, user } = useAuth();
@@ -25,8 +27,8 @@ export function JudgeRoute() {
     );
   }
 
-  if (user?.role !== "JUDGE" && user?.role !== "ADMIN") {
-    return <Navigate to="/dashboard" replace />;
+  if (user && !JUDGE_ROLES.includes(user.role)) {
+    return <Navigate to={homeRouteFor(user.role)} replace />;
   }
 
   return <Outlet />;

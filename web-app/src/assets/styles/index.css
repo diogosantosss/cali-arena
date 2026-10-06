@@ -61,6 +61,14 @@
     min-height: 100vh;
     background: var(--background);
   }
+
+  /* Overlay route is composited over a camera feed in OBS. The base background
+   * would otherwise paint the whole 1920x1080 frame opaque black. */
+  html.overlay-transparent,
+  html.overlay-transparent body,
+  html.overlay-transparent #container {
+    background: transparent;
+  }
 }
 
 input[type="number"]::-webkit-inner-spin-button,
@@ -90,6 +98,23 @@ input[type="number"] {
 
 .animate-rep-pop {
   animation: rep-pop 0.25s ease-out;
+  transform-origin: center;
+}
+
+@keyframes overlay-win {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+@keyframes overlay-rep {
+  0%   { transform: scale(1.18); }
+  60%  { transform: scale(0.97); }
+  100% { transform: scale(1); }
+}
+
+.animate-overlay-rep {
+  animation: overlay-rep 0.28s cubic-bezier(0.2, 0.8, 0.3, 1);
   transform-origin: center;
 }
 
@@ -128,4 +153,31 @@ input[type="number"] {
 .animate-rep-roll {
   animation: rep-roll 0.28s cubic-bezier(0.2, 0.8, 0.3, 1);
   transform-origin: center;
+}
+
+@keyframes overlay-drop {
+  from { opacity: 0; transform: translateY(-12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.animate-overlay-drop {
+  animation: overlay-drop 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes overlay-slide-left {
+  from { opacity: 0; transform: translateX(-48px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+.animate-overlay-slide-left {
+  animation: overlay-slide-left 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes overlay-slide-right {
+  from { opacity: 0; transform: translateX(48px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+.animate-overlay-slide-right {
+  animation: overlay-slide-right 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
