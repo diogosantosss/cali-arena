@@ -75,14 +75,14 @@ class TournamentService(
         trx.run {
             val visible =
                 visibleTournamentIds(user)
-                    ?: return@run tournaments.findAll().map { it.toDomain() }
+                    ?: return@run tournaments.findAll().map(TournamentEntity::toDomain)
 
-            tournaments.findAllById(visible).map { it.toDomain() }
+            tournaments.findAllById(visible).map(TournamentEntity::toDomain)
         }
 
     fun getTournamentsByStatus(status: TournamentStatus): List<Tournament> =
         trx.run {
-            tournaments.findByStatus(status).map { it.toDomain() }
+            tournaments.findByStatus(status).map(TournamentEntity::toDomain)
         }
 
     fun updateTournamentStatus(
@@ -105,7 +105,9 @@ class TournamentService(
 
             existing.status = status
 
-            success(tournaments.save(existing).toDomain())
+            val updated = tournaments.save(existing).toDomain()
+
+            success(updated)
         }
 
     /**
@@ -130,7 +132,7 @@ class TournamentService(
 
     fun getTournamentState(tournamentId: Int): Either<ApiError, TournamentState> =
         trx.run {
-            tournaments.findByIdOrNull(tournamentId)?.toDomain()
+            tournaments.findByIdOrNull(tournamentId)
                 ?: return@run failure(ApiError.TOURNAMENT_NOT_FOUND)
 
             val state =
@@ -149,7 +151,7 @@ class TournamentService(
         currentDivision: String?,
     ): Either<ApiError, TournamentState> =
         trx.run {
-            tournaments.findByIdOrNull(tournamentId)?.toDomain()
+            tournaments.findByIdOrNull(tournamentId)
                 ?: return@run failure(ApiError.TOURNAMENT_NOT_FOUND)
 
             if (!canManageTournament(user, tournamentId)) {

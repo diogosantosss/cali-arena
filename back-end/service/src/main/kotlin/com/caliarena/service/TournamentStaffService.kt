@@ -5,6 +5,7 @@ import com.caliarena.domain.tournament.Tournament
 import com.caliarena.domain.tournament.TournamentStaff
 import com.caliarena.domain.user.User
 import com.caliarena.domain.user.UserRole
+import com.caliarena.repo.entities.tournament.TournamentEntity
 import com.caliarena.repo.entities.tournament.TournamentJudgeEntity
 import com.caliarena.repo.trx.Transaction
 import com.caliarena.repo.trx.TransactionManager
@@ -156,7 +157,7 @@ class TournamentStaffService(
             if (ids.isEmpty()) {
                 emptyList()
             } else {
-                tournaments.findAllById(ids).map { it.toDomain() }
+                tournaments.findAllById(ids).map(TournamentEntity::toDomain)
             }
         }
 }

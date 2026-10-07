@@ -181,16 +181,18 @@ class UserAuthService(
 
             target.role = role
 
-            success(users.save(target).toDomain())
+            val updated = users.save(target).toDomain()
+
+            success(updated)
         }
 
     fun getUsers(): List<User> =
         trxManager.run {
-            users.findAll().map { it.toDomain() }
+            users.findAll().map(UserEntity::toDomain)
         }
 
     fun getUsersByRole(role: UserRole): List<User> =
         trxManager.run {
-            users.findAllByRole(role).map { it.toDomain() }
+            users.findAllByRole(role).map(UserEntity::toDomain)
         }
 }

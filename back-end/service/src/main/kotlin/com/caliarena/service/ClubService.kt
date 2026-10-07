@@ -65,6 +65,8 @@ class ClubService(
             existing.name = name
             existing.shortName = shortName
 
-            success(clubs.save(existing).toDomain())
+            val club = clubs.save(existing)
+
+            success(club.toDomain())
         }
 }

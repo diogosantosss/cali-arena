@@ -27,7 +27,7 @@ class RoutineService(
                 .findByName(name)
                 ?.let { return@run failure(ApiError.ROUTINE_ALREADY_EXISTS) }
 
-            val enduranceRoutine =
+            val routine =
                 routines.save(
                     EnduranceRoutineEntity(
                         name = name,
@@ -36,7 +36,7 @@ class RoutineService(
                     ),
                 )
 
-            success(enduranceRoutine.toDomain())
+            success(routine.toDomain())
         }
 
     /**
@@ -148,16 +148,20 @@ class RoutineService(
                 routines.findByName(routineName)
                     ?: return@run failure(ApiError.ROUTINE_NOT_FOUND)
 
-            val exercises = exercises.findExercisesByRoutineId(routine.id).map(ExerciseEntity::toDomain)
+            val exercises = exercises.findExercisesByRoutineId(routine.id)
 
-            success(
+            val overview =
                 RoutineOverview(
                     name = routine.name,
                     timeCapSeconds = routine.timeCapSeconds,
                     createdAt = Instant.ofEpochSecond(routine.createdAt),
-                    exercises = exercises.sortedBy(Exercise::exerciseOrder),
-                ),
-            )
+                    exercises =
+                        exercises
+                            .map(ExerciseEntity::toDomain)
+                            .sortedBy(Exercise::exerciseOrder),
+                )
+
+            success(overview)
         }
 
     fun getRoutines(): List<EnduranceRoutine> =

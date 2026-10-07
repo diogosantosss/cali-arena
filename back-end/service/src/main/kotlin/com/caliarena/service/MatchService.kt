@@ -126,14 +126,17 @@ class MatchService(
 
             val now = clock.instant()
 
+            // update match
             match.status = MatchStatus.RUNNING
             match.startedAt = now.toEpochMilli()
             matches.save(match)
 
+            // update match progress
             prog.timerStartedAt = now.toEpochMilli()
             prog.updatedAt = now.epochSecond
             val updatedProg = matchProgresses.save(prog).toDomain()
 
+            // send the event for the spectators
             MatchUpdatedEvent(
                 tournamentId = tournamentId,
                 matchProgress = updatedProg,

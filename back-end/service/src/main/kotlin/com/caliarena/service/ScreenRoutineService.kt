@@ -23,10 +23,15 @@ class ScreenRoutineService(
 ) {
     fun getByTournamentId(tournamentId: Int): Either<ApiError, List<ScreenRoutine>> =
         trx.run {
-            tournaments.findByIdOrNull(tournamentId)?.toDomain()
+            tournaments.findByIdOrNull(tournamentId)
                 ?: return@run failure(ApiError.TOURNAMENT_NOT_FOUND)
 
-            success(screenRoutines.findByTournamentIdOrderByDisplayOrder(tournamentId).map(ScreenRoutineEntity::toDomain))
+            val routines: List<ScreenRoutine> =
+                screenRoutines
+                    .findByTournamentIdOrderByDisplayOrder(tournamentId)
+                    .map(ScreenRoutineEntity::toDomain)
+
+            success(routines)
         }
 
     fun create(
@@ -130,6 +135,7 @@ class ScreenRoutineService(
                     routineOverview,
                 ),
             )
+
             success(result)
         }
 

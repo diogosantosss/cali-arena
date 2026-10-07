@@ -25,14 +25,10 @@ sealed class Either<out L, out R> {
     ) : Either<Nothing, R>()
 }
 
-// Wraps [value] as a successful [Either.Right].
-fun <R> success(value: R) = Either.Right(value)
-
-// Wraps [error] as a failed [Either.Left].
 fun <L> failure(error: L) = Either.Left(error)
 
-// Alias for the success [Either.Right].
-typealias Success<S> = Either.Right<S>
+fun <R> success(value: R) = Either.Right(value)
 
-// Alias for the failure [Either.Left].
 typealias Failure<F> = Either.Left<F>
+
+typealias Success<S> = Either.Right<S>

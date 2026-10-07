@@ -20,11 +20,11 @@ class AthleteService(
     ): Either<ApiError, Athlete> =
         trx.run {
             val club =
-                if (clubId != null) {
+                if (clubId == null) {
+                    null
+                } else {
                     clubs.findByIdOrNull(clubId)
                         ?: return@run failure(ApiError.CLUB_NOT_FOUND)
-                } else {
-                    null
                 }
 
             val genderType =
@@ -63,7 +63,12 @@ class AthleteService(
             clubs.findByIdOrNull(clubId)
                 ?: return@run failure(ApiError.CLUB_NOT_FOUND)
 
-            success(athletes.findByClubId(clubId).map(AthleteEntity::toDomain))
+            val athletes: List<Athlete> =
+                athletes
+                    .findByClubId(clubId)
+                    .map(AthleteEntity::toDomain)
+
+            success(athletes)
         }
 
     fun getAthletesByGender(gender: String): Either<ApiError, List<Athlete>> =
@@ -72,7 +77,12 @@ class AthleteService(
                 GenderType.entries.find { it.name == gender }
                     ?: return@run failure(ApiError.INVALID_GENDER)
 
-            success(athletes.findByGender(genderType).map(AthleteEntity::toDomain))
+            val athletes: List<Athlete> =
+                athletes
+                    .findByGender(genderType)
+                    .map(AthleteEntity::toDomain)
+
+            success(athletes)
         }
 
     fun updateAthlete(
@@ -91,17 +101,19 @@ class AthleteService(
                     ?: return@run failure(ApiError.INVALID_GENDER)
 
             val club =
-                if (clubId != null) {
+                if (clubId == null) {
+                    null
+                } else {
                     clubs.findByIdOrNull(clubId)
                         ?: return@run failure(ApiError.CLUB_NOT_FOUND)
-                } else {
-                    null
                 }
 
             existing.name = name
             existing.gender = genderType
             existing.club = club
 
-            success(athletes.save(existing).toDomain())
+            val athlete = athletes.save(existing).toDomain()
+
+            success(athlete)
         }
 }
