@@ -30,23 +30,7 @@ A real-time platform for managing and displaying calisthenics competitions.
 
 ## Architecture
 
-```
-                    ┌──────────────────────────────┐
-  spectators  ──────▶│  GET /screen-routines/listen │  SSE  (public, keep-alive)
-                    └──────────────┬───────────────┘
-                                   │ competition state
-  judge PWA  ───────▶│  /ws (STOMP) /topic/matches/… │  WebSocket (judge control)
-                    └──────────────┬───────────────┘
-                                   │
-                     ┌─────────────▼─────────────┐
-                     │   Spring Boot back-end    │
-                     │  :app → :http → :service   │
-                     │           :domain          │
-                     │        :repo-jpa (JPA)     │
-                     └───────┬───────────┬────────┘
-                             │           │
-                        PostgreSQL     Redis
-```
+![Cali Arena system architecture](./back-end/docs/ARCHITECTURE.png)
 
 **Two real-time channels, on purpose:**
 
@@ -54,6 +38,15 @@ A real-time platform for managing and displaying calisthenics competitions.
 - **WebSocket / STOMP** (`/ws`, topic `/topic/matches/{matchId}`) carries the judge's live actions (`START`, `ADJUST`, `FINISH`) and their results. The handshake is authorized (`ADMIN`, `HOST`, `JUDGE`) and every inbound message is re-checked against the tournament-scoped permissions.
 
 **Layering** (`back-end/`): `:domain` holds the pure model and rules (no Spring), `:repo-jpa` the entities and a small unit-of-work abstraction, `:service` the use cases (all of them returning `Either<ApiError, T>` instead of throwing), `:http` the controllers and DTOs, and `:app` the boot, the WebSocket configuration, the interceptors and the Docker setup.
+
+### Data model
+
+![Cali Arena entity-relationship model](./back-end/docs/ER-MODEL.png)
+
+Thirteen tables: `users`, `tokens`, `clubs`, `athletes`, `tournaments`, `tournament_judges`, `brackets`,
+`endurance_routines`, `exercises`, `matches`, `tournament_state`, `match_progress` and `screen_routines`.
+Everything that belongs to a tournament cascades from `tournaments`; athletes, clubs, routines and
+exercises are global and survive the deletion of a tournament.
 
 ---
 
