@@ -15,6 +15,7 @@ import { JudgeMatchPage } from "@/pages/judge/judge-match-page";
 import { JudgeRoute } from "@/components/judge/judge-route";
 import { ScreenPage } from "@/pages/live/screen-page";
 import { OverlayPage } from "@/pages/overlay/overlay-page.tsx";
+import { NotFoundPage } from "@/pages/not-found-page";
 
 export const router = createBrowserRouter([
   {
@@ -50,4 +51,5 @@ export const router = createBrowserRouter([
       { path: ":matchId", element: <JudgeMatchPage /> },
     ],
   },
+  { path: "*", element: <NotFoundPage /> },
 ]);

@@ -20,7 +20,7 @@ import type { TournamentStaff } from "@/services/tournament-staff.service";
 import { tournamentStaffService } from "@/services/tournament-staff.service";
 import { ConfirmDialog } from "@/components/tournaments/confirm-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, MapPin, CalendarDays, LayoutDashboard, Users, Monitor, Grid, Settings, TriangleAlert, Loader2 } from "lucide-react";
+import { ArrowLeft, MapPin, CalendarDays, LayoutDashboard, Users, Monitor, Grid, Settings, TriangleAlert, Loader2, Trophy } from "lucide-react";
 
 const statusStyles: Record<Tournament["status"], { label: string; color: string; bg: string }> = {
   DRAFT: { label: "Draft", color: "var(--muted-foreground)", bg: "rgba(107,101,96,0.12)" },
@@ -28,6 +28,20 @@ const statusStyles: Record<Tournament["status"], { label: string; color: string;
   LIVE: { label: "Live", color: "var(--accent)", bg: "var(--accent-12)" },
   FINISHED: { label: "Finished", color: "#4a4a4e", bg: "rgba(74,74,78,0.12)" },
 };
+
+const stageLabels: Record<BracketStage, string> = {
+  QUALIFIERS: "Qualifiers",
+  QUARTERFINALS: "Quarterfinals",
+  SEMIFINALS: "Semifinals",
+  FINALS: "Finals",
+};
+
+function formatDuration(ms: number): string {
+  const total = Math.max(0, Math.floor(ms / 1000));
+  const min = Math.floor(total / 60);
+  const sec = total % 60;
+  return `${String(min).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
+}
 
 interface DetailState {
   loading: boolean;
@@ -342,7 +356,7 @@ async function handleStatusChange(newStatus: Tournament["status"]) {
     try {
       await tournamentsService.updateTournamentStatus(tournamentId, newStatus);
       const updated = await tournamentsService.getTournamentById(tournamentId);
-      dispatch({ type: "loadSuccess", ...data, tournament: updated } as any);
+      dispatch({ type: "loadSuccess", ...data, tournament: updated } as Action);
     } catch (err) {
       console.error(err);
     }
@@ -385,11 +399,45 @@ async function handleStatusChange(newStatus: Tournament["status"]) {
   const s = statusStyles[tournament.status];
   const finishedMatches = matches.filter((m) => m.status === "FINISHED").length;
   const totalMatches = matches.length;
-  const nextMatch = matches.find((m) => m.status === "PENDING" || m.status === "READY");
-  const nextMatchBracket = nextMatch ? brackets.find((b) => b.id === nextMatch.bracketId) : null;
-  const nextMatchRed = nextMatch ? athletes.find((a) => a.id === nextMatch.athleteRedId) : null;
-  const nextMatchBlue = nextMatch ? athletes.find((a) => a.id === nextMatch.athleteBlueId) : null;
-  const nextMatchRoutine = nextMatch ? routines.find((r) => r.id === nextMatch.routineId) : null;
+  const pendingCount = matches.filter((m) => m.status === "PENDING").length;
+
+  const upcomingMatches = matches
+    .filter((m) => m.status === "PENDING")
+    .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+    .slice(0, 5)
+    .map((m) => ({
+      match: m,
+      redName: athletes.find((a) => a.id === m.athleteRedId)?.name ?? "TBD",
+      blueName: athletes.find((a) => a.id === m.athleteBlueId)?.name ?? "TBD",
+      bracket: brackets.find((b) => b.id === m.bracketId),
+    }));
+
+  const recentResults = matches
+    .filter((m) => m.status === "FINISHED" && m.winnerAthleteId != null)
+    .sort((a, b) => (b.finishedAt ?? "").localeCompare(a.finishedAt ?? ""))
+    .slice(0, 5)
+    .map((m) => {
+      const winnerIsRed = m.athleteRedId === m.winnerAthleteId;
+      const progress = progresses[m.id];
+      const finish = winnerIsRed ? progress?.redFinishedAt : progress?.blueFinishedAt;
+      const timer = progress?.timerStartedAt;
+      const time =
+        finish && timer
+          ? formatDuration(new Date(finish).getTime() - new Date(timer).getTime())
+          : "—";
+      return {
+        match: m,
+        winnerName: athletes.find((a) => a.id === m.winnerAthleteId)?.name ?? "Unknown",
+        bracket: brackets.find((b) => b.id === m.bracketId),
+        time,
+      };
+    });
+
+  const bracketProgress = brackets.map((b) => {
+    const bracketMatches = matches.filter((m) => m.bracketId === b.id);
+    const decided = bracketMatches.filter((m) => m.status === "FINISHED").length;
+    return { bracket: b, total: bracketMatches.length, decided };
+  });
 
   return (
     <div className="max-w-5xl mx-auto animate-fade-up" style={{ opacity: 0 }}>
@@ -470,21 +518,46 @@ async function handleStatusChange(newStatus: Tournament["status"]) {
               </dl>
             </div>
 
-            {/* Next Match */}
+            {/* Upcoming Matches */}
             <div className="rounded-lg p-4 sm:col-span-2 lg:col-span-1" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
-              <p className="text-xs uppercase tracking-wide mb-3" style={{ color: "var(--muted-foreground)" }}>Next Match</p>
-              {nextMatch ? (
-                <div className="space-y-2">
-                  <p className="font-medium">{nextMatchBracket?.division ?? "Unknown"} • {nextMatchBracket?.stage ?? "Unknown"}</p>
-                  <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>
-                    {nextMatchRed?.name ?? "TBD"} vs {nextMatchBlue?.name ?? "TBD"}
-                  </p>
-                  <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>
-                    {nextMatchRoutine?.name ?? "No routine"}
-                  </p>
-                </div>
-              ) : (
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-xs uppercase tracking-wide" style={{ color: "var(--muted-foreground)" }}>Upcoming Matches</p>
+                {pendingCount > 0 && (
+                  <span
+                    className="text-[10px] px-2 py-0.5 rounded-full uppercase tracking-widest"
+                    style={{ background: "var(--accent-12)", color: "var(--accent)" }}
+                  >
+                    {pendingCount}
+                  </span>
+                )}
+              </div>
+              {upcomingMatches.length === 0 ? (
                 <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>No upcoming matches</p>
+              ) : (
+                <ul className="divide-y" style={{ borderColor: "var(--border)" }}>
+                  {upcomingMatches.map((u) => (
+                    <li key={u.match.id} className="py-2.5 first:pt-0 last:pb-0 flex items-center gap-3">
+                      <div className="flex -space-x-1 shrink-0">
+                        <span
+                          className="w-3 h-3 rounded-full border-2"
+                          style={{ background: "var(--spec-red)", borderColor: "var(--card)" }}
+                        />
+                        <span
+                          className="w-3 h-3 rounded-full border-2"
+                          style={{ background: "var(--spec-blue)", borderColor: "var(--card)" }}
+                        />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">
+                          {u.redName} vs {u.blueName}
+                        </p>
+                        <p className="text-xs truncate" style={{ color: "var(--muted-foreground)" }}>
+                          {u.bracket ? `Division ${u.bracket.division} — ${stageLabels[u.bracket.stage]}` : "Unknown"}
+                        </p>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
               )}
             </div>
 
@@ -519,6 +592,66 @@ async function handleStatusChange(newStatus: Tournament["status"]) {
                 >
                   Manage Staff →
                 </button>
+              )}
+            </div>
+
+            {/* Recent Results */}
+            <div className="rounded-lg p-4 sm:col-span-2 lg:col-span-2" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+              <p className="text-xs uppercase tracking-wide mb-3" style={{ color: "var(--muted-foreground)" }}>Recent Results</p>
+              {recentResults.length === 0 ? (
+                <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>No finished matches yet</p>
+              ) : (
+                <ul className="divide-y" style={{ borderColor: "var(--border)" }}>
+                  {recentResults.map((r) => (
+                    <li key={r.match.id} className="py-2.5 flex items-center gap-3">
+                      <Trophy className="w-4 h-4 shrink-0" style={{ color: "var(--accent)" }} />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{r.winnerName}</p>
+                        <p className="text-xs truncate" style={{ color: "var(--muted-foreground)" }}>
+                          {r.bracket
+                            ? `Division ${r.bracket.division} — ${stageLabels[r.bracket.stage]}`
+                            : "Unknown"}
+                        </p>
+                      </div>
+                      <span className="text-sm font-medium tabular-nums shrink-0" style={{ color: "var(--secondary-foreground)" }}>
+                        {r.time}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            {/* Bracket Progress */}
+            <div className="rounded-lg p-4 lg:col-span-1" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+              <p className="text-xs uppercase tracking-wide mb-3" style={{ color: "var(--muted-foreground)" }}>Bracket Progress</p>
+              {bracketProgress.length === 0 ? (
+                <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>No brackets yet</p>
+              ) : (
+                <ul className="space-y-3.5">
+                  {bracketProgress.map((bp) => (
+                    <li key={bp.bracket.id}>
+                      <div className="flex items-baseline justify-between gap-2">
+                        <p className="text-sm font-medium truncate">Division {bp.bracket.division}</p>
+                        <span className="text-xs tabular-nums shrink-0" style={{ color: "var(--muted-foreground)" }}>
+                          {bp.decided}/{bp.total}
+                        </span>
+                      </div>
+                      <p className="text-xs mt-0.5" style={{ color: "var(--muted-foreground)" }}>
+                        {stageLabels[bp.bracket.stage]}
+                      </p>
+                      <div className="mt-1.5 h-1 rounded-full" style={{ background: "var(--border)" }}>
+                        <div
+                          className="h-full rounded-full"
+                          style={{
+                            width: `${bp.total ? Math.round((bp.decided / bp.total) * 100) : 0}%`,
+                            background: "var(--accent)",
+                          }}
+                        />
+                      </div>
+                    </li>
+                  ))}
+                </ul>
               )}
             </div>
           </div>

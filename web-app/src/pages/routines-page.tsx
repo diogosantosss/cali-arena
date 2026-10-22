@@ -550,7 +550,7 @@ export function RoutinesPage() {
                 <div>
                   <h2
                     className="text-2xl leading-tight"
-                    style={{ fontFamily: "DM Serif Display, Georgia, serif", color: "var(--foreground)" }}
+                    style={{ color: "var(--foreground)" }}
                   >
                     {selectedRoutine.name}
                   </h2>

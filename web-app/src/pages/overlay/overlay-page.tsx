@@ -11,7 +11,7 @@ import { buildOverlay, type OverlayData } from "@/data/overlay";
 import type { Athlete } from "@/data/athletes";
 import type { Match, MatchProgress } from "@/data/matches";
 import type { Exercise, Routine } from "@/data/routines";
-import type { BracketStage } from "@/data/tournaments";
+import type { BracketStage, Tournament } from "@/data/tournaments";
 import type { SpectatorEvent } from "@/data/live";
 
 const empty: OverlayData = {
@@ -43,6 +43,7 @@ export function OverlayPage() {
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [stage, setStage] = useState<BracketStage | null>(null);
   const [currentMatchId, setCurrentMatchId] = useState<number | null>(null);
+  const [tournament, setTournament] = useState<Tournament | null>(null);
 
   const id = tournamentId ? Number(tournamentId) : undefined;
   const pinned = params.get("match");
@@ -56,6 +57,13 @@ export function OverlayPage() {
       .getAthletes()
       .then((list) => {
         if (!cancelled) setAthletes(list);
+      })
+      .catch(() => { });
+
+    tournamentsService
+      .getTournamentById(id)
+      .then((t) => {
+        if (!cancelled) setTournament(t);
       })
       .catch(() => { });
 
@@ -139,7 +147,7 @@ export function OverlayPage() {
   const data =
     match && (pinnedMatchId != null || match.id === currentMatchId)
       ? buildOverlay(match, progress, athletes, routine ? [routine] : [], exercises, stage)
-      : empty;
+      : { ...empty, waiting: true, tournamentName: tournament?.name ?? null };
 
   if (params.get("debug") === "1") {
     return (

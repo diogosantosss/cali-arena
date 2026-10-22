@@ -2,7 +2,7 @@ import type { Athlete } from "@/data/athletes";
 import type { Match, MatchProgress } from "@/data/matches";
 import type { BracketStage } from "@/data/tournaments";
 import type { Exercise, Routine } from "@/data/routines";
-import { overlayExerciseItems, routineGroups, type OverlayExerciseItem } from "@/utils/exercise-labels";
+import { nextLabel, overlayExerciseItems, routineGroups, type OverlayExerciseItem } from "@/utils/exercise-labels";
 
 export interface OverlaySide {
   name: string;
@@ -13,6 +13,7 @@ export interface OverlaySide {
   finished: boolean;
   won: boolean;
   time: string | null;
+  next: string | null;
 }
 
 export interface OverlayData {
@@ -23,6 +24,10 @@ export interface OverlayData {
   finished: boolean;
   stage: string | null;
   timeCap: string | null;
+  /** True when there is no match to show yet (waiting state). */
+  waiting?: boolean;
+  /** Shown in the waiting state instead of the frozen timer. */
+  tournamentName?: string | null;
 }
 
 export interface OverlayProps {
@@ -93,6 +98,7 @@ function sideOf(
     finished,
     won,
     time: ms == null ? null : msToClock(ms),
+    next: nextLabel(exercises, currentId),
   };
 }
 

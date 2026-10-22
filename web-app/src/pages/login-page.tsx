@@ -117,7 +117,7 @@ export function LoginPage() {
         >
           <div
             className="text-5xl leading-[1.1] tracking-tight"
-            style={{ fontFamily: "DM Serif Display, Georgia, serif", color: "var(--foreground)" }}
+            style={{ color: "var(--foreground)" }}
           >
             Where athletes<br />
             <span style={{ color: "var(--accent)" }}>compete.</span>
@@ -156,7 +156,7 @@ export function LoginPage() {
             </p>
             <h1
               className="text-3xl leading-tight"
-              style={{ fontFamily: "DM Serif Display, Georgia, serif", color: "var(--foreground)" }}
+              style={{ color: "var(--foreground)" }}
             >
               Sign in
             </h1>
